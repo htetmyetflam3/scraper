@@ -8,6 +8,7 @@ import {
   classifySearchPage,
   extractSearchResults,
   fallbackBookName,
+  isConsentRedirect,
   isCurrentEnginePage,
   isScribdDocumentUrl,
   makeSearchPageUrl,
@@ -17,6 +18,10 @@ import {
 const args = process.argv.slice(2);
 const flags = new Set(args.filter((arg) => arg.startsWith("--")));
 const positionalArgs = args.filter((arg) => !arg.startsWith("--"));
+const optionValue = (name) => {
+  const match = args.find((arg) => arg.startsWith(`--${name}=`));
+  return match ? match.slice(name.length + 3).trim() : "";
+};
 
 if (flags.has("--help") || flags.has("-h")) {
   console.log(`Search-engine book link crawler
@@ -24,13 +29,14 @@ if (flags.has("--help") || flags.has("-h")) {
 Usage: node js/searchbooks.js [options] [query ...]
 
 Options:
+  --engine=NAME   Search engine: brave (default), bing, google, duckduckgo.
   --reset-state   Clear the crawled/pending page history and scan everything
                   again (found links are kept). Use this after upgrading: pages
                   recorded by an older parser are re-read with the current one.
   --help          Show this message.
 
 Environment:
-  SEARCH_ENGINE            bing (default), google, or duckduckgo
+  SEARCH_ENGINE            brave (default), bing, google, or duckduckgo
   SEARCH_TERMS             comma-separated terms, replacing the defaults
   SEARCH_QUERIES           exact queries, newline or ; separated
   SEARCH_PAGES_PER_QUERY   result pages per query (default 10)
@@ -43,9 +49,11 @@ Environment:
   process.exit(0);
 }
 
-const SEARCH_ENGINE = (process.env.SEARCH_ENGINE || "bing").trim().toLowerCase();
+const SEARCH_ENGINE = (optionValue("engine") || process.env.SEARCH_ENGINE || "brave").trim().toLowerCase();
 if (!SEARCH_ENGINE_BASE_URLS[SEARCH_ENGINE]) {
-  throw new Error(`Unsupported SEARCH_ENGINE "${SEARCH_ENGINE}". Use bing, duckduckgo, or google.`);
+  throw new Error(
+    `Unsupported search engine "${SEARCH_ENGINE}". Use brave, bing, google, or duckduckgo.`,
+  );
 }
 const SEARCH_BASE_URL = process.env.SEARCH_BASE_URL || SEARCH_ENGINE_BASE_URLS[SEARCH_ENGINE];
 const SEARCH_PAGES_PER_QUERY = Math.max(
@@ -354,7 +362,9 @@ async function crawlSearchResults() {
       }
       stats.rejectedFiles += rejectedCount;
 
-      const status = classifySearchPage(html, results.length);
+      const status = classifySearchPage(html, results.length, {
+        consentRedirect: isConsentRedirect(finalPageUrl, SEARCH_ENGINE),
+      });
       console.log(
         `  Results parsed: ${results.length}; new files: ${fileCount}; new Scribd: ${scribdCount}` +
           `${rejectedCount ? `; PDF/DOCX skipped as unrelated: ${rejectedCount}` : ""}.`,
@@ -447,6 +457,6 @@ async function crawlSearchResults() {
 
 crawlSearchResults().catch((error) => {
   console.error(error.message);
-  console.error("Usage: SEARCH_ENGINE=bing|google|duckduckgo node js/searchbooks.js [query ...]");
+  console.error("Usage: node js/searchbooks.js [--engine=brave|bing|google|duckduckgo] [query ...]");
   process.exitCode = 1;
 });

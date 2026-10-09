@@ -4,19 +4,21 @@ This repository has two independent crawlers and one list-based downloader:
 
 ## 1. Search-engine crawler (general discovery)
 
-This searches result pages from Bing by default. It does **not** start from or crawl `dhammadownload.com`; it collects matching direct PDF/DOCX results and records Scribd document URLs separately for manual use.
+This searches result pages from Brave Search by default. It does **not** start from or crawl `dhammadownload.com`; it collects matching direct PDF/DOCX results and records Scribd document URLs separately for manual use.
 
 ```sh
-SEARCH_ENGINE=bing node js/searchbooks.js
+node js/searchbooks.js
 node js/download.js search_entry_list.txt
 ```
 
-Supported providers are `bing`, `google`, and `duckduckgo`:
+Supported providers are `brave` (default), `bing`, `google`, and `duckduckgo`. Switch with `--engine=NAME` or `SEARCH_ENGINE`:
 
 ```sh
-SEARCH_ENGINE=google node js/searchbooks.js
+node js/searchbooks.js --engine=google
 SEARCH_ENGINE=duckduckgo node js/searchbooks.js
 ```
+
+Switching engines is safe mid-project: pages queued for a different engine are dropped from the queue, and the links already found are kept.
 
 Default keywords include the requested broad Burmese and English searches: `Burmese book PDF download link`, `Burmese PDF`, `Myanmar ဝတ္ထု`, `မြန်မာစာ`, `ဝတ္ထု`, `ရသ`, `ကဗျာများ free download`, `မြန်မာစာပေ`, both `မြန်မာဝတ္တု`/`မြန်မာဝတ္ထု` spellings, `သုတစာပေ`, `ရသစာပေ`, `အချစ်ဝတ္ထု`, `စိတ်ကူးယဉ်ဝတ္ထု`, `နာမည်ကြီးစာရေးဆရာများ၏ PDF download linkများ`, `နာမည်ကြီးစာရေးဆရာများ`, and related book/novel/poetry download phrases. For every keyword, it searches broadly, adds PDF- and DOCX-focused searches, and searches Scribd separately. A result enters `search_entry_list.txt` when it is a PDF/DOCX that looks Burmese-related: with the default `loose` matching the file name, URL path, result title or full URL may carry `myanmar`/`burmese`/`burma` or a Myanmar character in U+1000–U+1041; set `SEARCH_MATCH_MODE=filename` to require it in the file name alone. Scribd `/doc/`, `/document/` and `/book/` result URLs are stored separately in `search_scribd_links.txt` as title/URL/source-page TSV rows.
 
@@ -28,7 +30,7 @@ node js/searchbooks.js "Abhidhamma Myanmar filetype:pdf" "site:scribd.com Abhidh
 
 Useful settings:
 
-- `SEARCH_ENGINE` — `bing` (default), `google`, or `duckduckgo`.
+- `SEARCH_ENGINE` / `--engine=` — `brave` (default), `bing`, `google`, or `duckduckgo`.
 - `SEARCH_TERMS` — comma-separated search terms, replacing the defaults.
 - `SEARCH_PAGES_PER_QUERY` — result pages per query (default `10`, roughly up to 100 results per query on Bing/Google; actual provider limits vary).
 - `SEARCH_DELAY_MS` — delay between page requests (default `1000`).
@@ -55,8 +57,9 @@ Processed 32 search page attempt(s):
 ```
 
 - **engine said were empty** — the query really matched nothing. Recorded as done.
-- **blocked** — a CAPTCHA / rate-limit / JavaScript-required page. Left pending for
-  retry; after `SEARCH_MAX_CONSECUTIVE_BLOCKED` in a row the run stops.
+- **blocked** — a CAPTCHA / rate-limit / JavaScript-required page, Google's cookie
+  consent wall, or Brave's Cloudflare interstitial. Left pending for retry; after
+  `SEARCH_MAX_CONSECUTIVE_BLOCKED` in a row the run stops.
 - **unparseable HTML** — the page loaded but no results could be read from it,
   which means the engine changed its markup. These are **not** recorded as done,
   so they are retried instead of being lost. Set `SEARCH_DEBUG_DIR` to keep the
@@ -80,8 +83,8 @@ npm test
 ```
 
 The parser is tested offline against saved result pages in
-`js/test/fixtures/`, including both Bing result layouts (see
-`js/test/fixtures/README.md`). No network access is needed.
+`js/test/fixtures/`, covering Brave, both Bing result layouts, DuckDuckGo and
+Google (see `js/test/fixtures/README.md`). No network access is needed.
 
 ## 2. Dhammadownload site crawler (separate, site-specific case)
 

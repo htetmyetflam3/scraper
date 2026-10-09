@@ -7,12 +7,16 @@
 import path from "node:path";
 
 export const SEARCH_ENGINE_BASE_URLS = {
+  brave: "https://search.brave.com/search",
   bing: "https://www.bing.com/search",
   duckduckgo: "https://html.duckduckgo.com/html/",
   google: "https://www.google.com/search",
 };
 
+// Only used for engines that take a page-size parameter. Brave pages by
+// "offset=<page index>", so its page size is whatever the engine returns.
 export const RESULTS_PER_PAGE_BY_ENGINE = {
+  brave: 20,
   bing: 10,
   duckduckgo: 30,
   google: 10,
@@ -43,8 +47,21 @@ const BING_BLOCK_START_PATTERN =
 // fallback looks for the title heading Google wraps around the result link.
 const DUCKDUCKGO_TITLE_ANCHOR_PATTERN = /\bresult__a\b/i;
 const GOOGLE_TITLE_PATTERN = /<h3\b[^>]*>[\s\S]*?<\/h3\s*>/gi;
+const BRAVE_TITLE_PATTERN =
+  /<div\b[^>]*class\s*=\s*(?:"[^"]*\btitle\b[^"]*"|'[^']*\btitle\b[^']*')[^>]*>([\s\S]*?)<\/div\s*>/i;
+
+// Brave's web results are <div class="snippet …" data-type="web">; other
+// snippet blocks (news, discussions, pagination) carry a different data-type.
+const BRAVE_DIV_TAG_PATTERN = /<div\b[^>]*>/gi;
 
 const BLOCKED_PAGE_PATTERNS = [
+  // Cloudflare and similar interstitials (Brave sits behind one).
+  /just a moment/i,
+  /attention required/i,
+  /checking your browser/i,
+  /enable cookies and reload/i,
+  // Google's cookie consent wall has no results, only a "continue" form.
+  /before you continue to google/i,
   /\bcaptcha\b/i,
   /unusual traffic/i,
   /verify (?:that )?you(?:'re| are) (?:a )?human/i,
@@ -63,6 +80,7 @@ const NO_RESULTS_PATTERNS = [
   /\bb_no\b/i,
   /no results found/i,
   /we did not find any results/i,
+  /couldn't find any results/i,
   /did not match any documents/i,
   /your search did not/i,
   /no results containing all your search terms/i,
@@ -258,11 +276,26 @@ export function isScribdDocumentUrl(url) {
 }
 
 /**
- * Split a Bing result page into result blocks.
+ * Slice a page into blocks given the index of each block's opening tag.
  *
  * Blocks are delimited by the *start* of the next result rather than by a
- * matching closing tag: `<div class="b_algo">` blocks contain nested divs, so a
- * balanced-tag regex stops at the first inner `</div>` and loses the title.
+ * matching closing tag: result blocks contain nested divs (Bing's
+ * `<div class="b_algo">`, Brave's snippet), so a balanced-tag regex stops at
+ * the first inner `</div>` and loses the title.
+ */
+function sliceBlocks(source, starts, fallbackEnd) {
+  const blocks = [];
+  for (let index = 0; index < starts.length; index++) {
+    const start = starts[index];
+    const nextStart = starts[index + 1] ?? fallbackEnd;
+    const end = nextStart > start ? nextStart : source.length;
+    blocks.push(source.slice(start, end));
+  }
+  return blocks;
+}
+
+/**
+ * Split a Bing result page into result blocks.
  */
 export function extractBingBlocks(html) {
   // Comments can contain documented example markup (or commented-out results),
@@ -274,14 +307,23 @@ export function extractBingBlocks(html) {
   // Only look as far as the end of the results container, so the footer is not
   // swallowed into the final block.
   const containerEnd = source.search(/<\/(?:ol|ul)\s*>/i);
-  const blocks = [];
-  for (let index = 0; index < starts.length; index++) {
-    const start = starts[index];
-    const nextStart = starts[index + 1] ?? (containerEnd > start ? containerEnd : source.length);
-    const end = nextStart > start ? nextStart : source.length;
-    blocks.push(source.slice(start, end));
+  return sliceBlocks(source, starts, containerEnd > 0 ? containerEnd : source.length);
+}
+
+/**
+ * Split a Brave result page into web result blocks.
+ */
+export function extractBraveBlocks(html) {
+  const source = stripComments(html);
+  const starts = [];
+  for (const match of source.matchAll(BRAVE_DIV_TAG_PATTERN)) {
+    const tag = match[0];
+    const classValue = getAttribute(tag, "class") || "";
+    if (!/\bsnippet\b/i.test(classValue)) continue;
+    if ((getAttribute(tag, "data-type") || "").toLowerCase() !== "web") continue;
+    starts.push(match.index);
   }
-  return blocks;
+  return sliceBlocks(source, starts, source.length);
 }
 
 function pickBlockAnchor(block) {
@@ -289,6 +331,16 @@ function pickBlockAnchor(block) {
   const scoped = parseAnchorTags(heading ? heading[0] : "");
   if (scoped.length) return scoped[0];
   return parseAnchorTags(block)[0] ?? null;
+}
+
+// Brave puts the page title in its own <div class="title …"> inside the result
+// anchor; the anchor text also carries the site name.
+function pickBraveAnchor(block) {
+  const anchor = parseAnchorTags(block)[0];
+  if (!anchor) return null;
+  const titleMatch = block.match(BRAVE_TITLE_PATTERN);
+  const title = titleMatch ? cleanLabel(titleMatch[1]) : "";
+  return title ? { ...anchor, title } : anchor;
 }
 
 function anchorsToResults(anchors, pageUrl, engineHost) {
@@ -327,6 +379,15 @@ export function extractSearchResults(html, pageUrl, engine = "bing") {
     if (!anchors.length) {
       usedFallback = true;
       anchors = parseAnchorTags(source).filter(({ markup }) => /<h2\b/i.test(markup));
+    }
+  } else if (engine === "brave") {
+    blocks = extractBraveBlocks(source);
+    anchors = blocks.map(pickBraveAnchor).filter(Boolean);
+    if (!anchors.length) {
+      usedFallback = true;
+      anchors = parseAnchorTags(source).filter(({ markup }) =>
+        /<div\b[^>]*\btitle\b/i.test(markup),
+      );
     }
   } else if (engine === "google") {
     // Current Google layout wraps the H3 title *inside* the result anchor;
@@ -372,8 +433,9 @@ export function extractSearchResults(html, pageUrl, engine = "bing") {
  *               probably changed, so the page should be retried rather than
  *               recorded as done.
  */
-export function classifySearchPage(html, resultCount) {
+export function classifySearchPage(html, resultCount, { consentRedirect = false } = {}) {
   if (resultCount > 0) return "results";
+  if (consentRedirect) return "blocked";
   const source = String(html ?? "");
   if (BLOCKED_PAGE_PATTERNS.some((pattern) => pattern.test(source))) return "blocked";
   if (NO_RESULTS_PATTERNS.some((pattern) => pattern.test(source))) return "no-results";
@@ -384,12 +446,20 @@ export function makeSearchPageUrl(query, pageNumber, { engine = "bing", baseUrl,
   const url = new URL(baseUrl || SEARCH_ENGINE_BASE_URLS[engine]);
   const perPage = resultsPerPage || RESULTS_PER_PAGE_BY_ENGINE[engine] || 10;
   url.searchParams.set("q", query);
-  if (engine === "bing") {
+  if (engine === "brave") {
+    // offset is a zero-based *page* index (page 2 is offset=1), so no page-size
+    // parameter is needed and no results can be skipped.
+    if (pageNumber > 0) url.searchParams.set("offset", String(pageNumber));
+    // Keep the query verbatim: Brave would otherwise "correct" Burmese terms.
+    url.searchParams.set("spellcheck", "0");
+  } else if (engine === "bing") {
     url.searchParams.set("count", String(perPage));
     url.searchParams.set("first", String(pageNumber * perPage + 1));
   } else if (engine === "duckduckgo") {
     url.searchParams.set("s", String(pageNumber * perPage));
   } else {
+    url.searchParams.set("num", String(perPage));
+    url.searchParams.set("hl", "en");
     url.searchParams.set("start", String(pageNumber * perPage));
   }
   return url.href;
@@ -401,6 +471,14 @@ export function isCurrentEnginePage(value, { engine = "bing", baseUrl } = {}) {
   } catch {
     return false;
   }
+}
+
+// Google answers some clients with a redirect to its cookie consent form, which
+// looks like a normal page but holds no results.
+export function isConsentRedirect(finalUrl, engine = "google") {
+  if (engine !== "google") return false;
+  const host = hostOf(finalUrl);
+  return host === "consent.google.com" || host === "consent.youtube.com";
 }
 
 export function buildQueries(terms, { includeScribdQuery = true } = {}) {

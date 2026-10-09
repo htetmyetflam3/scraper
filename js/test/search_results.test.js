@@ -13,7 +13,9 @@ import {
   buildQueries,
   classifySearchPage,
   extractBingBlocks,
+  extractBraveBlocks,
   extractSearchResults,
+  isConsentRedirect,
   isScribdDocumentUrl,
   makeSearchPageUrl,
   matchesBookCandidate,
@@ -25,6 +27,7 @@ const FIXTURES = path.join(import.meta.dirname, "fixtures");
 const fixture = (name) => readFileSync(path.join(FIXTURES, name), "utf8");
 
 const BING_PAGE = "https://www.bing.com/search?q=test&count=10&first=1";
+const BRAVE_PAGE = "https://search.brave.com/search?q=test&spellcheck=0";
 const DDG_PAGE = "https://html.duckduckgo.com/html/?q=test&s=0";
 const GOOGLE_PAGE = "https://www.google.com/search?q=test&start=0";
 
@@ -69,6 +72,35 @@ test("prefers the <h2> title anchor over a favicon/site anchor in the block", ()
       "https://example.org/files/myanmar-poetry.docx",
     ],
   );
+});
+
+test("parses Brave results, skipping non-web snippets", () => {
+  const html = fixture("brave-results.html");
+  const { results, usedFallback } = extractSearchResults(html, BRAVE_PAGE, "brave");
+  assert.equal(usedFallback, false);
+  assert.equal(extractBraveBlocks(html).length, 2, "only data-type=web snippets count");
+  assert.deepEqual(
+    results.map((result) => result.url),
+    [
+      "https://www.scribd.com/document/451498539/Trigonometry-angle-value-table-pdf",
+      "https://files.example.org/burma/myanmar-poetry.pdf",
+    ],
+  );
+  // The title comes from the title DIV, not the whole anchor text.
+  assert.equal(results[0].title, "Trigonometry angle value table - pdf");
+  assert.equal(results[1].title, "မြန်မာကဗျာများ");
+});
+
+test("recognises Brave's empty and throttled pages", () => {
+  assert.equal(classifySearchPage(fixture("brave-no-results.html"), 0), "no-results");
+  assert.equal(classifySearchPage(fixture("brave-cloudflare.html"), 0), "blocked");
+});
+
+test("Google's consent wall counts as blocked, not as an empty query", () => {
+  assert.equal(classifySearchPage(fixture("google-consent.html"), 0), "blocked");
+  assert.equal(isConsentRedirect("https://consent.google.com/save", "google"), true);
+  assert.equal(isConsentRedirect("https://www.google.com/search?q=a", "google"), false);
+  assert.equal(isConsentRedirect("https://consent.google.com/save", "brave"), false);
 });
 
 test("parses DuckDuckGo results and unwraps the uddg redirect", () => {
@@ -149,13 +181,23 @@ test("site: queries use a bare domain, not a path", () => {
 });
 
 test("result page URLs carry the engine's paging parameters", () => {
+  // Brave pages with offset=<page index>, so no page-size parameter is needed
+  // and switching page size cannot skip results.
+  assert.equal(
+    makeSearchPageUrl("myanmar pdf", 0, { engine: "brave" }),
+    "https://search.brave.com/search?q=myanmar+pdf&spellcheck=0",
+  );
+  assert.equal(
+    makeSearchPageUrl("myanmar pdf", 3, { engine: "brave" }),
+    "https://search.brave.com/search?q=myanmar+pdf&offset=3&spellcheck=0",
+  );
   assert.equal(
     makeSearchPageUrl("myanmar pdf", 2, { engine: "bing" }),
     "https://www.bing.com/search?q=myanmar+pdf&count=10&first=21",
   );
   assert.equal(
     makeSearchPageUrl("myanmar pdf", 1, { engine: "google" }),
-    "https://www.google.com/search?q=myanmar+pdf&start=10",
+    "https://www.google.com/search?q=myanmar+pdf&num=10&hl=en&start=10",
   );
   assert.equal(
     makeSearchPageUrl("myanmar pdf", 1, { engine: "duckduckgo" }),

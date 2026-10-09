@@ -10,6 +10,10 @@ parser at least once:
 
 | Fixture | What it covers |
 | --- | --- |
+| `brave-results.html` | Brave Search: web results are divs carrying both the `snippet` class and `data-type="web"`, so news/discussion/pagination snippets must be ignored. Title sits in its own `title` div; hrefs are direct. |
+| `brave-no-results.html` | Brave's "no results found" page — a legitimate zero. |
+| `brave-cloudflare.html` | The Cloudflare "Just a moment..." interstitial Brave serves when it throttles a client — retried, not recorded as done. |
+| `google-consent.html` | Google's cookie consent wall: a real page holding no results. Counts as blocked so it is retried instead of being recorded as an empty query. |
 | `bing-li-algo.html` | Full-page Bing results: `<li class="b_algo">`, title in `<h2><a>`, mix of `/ck/a?...&u=a1…` redirects and direct hrefs. |
 | `bing-div-algo.html` | Bing's simplified page: results are `<div class="b_algo">` with *nested* divs in the caption. This is the shape the old `<li>`-only parser dropped entirely. |
 | `bing-algoheader-anchor.html` | A result whose first anchor is the favicon/site link, so the title must be taken from `<h2><a>`. |
