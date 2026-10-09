@@ -27,6 +27,10 @@ dependencies = [
     # python/scribdl (Scribd downloader)
     "requests>=2.32.0",
     "beautifulsoup4>=4.12.0",
+    # python/search_crawl.py + python/download.py
+    "httpx>=0.27",
+    "tenacity>=9.0.0",
+    "tqdm>=4.66",
 ]
 
 [project.optional-dependencies]
@@ -36,6 +40,13 @@ browser = ["playwright>=1.45"]
 
 [project.scripts]
 search-crawl = "search_crawl:main"
+download-books = "download:main"
+
+[tool.pytest.ini_options]
+# python/test/ holds scribdl's upstream tests, which download from scribd.com;
+# they are not part of `pytest` by default.
+testpaths = ["python/test_search_crawl.py", "python/test_download.py"]
+pythonpath = ["python"]
 
 
 

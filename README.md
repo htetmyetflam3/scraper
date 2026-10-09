@@ -168,6 +168,34 @@ node node/download.js entry_list.txt
 
 Its progress is persisted separately in `crawled_pages.txt` and `pending_pages.txt`.
 
-## Downloader
+## 0b. Downloader — Python (recommended)
 
-`js/download.js` consumes a crawler-generated TSV or a plain URL list. With no argument it uses `search_entry_list.txt`; pass `entry_list.txt` to use the Dhammadownload crawl output. Downloaded files and URL history are stored in `dhammadownload_files/` by default. Already-downloaded URLs and existing same-named files are skipped.
+`python/download.py` consumes a crawler-generated TSV or a plain URL list:
+
+```sh
+uv run python/download.py                          # search_entry_list.txt
+uv run python/download.py entry_list.txt           # the other crawler's output
+uv run python/download.py --concurrency=8 --verify-pdf
+```
+
+It downloads concurrently with `httpx`, retries with `tenacity` (exponential
+backoff + jitter), shows progress with `tqdm`, and skips URLs already in
+`.download-history.json`.
+
+The useful part: **it rejects files that only pretend to be PDFs.** Plenty of
+"PDF" links answer `200 OK` with an HTML login or error page, which is worse
+than a failure because it looks like a success. Every download is checked — a
+PDF must start with `%PDF`, a DOCX must be a zip — and optionally opened with
+`pikepdf` (`--verify-pdf`). Failures are listed at the end and stay downloadable
+on the next run.
+
+`python/download.py --help` for concurrency, timeout, delay and retry options.
+Tests: `uv run pytest` (no network needed).
+
+Scribd documents are not direct files — they need the vendored `scribdl`:
+
+```sh
+cd python && uv run python -m scribdl.scribdl "https://www.scribd.com/document/123/Title"
+```
+
+The Node downloader below still works, but the Python one is where new work happens.
