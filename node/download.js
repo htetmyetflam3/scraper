@@ -1,4 +1,4 @@
-import { mkdirSync, createWriteStream, existsSync, readFileSync } from "node:fs";
+import { mkdirSync, createWriteStream, existsSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { pipeline } from "node:stream/promises";
 import crypto from "node:crypto";
@@ -75,6 +75,41 @@ const NON_PAGE_EXTENSIONS = new Set([
 
 mkdirSync(OUT_DIR, { recursive: true });
 const reservedOutPaths = new Set();
+const inFlightDownloads = new Map();
+const DOWNLOAD_HISTORY_PATH = path.join(OUT_DIR, ".download-history.json");
+
+function normalizeDownloadUrl(value) {
+  const url = new URL(value);
+  url.hash = "";
+  return url.href;
+}
+
+function loadDownloadHistory() {
+  try {
+    const entries = JSON.parse(readFileSync(DOWNLOAD_HISTORY_PATH, "utf8"));
+    return new Map(Array.isArray(entries) ? entries : []);
+  } catch {
+    return new Map();
+  }
+}
+
+const downloadedFiles = loadDownloadHistory();
+
+function wasDownloaded(fileUrl) {
+  const key = normalizeDownloadUrl(fileUrl);
+  const filename = downloadedFiles.get(key);
+  if (!filename) return false;
+  if (existsSync(path.join(OUT_DIR, path.basename(filename)))) return true;
+  downloadedFiles.delete(key);
+  return false;
+}
+
+function recordDownloaded(fileUrl, responseUrl, outputPath) {
+  const filename = path.basename(outputPath);
+  downloadedFiles.set(normalizeDownloadUrl(fileUrl), filename);
+  if (responseUrl) downloadedFiles.set(normalizeDownloadUrl(responseUrl), filename);
+  writeFileSync(DOWNLOAD_HISTORY_PATH, JSON.stringify([...downloadedFiles], null, 2), "utf8");
+}
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -343,6 +378,13 @@ function reserveOutputPath(filename, fileUrl, extension) {
 }
 
 async function saveFileResponse(response, fileUrl) {
+  if (wasDownloaded(fileUrl)) {
+    const filename = downloadedFiles.get(normalizeDownloadUrl(fileUrl));
+    console.log(`Already downloaded: ${path.join(OUT_DIR, path.basename(filename))}`);
+    await response.body?.cancel();
+    return false;
+  }
+
   const contentType = (response.headers.get("content-type") || "").toLowerCase();
   const filename = filenameFromResponse(response, fileUrl);
   const filenameExtension = path.extname(filename).toLowerCase();
@@ -376,6 +418,7 @@ async function saveFileResponse(response, fileUrl) {
 
   try {
     await pipeline(response.body, createWriteStream(reservation.path, { flags: "wx" }));
+    recordDownloaded(fileUrl, response.url, reservation.path);
     console.log(`Saved: ${reservation.path}`);
     return true;
   } finally {
@@ -384,8 +427,34 @@ async function saveFileResponse(response, fileUrl) {
 }
 
 async function downloadFile(fileUrl, referer) {
-  const response = await fetchWithRetry(fileUrl, { referer });
-  return saveFileResponse(response, fileUrl);
+  const key = normalizeDownloadUrl(fileUrl);
+  if (wasDownloaded(key)) {
+    const filename = downloadedFiles.get(key);
+    console.log(`Already downloaded: ${path.join(OUT_DIR, path.basename(filename))}`);
+    return false;
+  }
+
+  const existingDownload = inFlightDownloads.get(key);
+  if (existingDownload) {
+    try {
+      await existingDownload;
+    } catch {
+      // The worker that started the request reports its failure.
+    }
+    return false;
+  }
+
+  const downloadPromise = (async () => {
+    const response = await fetchWithRetry(fileUrl, { referer });
+    return saveFileResponse(response, fileUrl);
+  })();
+  inFlightDownloads.set(key, downloadPromise);
+
+  try {
+    return await downloadPromise;
+  } finally {
+    inFlightDownloads.delete(key);
+  }
 }
 
 async function downloadFiles(fileUrls) {
