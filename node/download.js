@@ -74,8 +74,6 @@ const NON_PAGE_EXTENSIONS = new Set([
 ]);
 
 mkdirSync(OUT_DIR, { recursive: true });
-const reservedOutPaths = new Set();
-const inFlightDownloads = new Map();
 const DOWNLOAD_HISTORY_PATH = path.join(OUT_DIR, ".download-history.json");
 
 function normalizeDownloadUrl(value) {
@@ -94,6 +92,16 @@ function loadDownloadHistory() {
 }
 
 const downloadedFiles = loadDownloadHistory();
+const outputOwners = new Map();
+for (const [url, filename] of downloadedFiles) {
+  if (!outputOwners.has(path.basename(filename))) outputOwners.set(path.basename(filename), url);
+}
+const reservedOutPaths = new Map();
+const inFlightDownloads = new Map();
+
+function persistDownloadHistory() {
+  writeFileSync(DOWNLOAD_HISTORY_PATH, JSON.stringify([...downloadedFiles], null, 2), "utf8");
+}
 
 function wasDownloaded(fileUrl) {
   const key = normalizeDownloadUrl(fileUrl);
@@ -101,14 +109,41 @@ function wasDownloaded(fileUrl) {
   if (!filename) return false;
   if (existsSync(path.join(OUT_DIR, path.basename(filename)))) return true;
   downloadedFiles.delete(key);
+  if (outputOwners.get(path.basename(filename)) === key) outputOwners.delete(path.basename(filename));
   return false;
 }
 
+function rememberDownloaded(fileUrl, responseUrl, filename) {
+  const cleanFilename = path.basename(filename);
+  const primaryKey = normalizeDownloadUrl(fileUrl);
+  downloadedFiles.set(primaryKey, cleanFilename);
+  if (responseUrl) downloadedFiles.set(normalizeDownloadUrl(responseUrl), cleanFilename);
+  if (!outputOwners.has(cleanFilename)) outputOwners.set(cleanFilename, primaryKey);
+  persistDownloadHistory();
+}
+
 function recordDownloaded(fileUrl, responseUrl, outputPath) {
-  const filename = path.basename(outputPath);
-  downloadedFiles.set(normalizeDownloadUrl(fileUrl), filename);
-  if (responseUrl) downloadedFiles.set(normalizeDownloadUrl(responseUrl), filename);
-  writeFileSync(DOWNLOAD_HISTORY_PATH, JSON.stringify([...downloadedFiles], null, 2), "utf8");
+  rememberDownloaded(fileUrl, responseUrl, outputPath);
+}
+
+function findLegacyDownloadedPath(fileUrl) {
+  const key = normalizeDownloadUrl(fileUrl);
+  const filename = guessFilenameFromUrl(new URL(fileUrl));
+  const extension = path.extname(filename).toLowerCase();
+  if (extension !== ".pdf" && extension !== ".docx") return null;
+
+  const initialPath = path.join(OUT_DIR, filename);
+  const initialOwner = outputOwners.get(filename);
+  if (existsSync(initialPath) && (!initialOwner || initialOwner === key)) return initialPath;
+
+  const outputExtension = path.extname(filename);
+  const basename = filename.slice(0, filename.length - outputExtension.length);
+  const hash = crypto.createHash("sha1").update(key).digest("hex").slice(0, 10);
+  const hashedName = `${basename}__${hash}${outputExtension}`;
+  const hashedPath = path.join(OUT_DIR, hashedName);
+  const hashedOwner = outputOwners.get(hashedName);
+  if (existsSync(hashedPath) && (!hashedOwner || hashedOwner === key)) return hashedPath;
+  return null;
 }
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -349,30 +384,47 @@ function supportedContentExtension(contentType) {
 }
 
 function reserveOutputPath(filename, fileUrl, extension) {
+  const key = normalizeDownloadUrl(fileUrl);
   const initialPath = path.join(OUT_DIR, filename);
-  if (!existsSync(initialPath) && !reservedOutPaths.has(initialPath)) {
-    reservedOutPaths.add(initialPath);
+  const initialOwner = outputOwners.get(filename) || reservedOutPaths.get(initialPath);
+
+  if (existsSync(initialPath)) {
+    // Legacy output without a URL-history record: prefer skipping it over
+    // downloading the same-looking file again under a new name.
+    if (!initialOwner || initialOwner === key) {
+      return { path: initialPath, alreadyDownloaded: true, legacy: !initialOwner };
+    }
+  } else if (reservedOutPaths.has(initialPath)) {
+    if (initialOwner === key) return { path: initialPath, alreadyDownloaded: true };
+  } else {
+    reservedOutPaths.set(initialPath, key);
     return { path: initialPath, alreadyDownloaded: false };
   }
 
   const outputExtension = path.extname(filename) || extension;
   const basename = filename.slice(0, filename.length - outputExtension.length);
-  const hash = crypto.createHash("sha1").update(fileUrl).digest("hex").slice(0, 10);
+  const hash = crypto.createHash("sha1").update(key).digest("hex").slice(0, 10);
   let suffix = 0;
   while (true) {
     const extra = suffix === 0 ? hash : `${hash}_${suffix}`;
-    const candidate = path.join(OUT_DIR, `${basename}__${extra}${outputExtension}`);
+    const candidateName = `${basename}__${extra}${outputExtension}`;
+    const candidate = path.join(OUT_DIR, candidateName);
+    const owner = outputOwners.get(candidateName) || reservedOutPaths.get(candidate);
+
     if (existsSync(candidate)) {
-      // The URL-derived name is stable, so an existing hashed copy is a repeat.
-      if (suffix === 0) return { path: candidate, alreadyDownloaded: true };
+      if (owner === key || (!owner && suffix === 0)) {
+        return { path: candidate, alreadyDownloaded: true, legacy: !owner };
+      }
       suffix++;
       continue;
     }
     if (reservedOutPaths.has(candidate)) {
+      if (owner === key) return { path: candidate, alreadyDownloaded: true };
       suffix++;
       continue;
     }
-    reservedOutPaths.add(candidate);
+
+    reservedOutPaths.set(candidate, key);
     return { path: candidate, alreadyDownloaded: false };
   }
 }
@@ -381,6 +433,15 @@ async function saveFileResponse(response, fileUrl) {
   if (wasDownloaded(fileUrl)) {
     const filename = downloadedFiles.get(normalizeDownloadUrl(fileUrl));
     console.log(`Already downloaded: ${path.join(OUT_DIR, path.basename(filename))}`);
+    await response.body?.cancel();
+    return false;
+  }
+
+  const responseUrl = response.url || fileUrl;
+  if (responseUrl !== fileUrl && wasDownloaded(responseUrl)) {
+    const filename = downloadedFiles.get(normalizeDownloadUrl(responseUrl));
+    rememberDownloaded(fileUrl, responseUrl, filename);
+    console.log(`Already downloaded (redirect alias): ${path.join(OUT_DIR, path.basename(filename))}`);
     await response.body?.cancel();
     return false;
   }
@@ -411,6 +472,9 @@ async function saveFileResponse(response, fileUrl) {
     : `${safeFilename(filename.replace(/\.[^.]+$/, "")) || "download"}${extension}`;
   const reservation = reserveOutputPath(safeName, fileUrl, extension);
   if (reservation.alreadyDownloaded) {
+    if (reservation.legacy) {
+      rememberDownloaded(fileUrl, response.url, reservation.path);
+    }
     console.log(`Already downloaded: ${reservation.path}`);
     await response.body.cancel();
     return false;
@@ -431,6 +495,13 @@ async function downloadFile(fileUrl, referer) {
   if (wasDownloaded(key)) {
     const filename = downloadedFiles.get(key);
     console.log(`Already downloaded: ${path.join(OUT_DIR, path.basename(filename))}`);
+    return false;
+  }
+
+  const legacyPath = findLegacyDownloadedPath(key);
+  if (legacyPath) {
+    rememberDownloaded(key, null, legacyPath);
+    console.log(`Already on disk; skipping duplicate: ${legacyPath}`);
     return false;
   }
 
