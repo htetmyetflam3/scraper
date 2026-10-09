@@ -1,0 +1,7 @@
+{
+  "type": "module",
+  "dependencies": {
+    "better-sqlite3": "^13.0.3",
+    "cheerio": "^1.2.0"
+  }
+}

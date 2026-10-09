@@ -1,0 +1,32 @@
+[project]
+name = "mmpdf-to-Text"
+version = "0.2.2"
+description = "Extract and normalize Burmese text from PDFs. Handles Zawgyi-encoded embedded fonts that standard extractors fail on, plus Unicode PDFs where fonts use non-standard character substitutions (e.g., ၄င်း → ၎င်း)."
+requires-python = ">=3.10"
+license = {text = "MIT"}
+authors = [
+    {name = "Kaung Myat Thu", email = "htetmyet157@gmail.com"}
+]
+keywords = ["pdf", "zawgyi", "unicode", "burmese", "myanmar", "text-extraction", "font-embedding"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Text Processing :: Linguistic",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+
+dependencies = [
+    "flask>=3.0.0",
+    "fpdf2>=2.8.8",
+    "pikepdf>=8"
+
+]
+
+
+
+
