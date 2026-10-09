@@ -105,6 +105,12 @@ BLOCKED_PATTERNS = [
         r"sign in to confirm",
         r"temporarily (?:unavailable|blocked)",
         r"access denied",
+        # Mojeek's ALTCHA challenge: the title says "Captcha" but the body says
+        # "Verification required" and never necessarily uses the word captcha.
+        r"\baltcha\b",
+        r"verification required",
+        r"please complete the challenge",
+        r"waiting for verification",
     )
 ]
 

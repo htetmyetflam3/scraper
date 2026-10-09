@@ -143,6 +143,20 @@ def test_page_classification():
     assert classify_page(fixture("brave-cloudflare.html"), 0) == "blocked"
     assert classify_page(fixture("google-consent.html"), 0) == "blocked"
     assert classify_page(fixture("bing-empty-unknown.html"), 0) == "empty"
+
+
+def test_mojeek_altcha_challenge_is_blocked_not_zero_results():
+    # Reconstructed from the text Mojeek served for real queries (title "Captcha",
+    # body "Verification required", "Protected by ALTCHA"). Before this fix it was
+    # classified "empty" and reported as "0 matches".
+    html = (
+        "<html><head><title>Captcha</title></head><body>"
+        "<h1>Verification required</h1>"
+        "<p>Please complete the challenge to continue.</p>"
+        "<p>Protected by ALTCHA</p><p>Waiting for verification.</p>"
+        "</body></html>"
+    )
+    assert classify_page(html, 0) == "blocked"
     assert classify_page(fixture("bing-li-algo.html"), 3) == "results"
 
 
