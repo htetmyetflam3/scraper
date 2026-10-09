@@ -23,8 +23,10 @@ classifiers = [
 dependencies = [
     "flask>=3.0.0",
     "fpdf2>=2.8.8",
-    "pikepdf>=8"
-
+    "pikepdf>=8",
+    # python/scribdl (Scribd downloader)
+    "requests>=2.32.0",
+    "beautifulsoup4>=4.12.0",
 ]
 
 

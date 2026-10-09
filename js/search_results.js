@@ -7,6 +7,8 @@
 import path from "node:path";
 
 export const SEARCH_ENGINE_BASE_URLS = {
+  mojeek: "https://www.mojeek.com/search",
+  searx: "https://searx.be/search",
   brave: "https://search.brave.com/search",
   bing: "https://www.bing.com/search",
   duckduckgo: "https://html.duckduckgo.com/html/",
@@ -16,11 +18,17 @@ export const SEARCH_ENGINE_BASE_URLS = {
 // Only used for engines that take a page-size parameter. Brave pages by
 // "offset=<page index>", so its page size is whatever the engine returns.
 export const RESULTS_PER_PAGE_BY_ENGINE = {
+  mojeek: 10,
+  searx: 10,
   brave: 20,
   bing: 10,
   duckduckgo: 30,
   google: 10,
 };
+
+// Mojeek and SearXNG answer ordinary clients without CAPTCHAs at a polite
+// request rate; the big engines throttle automated clients immediately.
+export const BOT_FRIENDLY_ENGINES = ["mojeek", "searx"];
 
 const NAMED_ENTITIES = {
   amp: "&",
@@ -54,6 +62,15 @@ const BRAVE_TITLE_PATTERN =
 // snippet blocks (news, discussions, pagination) carry a different data-type.
 const BRAVE_DIV_TAG_PATTERN = /<div\b[^>]*>/gi;
 
+// Mojeek: <ul class="results-standard"><li>…<h2><a href="…">Title</a></h2>
+const MOJEEK_CONTAINER_PATTERN =
+  /<ul\b[^>]*class\s*=\s*(?:"[^"]*\bresults-standard\b[^"]*"|'[^']*\bresults-standard\b[^']*')[^>]*>([\s\S]*?)<\/ul\s*>/i;
+const MOJEEK_ITEM_PATTERN = /<li\b[^>]*>/gi;
+
+// SearXNG: <article class="result result-default category-general"> with the
+// title in <h3><a>. (\bresult\b does not match the "results" wrapper class.)
+const SEARX_RESULT_TAG_PATTERN = /<(?:article|div)\b[^>]*>/gi;
+
 const BLOCKED_PAGE_PATTERNS = [
   // Cloudflare and similar interstitials (Brave sits behind one).
   /just a moment/i,
@@ -78,7 +95,8 @@ const BLOCKED_PAGE_PATTERNS = [
 
 const NO_RESULTS_PATTERNS = [
   /\bb_no\b/i,
-  /no results found/i,
+  /no results (?:were )?found/i,
+  /did not match any/i,
   /we did not find any results/i,
   /couldn't find any results/i,
   /did not match any documents/i,
@@ -326,6 +344,31 @@ export function extractBraveBlocks(html) {
   return sliceBlocks(source, starts, source.length);
 }
 
+/**
+ * Split a Mojeek result page into result blocks.
+ */
+export function extractMojeekBlocks(html) {
+  const source = stripComments(html);
+  const container = source.match(MOJEEK_CONTAINER_PATTERN);
+  if (!container) return [];
+  const inner = container[1];
+  const starts = [...inner.matchAll(MOJEEK_ITEM_PATTERN)].map((match) => match.index);
+  return sliceBlocks(inner, starts, inner.length);
+}
+
+/**
+ * Split a SearXNG result page into result blocks.
+ */
+export function extractSearxBlocks(html) {
+  const source = stripComments(html);
+  const starts = [];
+  for (const match of source.matchAll(SEARX_RESULT_TAG_PATTERN)) {
+    const classValue = getAttribute(match[0], "class") || "";
+    if (/\bresult\b/i.test(classValue)) starts.push(match.index);
+  }
+  return sliceBlocks(source, starts, source.length);
+}
+
 function pickBlockAnchor(block) {
   const heading = block.match(/<h2\b[^>]*>[\s\S]*?<\/h2\s*>/i) || block.match(GOOGLE_TITLE_PATTERN);
   const scoped = parseAnchorTags(heading ? heading[0] : "");
@@ -389,6 +432,20 @@ export function extractSearchResults(html, pageUrl, engine = "bing") {
         /<div\b[^>]*\btitle\b/i.test(markup),
       );
     }
+  } else if (engine === "mojeek") {
+    blocks = extractMojeekBlocks(source);
+    anchors = blocks.map(pickBlockAnchor).filter(Boolean);
+    if (!anchors.length) {
+      usedFallback = true;
+      anchors = parseAnchorTags(source).filter(({ markup }) => /<h2\b/i.test(markup));
+    }
+  } else if (engine === "searx") {
+    blocks = extractSearxBlocks(source);
+    anchors = blocks.map(pickBlockAnchor).filter(Boolean);
+    if (!anchors.length) {
+      usedFallback = true;
+      anchors = parseAnchorTags(source).filter(({ markup }) => /<h3\b/i.test(markup));
+    }
   } else if (engine === "google") {
     // Current Google layout wraps the H3 title *inside* the result anchor;
     // older layouts put the anchor inside the H3. Support both.
@@ -414,7 +471,12 @@ export function extractSearchResults(html, pageUrl, engine = "bing") {
 
   // How many result containers the structured parse found, before any fallback.
   const blockCount = blocks.length || anchors.length;
-  if (usedFallback && !anchors.length) anchors = parseAnchorTags(source);
+  // Last resort: every external link on the page. Skipped when the page itself
+  // says there is nothing to find, otherwise footer and navigation links get
+  // reported as results.
+  if (usedFallback && !anchors.length && !NO_RESULTS_PATTERNS.some((pattern) => pattern.test(source))) {
+    anchors = parseAnchorTags(source);
+  }
 
   return {
     results: anchorsToResults(anchors, pageUrl, engineHost),
@@ -452,6 +514,16 @@ export function makeSearchPageUrl(query, pageNumber, { engine = "bing", baseUrl,
     if (pageNumber > 0) url.searchParams.set("offset", String(pageNumber));
     // Keep the query verbatim: Brave would otherwise "correct" Burmese terms.
     url.searchParams.set("spellcheck", "0");
+  } else if (engine === "mojeek") {
+    // s is a result offset. Mojeek rate-limits requests that set s=0, so the
+    // first page must omit it entirely.
+    if (pageNumber > 0) url.searchParams.set("s", String(pageNumber * perPage));
+  } else if (engine === "searx") {
+    // SearXNG pages with a 1-based page number.
+    url.searchParams.set("pageno", String(pageNumber + 1));
+    url.searchParams.set("categories", "general");
+    url.searchParams.set("safesearch", "0");
+    url.searchParams.set("language", "all");
   } else if (engine === "bing") {
     url.searchParams.set("count", String(perPage));
     url.searchParams.set("first", String(pageNumber * perPage + 1));

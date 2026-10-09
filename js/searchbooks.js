@@ -2,8 +2,9 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
 import {
-  SEARCH_ENGINE_BASE_URLS,
+  BOT_FRIENDLY_ENGINES,
   RESULTS_PER_PAGE_BY_ENGINE,
+  SEARCH_ENGINE_BASE_URLS,
   buildQueries,
   classifySearchPage,
   extractSearchResults,
@@ -29,18 +30,27 @@ if (flags.has("--help") || flags.has("-h")) {
 Usage: node js/searchbooks.js [options] [query ...]
 
 Options:
-  --engine=NAME   Search engine: brave (default), bing, google, duckduckgo.
+  --engine=NAME   Search engine: mojeek (default), searx, brave, bing, google,
+                  duckduckgo. mojeek and searx are the ones that answer scripts
+                  without CAPTCHAs.
+  --delay=MS      Delay between requests (default 2000). Raise it if the engine
+                  answers 429; the crawler also raises it on its own.
+  --base-url=URL  Override the engine URL, e.g. your own SearXNG instance.
   --reset-state   Clear the crawled/pending page history and scan everything
                   again (found links are kept). Use this after upgrading: pages
                   recorded by an older parser are re-read with the current one.
   --help          Show this message.
 
 Environment:
-  SEARCH_ENGINE            brave (default), bing, google, or duckduckgo
+  SEARCH_ENGINE            mojeek (default), searx, brave, bing, google or
+                           duckduckgo
+  SEARCH_BASE_URL          same as --base-url
   SEARCH_TERMS             comma-separated terms, replacing the defaults
   SEARCH_QUERIES           exact queries, newline or ; separated
   SEARCH_PAGES_PER_QUERY   result pages per query (default 10)
-  SEARCH_DELAY_MS          delay between requests (default 1000)
+  SEARCH_DELAY_MS          delay between requests (default 2000)
+  SEARCH_MAX_CONSECUTIVE_RATE_LIMITED
+                           stop after this many 429s in a row (default 3)
   SEARCH_MATCH_MODE        loose (default) or filename
   SEARCH_USER_AGENT        override the User-Agent header
   SEARCH_DEBUG_DIR         save HTML of pages whose markup could not be parsed
@@ -49,13 +59,14 @@ Environment:
   process.exit(0);
 }
 
-const SEARCH_ENGINE = (optionValue("engine") || process.env.SEARCH_ENGINE || "brave").trim().toLowerCase();
+const SEARCH_ENGINE = (optionValue("engine") || process.env.SEARCH_ENGINE || "mojeek").trim().toLowerCase();
 if (!SEARCH_ENGINE_BASE_URLS[SEARCH_ENGINE]) {
   throw new Error(
     `Unsupported search engine "${SEARCH_ENGINE}". Use brave, bing, google, or duckduckgo.`,
   );
 }
-const SEARCH_BASE_URL = process.env.SEARCH_BASE_URL || SEARCH_ENGINE_BASE_URLS[SEARCH_ENGINE];
+const SEARCH_BASE_URL =
+  optionValue("base-url") || process.env.SEARCH_BASE_URL || SEARCH_ENGINE_BASE_URLS[SEARCH_ENGINE];
 const SEARCH_PAGES_PER_QUERY = Math.max(
   1,
   Number.parseInt(process.env.SEARCH_PAGES_PER_QUERY || "10", 10) || 10,
@@ -64,12 +75,25 @@ const MAX_PAGES_PER_BATCH = Math.max(
   1,
   Number.parseInt(process.env.MAX_PAGES || "500", 10) || 500,
 );
-const DELAY_MS = Math.max(0, Number.parseInt(process.env.SEARCH_DELAY_MS || "1000", 10) || 0);
+const DELAY_MS = Math.max(
+  0,
+  Number.parseInt(optionValue("delay") || process.env.SEARCH_DELAY_MS || "2000", 10) || 0,
+);
 // Stop hammering the engine once it starts answering with interstitials.
 const MAX_CONSECUTIVE_BLOCKED = Math.max(
   1,
   Number.parseInt(process.env.SEARCH_MAX_CONSECUTIVE_BLOCKED || "5", 10) || 5,
 );
+// Stop once the engine starts answering "too many requests": retrying through a
+// rate limit just digs the hole deeper, and the wait is usually long.
+const MAX_CONSECUTIVE_RATE_LIMITED = Math.max(
+  1,
+  Number.parseInt(process.env.SEARCH_MAX_CONSECUTIVE_RATE_LIMITED || "3", 10) || 3,
+);
+// Backoff for retries, and the ceiling for a single sleep.
+const BACKOFF_BASE_MS = 5_000;
+const MAX_BACKOFF_MS = 120_000;
+const MAX_DELAY_MS = 60_000;
 const TIMEOUT_MS = 60_000;
 const RETRIES = 3;
 const RESULTS_PER_PAGE = Number.parseInt(
@@ -218,6 +242,31 @@ function queriesToSearch() {
   return buildQueries(terms);
 }
 
+class RateLimitedError extends Error {
+  constructor(message, retryAfterMs) {
+    super(message);
+    this.name = "RateLimitedError";
+    this.retryAfterMs = retryAfterMs;
+  }
+}
+
+class BlockedError extends Error {
+  constructor(message) {
+    super(message);
+    this.name = "BlockedError";
+  }
+}
+
+// Retry-After is either a number of seconds or an HTTP date.
+function parseRetryAfterMs(value, defaultMs) {
+  if (!value) return defaultMs;
+  const seconds = Number.parseInt(value.trim(), 10);
+  if (Number.isFinite(seconds)) return Math.max(0, seconds * 1000);
+  const date = Date.parse(value);
+  if (Number.isFinite(date)) return Math.max(0, date - Date.now());
+  return defaultMs;
+}
+
 async function fetchWithRetry(url) {
   let lastError;
   for (let attempt = 1; attempt <= RETRIES; attempt++) {
@@ -231,11 +280,35 @@ async function fetchWithRetry(url) {
         redirect: "follow",
         signal: AbortSignal.timeout(TIMEOUT_MS),
       });
+
+      if (response.status === 429 || response.status === 503) {
+        // Too many requests: back off for as long as the engine asked, never
+        // retry immediately — that is what turns a throttle into a block.
+        const retryAfterMs = parseRetryAfterMs(response.headers.get("retry-after"), 0);
+        const waitMs = Math.min(
+          Math.max(retryAfterMs, BACKOFF_BASE_MS * 2 ** (attempt - 1)),
+          MAX_BACKOFF_MS,
+        );
+        await response.body?.cancel();
+        if (attempt < RETRIES) {
+          console.log(`  Rate limited (HTTP ${response.status}); waiting ${Math.round(waitMs / 1000)}s.`);
+          await sleep(waitMs);
+          continue;
+        }
+        throw new RateLimitedError(`HTTP ${response.status} ${response.statusText}`, waitMs);
+      }
+
+      if (response.status === 401 || response.status === 403) {
+        await response.body?.cancel();
+        throw new BlockedError(`HTTP ${response.status} ${response.statusText}`);
+      }
+
       if (!response.ok) throw new Error(`HTTP ${response.status} ${response.statusText}`);
       return response;
     } catch (error) {
       lastError = error;
-      if (attempt < RETRIES) await sleep(800 * attempt);
+      if (error instanceof RateLimitedError || error instanceof BlockedError) break;
+      if (attempt < RETRIES) await sleep(BACKOFF_BASE_MS * attempt);
     }
   }
   throw lastError;
@@ -299,6 +372,7 @@ async function crawlSearchResults() {
     blocked: 0,
     unparsed: 0,
     fetchFailed: 0,
+    rateLimited: 0,
     nonHtml: 0,
     fallbackParses: 0,
     rejectedFiles: 0,
@@ -306,6 +380,9 @@ async function crawlSearchResults() {
   let totalAttempts = 0;
   let batchAttempts = 0;
   let consecutiveBlocked = 0;
+  let consecutiveRateLimited = 0;
+  // Grows when the engine pushes back, so a throttled run slows itself down.
+  let delayMs = DELAY_MS;
   writeUrlList(PENDING_PAGES_PATH, pendingPages);
 
   while (pendingPages.length) {
@@ -336,7 +413,7 @@ async function crawlSearchResults() {
         writeUrlList(CRAWLED_PAGES_PATH, completedPages);
         writeUrlList(PENDING_PAGES_PATH, pendingPages);
         console.log(`  Skipped: not an HTML response (${contentType || "unknown content type"}).`);
-        await sleep(DELAY_MS);
+        await sleep(delayMs);
         continue;
       }
 
@@ -373,9 +450,11 @@ async function crawlSearchResults() {
       if (status === "results") {
         stats.withResults++;
         consecutiveBlocked = 0;
+        consecutiveRateLimited = 0;
       } else if (status === "no-results") {
         stats.noResults++;
         consecutiveBlocked = 0;
+        consecutiveRateLimited = 0;
         console.log("  Engine reported no results for this query page.");
       } else {
         // "empty" or "blocked": nothing usable was fetched, so do not record
@@ -415,13 +494,50 @@ async function crawlSearchResults() {
       writeUrlList(CRAWLED_PAGES_PATH, completedPages);
       writeUrlList(PENDING_PAGES_PATH, pendingPages);
     } catch (error) {
-      stats.fetchFailed++;
-      failedThisRun.add(pageUrl);
-      writeUrlList(PENDING_PAGES_PATH, pendingPages);
-      console.warn(`Search page failed: ${pageUrl} (${error.message})`);
+      if (error instanceof RateLimitedError) {
+        // Back off further for the rest of the run and retry this page later.
+        stats.rateLimited++;
+        consecutiveRateLimited++;
+        delayMs = Math.min(Math.max(delayMs * 2, error.retryAfterMs || 0), MAX_DELAY_MS);
+        failedThisRun.add(pageUrl);
+        writeUrlList(PENDING_PAGES_PATH, pendingPages);
+        console.warn(`Search page rate limited: ${pageUrl} (${error.message})`);
+        console.warn(`  Slowing down to ${Math.round(delayMs / 1000)}s between requests.`);
+        if (consecutiveRateLimited >= MAX_CONSECUTIVE_RATE_LIMITED) {
+          const alternatives = BOT_FRIENDLY_ENGINES.filter((name) => name !== SEARCH_ENGINE);
+          console.warn(
+            `\n${consecutiveRateLimited} consecutive rate-limited pages: ${SEARCH_ENGINE} is ` +
+              "throttling this client. Stopping this run; the remaining pages stay queued. Wait " +
+              "a while, raise --delay / SEARCH_DELAY_MS, lower SEARCH_PAGES_PER_QUERY" +
+              `${alternatives.length ? `, or switch --engine=${alternatives[0]}` : ""}.`,
+          );
+          break;
+        }
+      } else if (error instanceof BlockedError) {
+        stats.blocked++;
+        failedThisRun.add(pageUrl);
+        writeUrlList(PENDING_PAGES_PATH, pendingPages);
+        console.warn(`Search page refused: ${pageUrl} (${error.message})`);
+        consecutiveBlocked++;
+        if (consecutiveBlocked >= MAX_CONSECUTIVE_BLOCKED) {
+          console.warn(
+            `\n${consecutiveBlocked} consecutive refused pages: ${SEARCH_ENGINE} is refusing ` +
+              "requests. Stopping this run; the remaining pages stay queued. Switch --engine or " +
+              "set SEARCH_USER_AGENT.",
+          );
+          break;
+        }
+      } else {
+        stats.fetchFailed++;
+        consecutiveBlocked = 0;
+        consecutiveRateLimited = 0;
+        failedThisRun.add(pageUrl);
+        writeUrlList(PENDING_PAGES_PATH, pendingPages);
+        console.warn(`Search page failed: ${pageUrl} (${error.message})`);
+      }
     }
 
-    await sleep(DELAY_MS);
+    await sleep(delayMs);
   }
 
   writeBookList(ENTRY_LIST_PATH, fileLinks);
@@ -435,6 +551,7 @@ async function crawlSearchResults() {
   console.log(`  pages blocked by the engine:   ${stats.blocked}`);
   console.log(`  pages with unparseable HTML:   ${stats.unparsed}`);
   console.log(`  non-HTML responses skipped:    ${stats.nonHtml}`);
+  console.log(`  pages rate limited (HTTP 429): ${stats.rateLimited}`);
   console.log(`  pages that failed to download: ${stats.fetchFailed}`);
   if (stats.fallbackParses) {
     console.log(
@@ -457,6 +574,8 @@ async function crawlSearchResults() {
 
 crawlSearchResults().catch((error) => {
   console.error(error.message);
-  console.error("Usage: node js/searchbooks.js [--engine=brave|bing|google|duckduckgo] [query ...]");
+  console.error(
+    "Usage: node js/searchbooks.js [--engine=mojeek|searx|brave|bing|google|duckduckgo] [query ...]",
+  );
   process.exitCode = 1;
 });

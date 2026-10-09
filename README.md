@@ -4,19 +4,25 @@ This repository has two independent crawlers and one list-based downloader:
 
 ## 1. Search-engine crawler (general discovery)
 
-This searches result pages from Brave Search by default. It does **not** start from or crawl `dhammadownload.com`; it collects matching direct PDF/DOCX results and records Scribd document URLs separately for manual use.
+This searches result pages from Mojeek by default. It does **not** start from or crawl `dhammadownload.com`; it collects matching direct PDF/DOCX results and records Scribd document URLs separately for manual use.
 
 ```sh
 node js/searchbooks.js
 node js/download.js search_entry_list.txt
 ```
 
-Supported providers are `brave` (default), `bing`, `google`, and `duckduckgo`. Switch with `--engine=NAME` or `SEARCH_ENGINE`:
+Supported providers are `mojeek` (default), `searx`, `brave`, `bing`, `google`, and `duckduckgo`:
 
 ```sh
-node js/searchbooks.js --engine=google
-SEARCH_ENGINE=duckduckgo node js/searchbooks.js
+node js/searchbooks.js --engine=searx
+node js/searchbooks.js --engine=google --delay=5000
 ```
+
+| Engine | Notes |
+| --- | --- |
+| `mojeek` | Default. Independent index, no CAPTCHA for ordinary clients, tolerates polite scripted access. |
+| `searx` | Any SearXNG instance — a meta-search proxy, so it queries Google/Bing/Brave *for* you and returns plain HTML. Best coverage if the instance allows you. Point it at your own with `--base-url=https://your-instance/search`. |
+| `brave`, `bing`, `google`, `duckduckgo` | Bigger indexes, but all of them throttle or CAPTCHA automated clients — Brave answers `HTTP 429` within the first few pages. |
 
 Switching engines is safe mid-project: pages queued for a different engine are dropped from the queue, and the links already found are kept.
 
@@ -37,7 +43,9 @@ Useful settings:
 - `SEARCH_MATCH_MODE` — `loose` (default) or `filename`.
 - `SEARCH_USER_AGENT` — override the `User-Agent` header (engines serve a reduced page to obvious bots).
 - `SEARCH_DEBUG_DIR` — save the HTML of pages whose results could not be parsed.
-- `SEARCH_MAX_CONSECUTIVE_BLOCKED` — stop the run after this many blocked pages in a row (default `5`).
+- `SEARCH_MAX_CONSECUTIVE_BLOCKED` — stop after this many blocked pages in a row (default `5`).
+- `SEARCH_MAX_CONSECUTIVE_RATE_LIMITED` — stop after this many `HTTP 429`s in a row (default `3`).
+- `SEARCH_BASE_URL` / `--base-url=` — override the engine URL, e.g. your own SearXNG instance.
 - `MAX_PAGES` — pages per internal batch; the crawler automatically continues into further batches.
 - `SEARCH_ENTRY_LIST_OUT`, `SEARCH_SCRIBD_LIST_OUT`, `SEARCH_CRAWLED_PAGES_OUT`, `SEARCH_PENDING_PAGES_OUT` — output/state paths.
 
@@ -57,13 +65,31 @@ Processed 32 search page attempt(s):
 ```
 
 - **engine said were empty** — the query really matched nothing. Recorded as done.
-- **blocked** — a CAPTCHA / rate-limit / JavaScript-required page, Google's cookie
+- **blocked** — a CAPTCHA / `HTTP 403` / JavaScript-required page, Google's cookie
   consent wall, or Brave's Cloudflare interstitial. Left pending for retry; after
   `SEARCH_MAX_CONSECUTIVE_BLOCKED` in a row the run stops.
+- **rate limited (HTTP 429)** — see below.
 - **unparseable HTML** — the page loaded but no results could be read from it,
   which means the engine changed its markup. These are **not** recorded as done,
   so they are retried instead of being lost. Set `SEARCH_DEBUG_DIR` to keep the
   HTML and add a fixture under `js/test/fixtures/` when this happens.
+
+### Rate limiting
+
+The big engines answer scripted access with `HTTP 429`, sometimes on the very
+first page. The crawler now treats that as a signal to slow down rather than an
+error to retry through:
+
+- it honours the `Retry-After` header, with a minimum backoff of 5s, then 10s;
+- every rate-limited page doubles the delay between requests for the rest of the
+  run (capped at 60s);
+- after `SEARCH_MAX_CONSECUTIVE_RATE_LIMITED` (default `3`) in a row the run
+  stops, and every unfinished page stays queued for the next run.
+
+So a run that hits a wall costs a few slow requests instead of hammering the
+engine hundreds of times. To get going again: wait for the throttle to expire,
+raise `--delay` (or `SEARCH_DELAY_MS`), lower `SEARCH_PAGES_PER_QUERY`, or
+switch to `--engine=searx` / the default `mojeek`.
 
 ### Re-reading pages after a parser change
 
@@ -83,8 +109,9 @@ npm test
 ```
 
 The parser is tested offline against saved result pages in
-`js/test/fixtures/`, covering Brave, both Bing result layouts, DuckDuckGo and
-Google (see `js/test/fixtures/README.md`). No network access is needed.
+`js/test/fixtures/`, covering Mojeek, SearXNG, Brave, both Bing result layouts,
+DuckDuckGo and Google (see `js/test/fixtures/README.md`). No network access is
+needed.
 
 ## 2. Dhammadownload site crawler (separate, site-specific case)
 

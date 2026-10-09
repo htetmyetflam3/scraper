@@ -14,7 +14,9 @@ import {
   classifySearchPage,
   extractBingBlocks,
   extractBraveBlocks,
+  extractMojeekBlocks,
   extractSearchResults,
+  extractSearxBlocks,
   isConsentRedirect,
   isScribdDocumentUrl,
   makeSearchPageUrl,
@@ -28,6 +30,8 @@ const fixture = (name) => readFileSync(path.join(FIXTURES, name), "utf8");
 
 const BING_PAGE = "https://www.bing.com/search?q=test&count=10&first=1";
 const BRAVE_PAGE = "https://search.brave.com/search?q=test&spellcheck=0";
+const MOJEEK_PAGE = "https://www.mojeek.com/search?q=test";
+const SEARX_PAGE = "https://searx.be/search?q=test&pageno=1";
 const DDG_PAGE = "https://html.duckduckgo.com/html/?q=test&s=0";
 const GOOGLE_PAGE = "https://www.google.com/search?q=test&start=0";
 
@@ -89,6 +93,58 @@ test("parses Brave results, skipping non-web snippets", () => {
   // The title comes from the title DIV, not the whole anchor text.
   assert.equal(results[0].title, "Trigonometry angle value table - pdf");
   assert.equal(results[1].title, "မြန်မာကဗျာများ");
+});
+
+test("parses Mojeek results", () => {
+  const html = fixture("mojeek-results.html");
+  const { results, usedFallback } = extractSearchResults(html, MOJEEK_PAGE, "mojeek");
+  assert.equal(usedFallback, false);
+  assert.equal(extractMojeekBlocks(html).length, 3);
+  assert.deepEqual(
+    results.map((result) => result.url),
+    [
+      "https://www.scribd.com/document/451498539/Trigonometry-angle-value-table-pdf",
+      "https://files.example.org/burma/myanmar-poetry.pdf",
+      "https://example.org/not-interesting.pdf",
+    ],
+  );
+  assert.equal(results[0].title, "Trigonometry angle value table - pdf");
+});
+
+test("parses SearXNG results, taking the title from the h3 anchor", () => {
+  const html = fixture("searx-results.html");
+  const { results, usedFallback } = extractSearchResults(html, SEARX_PAGE, "searx");
+  assert.equal(usedFallback, false);
+  assert.equal(extractSearxBlocks(html).length, 3);
+  // The url_header anchor and the h3 anchor share a URL; it is deduped.
+  assert.deepEqual(results.slice(0, 2).map((result) => result.url), [
+    "https://www.scribd.com/document/451498539/Trigonometry-angle-value-table-pdf",
+    "https://files.example.org/burma/myanmar-novel.pdf",
+  ]);
+  assert.equal(results[0].title, "Trigonometry angle value table - pdf");
+});
+
+// Mojeek rate-limits any request that sets s=0, so page one must omit it.
+test("Mojeek page one omits the s parameter", () => {
+  assert.equal(
+    makeSearchPageUrl("myanmar pdf", 0, { engine: "mojeek" }),
+    "https://www.mojeek.com/search?q=myanmar+pdf",
+  );
+  assert.equal(
+    makeSearchPageUrl("myanmar pdf", 2, { engine: "mojeek" }),
+    "https://www.mojeek.com/search?q=myanmar+pdf&s=20",
+  );
+});
+
+test("SearXNG pages with a 1-based pageno", () => {
+  assert.equal(
+    makeSearchPageUrl("myanmar pdf", 0, { engine: "searx" }),
+    "https://searx.be/search?q=myanmar+pdf&pageno=1&categories=general&safesearch=0&language=all",
+  );
+  assert.equal(
+    makeSearchPageUrl("myanmar pdf", 1, { engine: "searx" }),
+    "https://searx.be/search?q=myanmar+pdf&pageno=2&categories=general&safesearch=0&language=all",
+  );
 });
 
 test("recognises Brave's empty and throttled pages", () => {

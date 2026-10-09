@@ -10,6 +10,8 @@ parser at least once:
 
 | Fixture | What it covers |
 | --- | --- |
+| `mojeek-results.html` | Mojeek: web results are `<li>` inside `ul.results-standard`, URL in `a.ob`, title in `h2 > a`. |
+| `searx-results.html` | SearXNG: `<article class="result result-default category-general">` with a `url_header` anchor and the title in `<h3><a>`; both anchors share the result URL, so results are deduped, and the `results` wrapper class must not be mistaken for a result. |
 | `brave-results.html` | Brave Search: web results are divs carrying both the `snippet` class and `data-type="web"`, so news/discussion/pagination snippets must be ignored. Title sits in its own `title` div; hrefs are direct. |
 | `brave-no-results.html` | Brave's "no results found" page — a legitimate zero. |
 | `brave-cloudflare.html` | The Cloudflare "Just a moment..." interstitial Brave serves when it throttles a client — retried, not recorded as done. |
