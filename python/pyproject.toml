@@ -1,24 +1,13 @@
 [project]
-name = "mmpdf-to-Text"
+name = "mmscraper"
 version = "0.2.2"
-description = "Extract and normalize Burmese text from PDFs. Handles Zawgyi-encoded embedded fonts that standard extractors fail on, plus Unicode PDFs where fonts use non-standard character substitutions (e.g., ၄င်း → ၎င်း)."
+
 requires-python = ">=3.10"
 license = {text = "MIT"}
 authors = [
     {name = "Kaung Myat Thu", email = "htetmyet157@gmail.com"}
 ]
 keywords = ["pdf", "zawgyi", "unicode", "burmese", "myanmar", "text-extraction", "font-embedding"]
-classifiers = [
-    "Development Status :: 4 - Beta",
-    "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
-    "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python :: 3.12",
-    "Topic :: Text Processing :: Linguistic",
-    "Topic :: Software Development :: Libraries :: Python Modules",
-]
 
 dependencies = [
     "flask>=3.0.0",
@@ -36,7 +25,7 @@ dependencies = [
 [project.optional-dependencies]
 # Headless browser support for python/search_crawl.py, for engines that answer
 # plain HTTP with 403. Install with:  uv sync --extra browser
-browser = ["playwright>=1.45"]
+browser = ["playwright>=1.61.0-1"]
 
 [project.scripts]
 search-crawl = "search_crawl:main"
@@ -45,7 +34,7 @@ download-books = "download:main"
 [tool.pytest.ini_options]
 # python/test/ holds scribdl's upstream tests, which download from scribd.com;
 # they are not part of `pytest` by default.
-testpaths = ["python/test_search_crawl.py", "python/test_download.py"]
+testpaths = ["test/crawler.py", "test/download.py"]
 pythonpath = ["python"]
 
 
