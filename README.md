@@ -18,7 +18,7 @@ SEARCH_ENGINE=google node node/search_crawl_books.js
 SEARCH_ENGINE=duckduckgo node node/search_crawl_books.js
 ```
 
-Default searches are generated from `Myanmar`, `Burmese`, `Burma`, and `မြန်မာ`, with PDF, DOCX, and Scribd-document searches for each term. A result enters `search_entry_list.txt` only when its **filename** is a PDF/DOCX and contains Myanmar, Burmese, Burma, or a Myanmar character in U+1000–U+1041. Scribd `/doc/` and `/document/` result URLs are stored separately in `search_scribd_links.txt` as title/URL/source-page TSV rows.
+Default keywords include the requested broad Burmese and English searches: `Burmese book PDF download link`, `Burmese PDF`, `Myanmar ဝတ္ထု`, `မြန်မာစာ`, `ဝတ္ထု`, `ရသ`, `ကဗျာများ free download`, `မြန်မာစာပေ`, both `မြန်မာဝတ္တု`/`မြန်မာဝတ္ထု` spellings, `သုတစာပေ`, `ရသစာပေ`, `အချစ်ဝတ္ထု`, `စိတ်ကူးယဉ်ဝတ္ထု`, `နာမည်ကြီးစာရေးဆရာများ၏ PDF download linkများ`, `နာမည်ကြီးစာရေးဆရာများ`, and related book/novel/poetry download phrases. For every keyword, it searches broadly, adds PDF- and DOCX-focused searches, and searches Scribd separately. A result enters `search_entry_list.txt` only when its **filename** is a PDF/DOCX and contains Myanmar, Burmese, Burma, or a Myanmar character in U+1000–U+1041. Scribd `/doc/` and `/document/` result URLs are stored separately in `search_scribd_links.txt` as title/URL/source-page TSV rows.
 
 To use exact search queries, pass them as arguments or set `SEARCH_QUERIES` (separate multiple values with newlines or semicolons):
 
@@ -30,7 +30,7 @@ Useful settings:
 
 - `SEARCH_ENGINE` — `bing` (default), `google`, or `duckduckgo`.
 - `SEARCH_TERMS` — comma-separated search terms, replacing the defaults.
-- `SEARCH_PAGES_PER_QUERY` — result pages per query (default `5`).
+- `SEARCH_PAGES_PER_QUERY` — result pages per query (default `10`, roughly up to 100 results per query on Bing/Google; actual provider limits vary).
 - `SEARCH_DELAY_MS` — delay between page requests (default `1000`).
 - `MAX_PAGES` — pages per internal batch; the crawler automatically continues into further batches.
 - `SEARCH_ENTRY_LIST_OUT`, `SEARCH_SCRIBD_LIST_OUT`, `SEARCH_CRAWLED_PAGES_OUT`, `SEARCH_PENDING_PAGES_OUT` — output/state paths.

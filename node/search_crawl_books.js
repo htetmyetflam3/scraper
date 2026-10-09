@@ -13,7 +13,7 @@ if (!SEARCH_BASE_URLS[SEARCH_ENGINE]) {
 const SEARCH_BASE_URL = process.env.SEARCH_BASE_URL || SEARCH_BASE_URLS[SEARCH_ENGINE];
 const SEARCH_PAGES_PER_QUERY = Math.max(
   1,
-  Number.parseInt(process.env.SEARCH_PAGES_PER_QUERY || "5", 10) || 5,
+  Number.parseInt(process.env.SEARCH_PAGES_PER_QUERY || "10", 10) || 10,
 );
 const MAX_PAGES_PER_BATCH = Math.max(
   1,
@@ -24,6 +24,36 @@ const TIMEOUT_MS = 60_000;
 const RETRIES = 3;
 const RESULTS_PER_PAGE = SEARCH_ENGINE === "duckduckgo" ? 30 : 10;
 const USER_AGENT = "Mozilla/5.0 (compatible; dhamma-search-results-crawler/1.0)";
+const DEFAULT_SEARCH_KEYWORDS = [
+  "Burmese book PDF download link",
+  "Burmese PDF",
+  "Myanmar ဝတ္ထု",
+  "မြန်မာစာ",
+  "ဝတ္ထု",
+  "ရသ",
+  "ကဗျာများ free download",
+  "မြန်မာစာပေ",
+  "မြန်မာဝတ္တု",
+  "မြန်မာဝတ္ထု",
+  "သုတစာပေ",
+  "ရသစာပေ",
+  "အချစ်ဝတ္ထု",
+  "စိတ်ကူးယဉ်ဝတ္ထု",
+  "နာမည်ကြီးစာရေးဆရာများ၏ PDF download linkများ",
+  "နာမည်ကြီးစာရေးဆရာများ",
+  "မြန်မာစာအုပ် PDF download",
+  "မြန်မာကဗျာများ free download",
+  "Myanmar book PDF free download",
+  "Burmese novel PDF download",
+  "မြန်မာစာအုပ်များ download",
+  "Myanmar",
+  "Burmese",
+  "Burma",
+  "မြန်မာ",
+  "Myanmar PDF free download",
+  "Burma book PDF download",
+  "Burmese book free download",
+];
 
 const ENTRY_LIST_PATH = path.resolve(process.env.SEARCH_ENTRY_LIST_OUT || "search_entry_list.txt");
 const SCRIBD_LIST_PATH = path.resolve(process.env.SEARCH_SCRIBD_LIST_OUT || "search_scribd_links.txt");
@@ -259,12 +289,13 @@ function queriesToSearch() {
     .filter(Boolean);
   if (explicit.length) return [...new Set(explicit)];
 
-  const terms = (process.env.SEARCH_TERMS || "Myanmar,Burmese,Burma,မြန်မာ")
-    .split(",")
-    .map((term) => term.trim())
-    .filter(Boolean);
+  const terms = process.env.SEARCH_TERMS
+    ? process.env.SEARCH_TERMS.split(",").map((term) => term.trim()).filter(Boolean)
+    : DEFAULT_SEARCH_KEYWORDS;
   const queries = [];
   for (const term of terms) {
+    // Include broad discovery as well as format-focused and Scribd searches.
+    queries.push(term);
     queries.push(`${term} filetype:pdf`);
     queries.push(`${term} filetype:docx`);
     queries.push(`site:scribd.com/doc ${term}`);
