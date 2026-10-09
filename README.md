@@ -124,7 +124,7 @@ node js/searchbooks.js --engine=google --delay=5000
 
 | Engine | Notes |
 | --- | --- |
-| `mojeek` | Default. Independent index, no CAPTCHA for ordinary clients, tolerates polite scripted access. |
+| `mojeek` | Default, but **not reliable**. Its search pages have returned HTTP 403 after page 1 and an ALTCHA "Verification required" CAPTCHA page (seen 2026-10-10 from the sandbox). The crawler now reports these as `blocked` instead of `0 matches`. Do not assume it is crawler-friendly. |
 | `searx` | Any SearXNG instance — a meta-search proxy, so it queries Google/Bing/Brave *for* you and returns plain HTML. Best coverage if the instance allows you. Point it at your own with `--base-url=https://your-instance/search`. |
 | `brave`, `bing`, `google`, `duckduckgo` | Bigger indexes, but all of them throttle or CAPTCHA automated clients — Brave answers `HTTP 429` within the first few pages. |
 
