@@ -145,11 +145,10 @@ function matchesBookFilename(url) {
   if (extension !== ".pdf" && extension !== ".docx") return false;
 
   const stem = filename.slice(0, -extension.length);
-  const matchesMyanmarName = /myanmar/i.test(stem);
-  const matchesBurmeseName = /burmese/i.test(stem);
-  // Interprets the supplied range as Myanmar code points U+1000 through U+1040.
-  const startsWithMyanmarCharacter = /^[\u1000-\u1040]/u.test(stem);
-  return matchesMyanmarName || matchesBurmeseName || startsWithMyanmarCharacter;
+  const matchesLanguageName = /myanmar|burmese|burma/i.test(stem);
+  // The range is inclusive: Myanmar code points U+1000 through U+1041.
+  const containsMyanmarCharacter = /[\u1000-\u1041]/u.test(stem);
+  return matchesLanguageName || containsMyanmarCharacter;
 }
 
 async function fetchWithRetry(url, referer) {
