@@ -7,7 +7,8 @@ const ENTRY_URL = process.argv[2] || DEFAULT_ENTRY_URL;
 const DELAY_MS = 500;
 const TIMEOUT_MS = 120_000;
 const RETRIES = 3;
-const MAX_PAGES = Number.parseInt(process.env.MAX_PAGES || "500", 10);
+// Page attempts per batch; the crawler automatically continues in more batches.
+const MAX_PAGES = Math.max(1, Number.parseInt(process.env.MAX_PAGES || "500", 10) || 500);
 const USER_AGENT = "Mozilla/5.0 (compatible; dhamma-book-link-crawler/1.0)";
 
 const ENTRY_LIST_PATH = path.resolve(process.env.ENTRY_LIST_OUT || "entry_list.txt");
@@ -282,26 +283,43 @@ async function crawl(entryUrl) {
   const fileLinks = readBookList(ENTRY_LIST_PATH);
   const scribdLinks = readBookList(SCRIBD_LIST_PATH);
   const completedPages = new Set(readUrlList(CRAWLED_PAGES_PATH));
-  const pendingPages = readUrlList(PENDING_PAGES_PATH).filter((url) => !completedPages.has(url));
+  const pendingPages = [...new Set(readUrlList(PENDING_PAGES_PATH))]
+    .filter((url) => !completedPages.has(url));
   if (!completedPages.has(entryUrl.href) && !pendingPages.includes(entryUrl.href)) {
     pendingPages.unshift(entryUrl.href);
   }
 
   const queuedPages = new Set(pendingPages);
   const newlyCompleted = new Set();
-  let attempts = 0;
+  const attemptedThisBatch = new Set();
+  const failedThisRun = new Set();
+  let totalAttempts = 0;
+  let batchAttempts = 0;
   writeUrlList(PENDING_PAGES_PATH, pendingPages);
 
-  while (pendingPages.length && attempts < MAX_PAGES) {
-    const pageUrl = pendingPages[0];
-    if (completedPages.has(pageUrl)) {
-      pendingPages.shift();
-      writeUrlList(PENDING_PAGES_PATH, pendingPages);
-      continue;
-    }
+  while (pendingPages.length) {
+    let pageIndex = pendingPages.findIndex((url) =>
+      !completedPages.has(url) &&
+      !failedThisRun.has(url) &&
+      !attemptedThisBatch.has(url),
+    );
 
-    attempts++;
-    console.log(`Page attempt ${attempts}/${MAX_PAGES}: ${pageUrl}`);
+    if (batchAttempts >= MAX_PAGES) {
+      if (pageIndex < 0) break;
+      console.log(`Completed a ${MAX_PAGES}-page batch; continuing automatically with the remaining queue.`);
+      batchAttempts = 0;
+      attemptedThisBatch.clear();
+      pageIndex = pendingPages.findIndex((url) =>
+        !completedPages.has(url) && !failedThisRun.has(url),
+      );
+    }
+    if (pageIndex < 0) break;
+
+    const pageUrl = pendingPages[pageIndex];
+    attemptedThisBatch.add(pageUrl);
+    totalAttempts++;
+    batchAttempts++;
+    console.log(`Page attempt ${totalAttempts}: ${pageUrl}`);
 
     try {
       const response = await fetchWithRetry(pageUrl);
@@ -313,7 +331,7 @@ async function crawl(entryUrl) {
         completedPages.add(pageUrl);
         completedPages.add(finalPageUrl);
         newlyCompleted.add(pageUrl);
-        pendingPages.shift();
+        pendingPages.splice(pageIndex, 1);
         writeUrlList(CRAWLED_PAGES_PATH, completedPages);
         writeUrlList(PENDING_PAGES_PATH, pendingPages);
         await sleep(DELAY_MS);
@@ -352,17 +370,17 @@ async function crawl(entryUrl) {
       completedPages.add(pageUrl);
       completedPages.add(finalPageUrl);
       newlyCompleted.add(pageUrl);
-      pendingPages.shift();
+      pendingPages.splice(pageIndex, 1);
       writeBookList(ENTRY_LIST_PATH, fileLinks);
       writeBookList(SCRIBD_LIST_PATH, scribdLinks);
       writeUrlList(CRAWLED_PAGES_PATH, completedPages);
       writeUrlList(PENDING_PAGES_PATH, pendingPages);
       console.log(`  Matched files: ${fileCount}; Scribd links: ${scribdCount}.`);
     } catch (error) {
-      console.warn(`Page fetch failed: ${pageUrl} (${error.message})`);
-      pendingPages.shift();
-      pendingPages.push(pageUrl);
+      // Leave failures in the saved queue, but don't retry them endlessly this run.
+      failedThisRun.add(pageUrl);
       writeUrlList(PENDING_PAGES_PATH, pendingPages);
+      console.warn(`Page fetch failed: ${pageUrl} (${error.message})`);
     }
 
     await sleep(DELAY_MS);
@@ -373,11 +391,17 @@ async function crawl(entryUrl) {
   writeUrlList(CRAWLED_PAGES_PATH, completedPages);
   writeUrlList(PENDING_PAGES_PATH, pendingPages);
 
-  console.log(`\nProcessed ${attempts} page attempt(s); ${newlyCompleted.size} new page(s) completed.`);
+  console.log(`\nProcessed ${totalAttempts} page attempt(s); ${newlyCompleted.size} new page(s) completed.`);
   console.log(`Total matched PDF/DOCX links: ${fileLinks.size} (${ENTRY_LIST_PATH})`);
   console.log(`Total Scribd links: ${scribdLinks.size} (${SCRIBD_LIST_PATH})`);
+  if (scribdLinks.size === 0) {
+    console.log("No Scribd URLs found in the pages scanned so far; the Scribd TSV contains its header only.");
+  }
   console.log(`Completed page history: ${completedPages.size} (${CRAWLED_PAGES_PATH})`);
-  if (pendingPages.length) console.log(`Pages left to process: ${pendingPages.length} (${PENDING_PAGES_PATH})`);
+  if (pendingPages.length) {
+    const retryCount = pendingPages.filter((url) => failedThisRun.has(url)).length;
+    console.warn(`${retryCount} failed page(s) remain in ${PENDING_PAGES_PATH}; they will be retried on the next run.`);
+  }
 }
 
 async function main() {
