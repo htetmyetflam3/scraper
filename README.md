@@ -76,6 +76,36 @@ It writes `search_entry_list.txt`, `search_scribd_links.txt`,
 If an engine answers `HTTP 403`, run with `--fetcher=chromium`: a real browser
 executes JavaScript, keeps cookies and has a genuine browser fingerprint.
 
+## 0c. PDF linearizer — `python/linearize_pdfs.py`
+
+Sweeps the `pdfs/` folder that sits next to `python/` and rewrites every PDF so
+a browser or Scribd-style viewer can show page 1 before the whole file has
+arrived ("fast web view").
+
+```sh
+cd python
+uv run linearize_pdfs.py --dry-run       # report only, nothing touched
+uv run linearize_pdfs.py                 # do it
+uv run linearize_pdfs.py --password=xyz  # also unlock files that need a password
+```
+
+What it does, in order:
+
+1. **Duplicates** (same sha256) — all but one copy are deleted. The kept copy is
+   the one with the shortest name, so `book.pdf` beats `book (1).pdf`.
+2. **Linearize in place** — the new file is written to a temp file beside the
+   original, its page count is checked against the original, and only then does
+   it replace the original. **No backup and no copy is left behind.**
+3. **Encrypted PDFs are unlocked, not kept as-is.** Restriction-only PDFs (no
+   user password) open automatically; password-protected ones need `--password`
+   (repeatable) or `--password-file`. The rewrite saves without encryption, so
+   print/copy restrictions do not survive.
+4. **Broken, non-PDF and still-locked files are left byte-for-byte alone** and
+   listed at the end. Add `--delete-broken` to remove them.
+
+It is safe to run again: files already linearized are skipped, so you can drop
+PDFs into `pdfs/` one at a time and re-run. Tests: `uv run pytest` (no network).
+
 ## 1. Search-engine crawler (general discovery)
 
 This searches result pages from Mojeek by default. It does **not** start from or crawl `dhammadownload.com`; it collects matching direct PDF/DOCX results and records Scribd document URLs separately for manual use.

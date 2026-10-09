@@ -36,11 +36,12 @@ dependencies = [
 crawl = "crawler:main"
 search-crawl = "crawler:main"
 download-books = "download:main"
+linearize-pdfs = "linearize_pdfs:main"
 
 [tool.pytest.ini_options]
 # python/test/ holds scribdl's upstream tests (test_images.py, test_text.py),
 # which download from scribd.com; they are not part of `pytest` by default.
-testpaths = ["test/crawler.py", "test/download.py"]
+testpaths = ["test/crawler.py", "test/download.py", "test/linearize_pdfs.py"]
 pythonpath = ["."]
 # importlib mode keeps test/crawler.py from shadowing the crawler module it is
 # testing (both would otherwise be imported under the name "crawler").
