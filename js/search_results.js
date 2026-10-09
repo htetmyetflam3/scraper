@@ -62,9 +62,9 @@ const BRAVE_TITLE_PATTERN =
 // snippet blocks (news, discussions, pagination) carry a different data-type.
 const BRAVE_DIV_TAG_PATTERN = /<div\b[^>]*>/gi;
 
-// Mojeek: <ul class="results-standard"><li>…<h2><a href="…">Title</a></h2>
+// Mojeek: <ul class="results"> (the class varies, so match any results list)<li>…<h2><a href="…">Title</a></h2>
 const MOJEEK_CONTAINER_PATTERN =
-  /<ul\b[^>]*class\s*=\s*(?:"[^"]*\bresults-standard\b[^"]*"|'[^']*\bresults-standard\b[^']*')[^>]*>([\s\S]*?)<\/ul\s*>/i;
+  /<ul\b[^>]*class\s*=\s*(?:"[^"]*\bresults\b[^"]*"|'[^']*\bresults\b[^']*')[^>]*>([\s\S]*?)<\/ul\s*>/i;
 const MOJEEK_ITEM_PATTERN = /<li\b[^>]*>/gi;
 
 // SearXNG: <article class="result result-default category-general"> with the

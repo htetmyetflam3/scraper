@@ -1,6 +1,48 @@
 # Myanmar book link scraper
 
-This repository has two independent crawlers and one list-based downloader:
+This repository has two independent crawlers (Python and Node) and one list-based downloader:
+
+## 0. Search-engine crawler — Python (recommended)
+
+`python/search_crawl.py` is the crawler to use. It reads results with CSS
+selectors instead of hand-written HTML parsing, keeps cookies across requests
+(the usual cause of a 403 on page two), and can drive a **real headless
+Chromium** through Playwright when an engine refuses plain HTTP.
+
+```sh
+uv sync                                   # requests + beautifulsoup4
+uv sync --extra browser                   # + playwright for --fetcher=browser
+uv run playwright install chromium        # download the browser once
+
+uv run python/search_crawl.py                          # Mojeek, default terms
+uv run python/search_crawl.py --engine=searx
+uv run python/search_crawl.py --fetcher=browser        # headless Chromium
+uv run python/search_crawl.py --reset-state            # scan everything again
+```
+
+| Flag | Notes |
+| --- | --- |
+| `--engine` | `mojeek` (default), `searx`, `brave`, `bing`, `google`, `duckduckgo` |
+| `--fetcher` | `http` (requests), `browser` (headless Chromium), `auto` (browser if available, else HTTP) |
+| `--base-url` | point at your own SearXNG instance |
+| `--delay`, `--jitter` | seconds between requests (default 2 + up to 0.5 random) |
+| `--pages` | result pages per query (default 10) |
+| `--reset-state` | clear the page history, keep found links |
+| `--debug-dir` | save HTML of pages that could not be read |
+
+It writes `search_entry_list.txt`, `search_scribd_links.txt`,
+`search_crawled_pages.txt` and `search_pending_pages.txt` next to the script.
+The row format is identical to the Node crawler's, so the downloader reads
+either. Run the tests with `uv run python -m pytest python/test_search_crawl.py`
+(no network needed — they use saved result pages).
+
+If an engine answers `HTTP 403`, run with `--fetcher=browser`: a real browser
+executes JavaScript, keeps cookies and has a genuine browser fingerprint. That
+is the whole reason this crawler moved to Python — Playwright is far better at
+this than anything in the Node setup.
+
+The Node crawler below still works and shares the same fixtures and output
+format, but the Python one is where new work happens.
 
 ## 1. Search-engine crawler (general discovery)
 
