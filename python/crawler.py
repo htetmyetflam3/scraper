@@ -711,7 +711,7 @@ def crawl(args: argparse.Namespace) -> int:
 
     stats = {key: 0 for key in ("with_results", "no_results", "blocked", "unparsed", "rate_limited", "fetch_failed", "skipped")}
     delay = args.delay
-    consecutive_blocked = consecutive_rate_limited = 0
+    consecutive_blocked = consecutive_rate_limited = consecutive_empty = 0
     debug_index = 0
     fetcher: HttpFetcher | BrowserFetcher
 
@@ -791,10 +791,10 @@ def crawl(args: argparse.Namespace) -> int:
                 stats["with_results"] += 1
                 if used_fallback:
                     print("  (read with the generic link fallback: the engine's markup may have changed)")
-                consecutive_blocked = consecutive_rate_limited = 0
+                consecutive_blocked = consecutive_rate_limited = consecutive_empty = 0
             elif status == "no-results":
                 stats["no_results"] += 1
-                consecutive_blocked = consecutive_rate_limited = 0
+                consecutive_blocked = consecutive_rate_limited = consecutive_empty = 0
                 print("  Engine reported no results for this query page.")
             else:
                 stats["unparsed" if status == "empty" else "blocked"] += 1
@@ -802,8 +802,17 @@ def crawl(args: argparse.Namespace) -> int:
                 debug_index += 1
                 print(
                     f"  No results could be read ({status}); page left pending for retry."
-                    + (f" HTML saved to {path}" if path else " Use --debug-dir to save the HTML.")
+                    + (f" HTML saved to {path}" if path else "")
                 )
+                if status == "empty":
+                    consecutive_empty += 1
+                    if consecutive_empty >= args.max_blocked:
+                        print(
+                            f"\n{consecutive_empty} consecutive pages came back with no results, no "
+                            "'no results' message and no block marker. The engine's markup or its response "
+                            f"has changed. Stopping. Look at the saved HTML in {args.debug_dir}."
+                        )
+                        break
                 if status == "blocked":
                     consecutive_blocked += 1
                     if consecutive_blocked >= args.max_blocked:
@@ -909,7 +918,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--max-rate-limited", type=int, default=3)
     parser.add_argument("--max-delay", type=float, default=60.0)
     parser.add_argument("--reset-state", action="store_true", help="clear the page history and scan everything again")
-    parser.add_argument("--debug-dir", type=Path, default=None, help="save HTML of pages that could not be read")
+    parser.add_argument("--debug-dir", type=Path, default=HERE / "debug_html",
+                        help="save HTML of pages that could not be read (first 20 per run)")
     parser.add_argument("--user-agent", default=USER_AGENT, help="override the User-Agent header")
     parser.add_argument("--entry-list", type=Path, default=HERE / "search_entry_list.txt")
     parser.add_argument("--scribd-list", type=Path, default=HERE / "search_scribd_links.txt")
