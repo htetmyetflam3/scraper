@@ -683,6 +683,39 @@ def save_debug_html(directory: Path | None, url: str, html: str, index: int, lim
 
 
 # --------------------------------------------------------------------------- #
+# Sites to crawl (handed to site_crawl.py)
+# --------------------------------------------------------------------------- #
+
+
+def site_host(url: str) -> str:
+    return urllib.parse.urlsplit(url).netloc.lower().removeprefix("www.")
+
+
+def is_site_seed(url: str) -> bool:
+    """A search result page on an ordinary website: worth crawling for PDFs.
+
+    Scribd documents, direct files and the search engines' own pages are not.
+    """
+    parts = urllib.parse.urlsplit(url)
+    if parts.scheme not in ("http", "https") or not parts.netloc:
+        return False
+    if is_scribd_document_url(url) or BOOK_EXTENSION.search(parts.path.lower()):
+        return False
+    engine_hosts = {site_host(engine.base_url) for engine in ENGINES.values()}
+    host = site_host(url)
+    return not any(host == name or host.endswith("." + name) for name in engine_hosts)
+
+
+def add_site_seed(sites: dict[str, str], url: str) -> bool:
+    """One seed per domain: the first result page seen from that domain. True if added."""
+    host = site_host(url)
+    if host in sites:
+        return False
+    sites[host] = url
+    return True
+
+
+# --------------------------------------------------------------------------- #
 # Crawl
 # --------------------------------------------------------------------------- #
 
@@ -710,6 +743,10 @@ def crawl(args: argparse.Namespace) -> int:
 
     file_links = read_book_list(args.entry_list)
     scribd_links = read_book_list(args.scribd_list)
+    site_seeds: dict[str, str] = {}
+    for url in read_url_list(args.sites):
+        add_site_seed(site_seeds, url)
+    sites_before = len(site_seeds)
 
     print(f"Search engine: {engine.name} ({engine.base_url})")
     print(f"Fetcher: {args.fetcher}")
@@ -788,6 +825,12 @@ def crawl(args: argparse.Namespace) -> int:
                     upsert(file_links, result["url"], result["title"], final_url)
                 elif BOOK_EXTENSION.search(result["url"].lower()):
                     rejected += 1
+                elif is_site_seed(result["url"]):
+                    add_site_seed(site_seeds, result["url"])
+
+            if len(site_seeds) != sites_before:
+                write_url_list(args.sites, site_seeds.values())
+                sites_before = len(site_seeds)
 
             detail = f"results: {len(results)}; new files: {new_files}; new Scribd: {new_scribd}"
             if rejected:
@@ -940,6 +983,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--user-agent", default=USER_AGENT, help="override the User-Agent header")
     parser.add_argument("--entry-list", type=Path, default=HERE / "search_entry_list.txt")
     parser.add_argument("--scribd-list", type=Path, default=HERE / "search_scribd_links.txt")
+    parser.add_argument("--sites", type=Path, default=HERE / "search_sites.txt",
+                        help="ordinary websites found by search, for site_crawl.py")
     parser.add_argument("--crawled", type=Path, default=HERE / "search_crawled_pages.txt")
     parser.add_argument("--pending", type=Path, default=HERE / "search_pending_pages.txt")
     return parser.parse_args(argv)

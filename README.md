@@ -76,6 +76,26 @@ It writes `search_entry_list.txt`, `search_scribd_links.txt`,
 If an engine answers `HTTP 403`, run with `--fetcher=chromium`: a real browser
 executes JavaScript, keeps cookies and has a genuine browser fingerprint.
 
+## 0d. Site crawler — one command, URL or search
+
+`python/site_crawl.py` crawls websites for PDF/DOCX links. Scribd links are
+recorded separately and not downloaded.
+
+```sh
+cd python
+uv run site_crawl.py https://example.org/books/   # crawl this site
+uv run site_crawl.py                              # no URL: one bounded search, then crawl the sites it finds
+uv run site_crawl.py --max-pages=30 --max-depth=2 --delay=8
+```
+
+- A given URL is the start page; the crawl stays on that domain.
+- Without a URL, the search runs **once** (`--search-terms`, default one phrase,
+  `--search-pages=2`). Each result site becomes a start URL. The search is not
+  repeated per site.
+- `robots.txt` is honoured. A site that blocks or rate-limits is abandoned at once.
+- Output: `site_entry_list.txt` (PDF/DOCX, feed it to `download.py`) and
+  `site_scribd_links.txt`.
+
 ## 0c. PDF linearizer — `python/linearize_pdfs.py`
 
 Sweeps the `pdfs/` folder that sits next to `python/` and rewrites every PDF so
