@@ -793,6 +793,16 @@ def crawl(args: argparse.Namespace) -> int:
             if rejected:
                 detail += f"; PDF/DOCX skipped as unrelated: {rejected}"
             print(f"  {detail}.")
+            # Show what the engine returned that we did not keep, so an empty
+            # "new files" line can be told apart from a filter that is too strict.
+            dropped = [
+                r for r in results
+                if not is_scribd_document_url(r["url"]) and not matches_book_candidate(r["url"], r["title"], args.match_mode)
+            ]
+            for item in dropped[:5]:
+                print(f"    not kept: {item['title'][:70]!r} -> {item['url'][:140]}")
+            if len(dropped) > 5:
+                print(f"    ... and {len(dropped) - 5} more not kept")
 
             if status == "results":
                 stats["with_results"] += 1
