@@ -111,6 +111,13 @@ BLOCKED_PATTERNS = [
         r"verification required",
         r"please complete the challenge",
         r"waiting for verification",
+        # Mojeek's 403 page when it decides the client is a bot. Without this the
+        # page was classified "empty" and the crawler kept requesting.
+        r"appears to be sending automated queries",
+        r"automated queries",
+        r"cannot process your search at this time",
+        r"can't process your search at this time",
+        r"403 - forbidden",
     )
 ]
 

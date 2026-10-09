@@ -145,6 +145,18 @@ def test_page_classification():
     assert classify_page(fixture("bing-empty-unknown.html"), 0) == "empty"
 
 
+def test_mojeek_bot_403_page_is_blocked_not_empty():
+    # The page Mojeek returned to a chromium run: "403 - Forbidden ... appears to be
+    # sending automated queries". It used to classify as "empty" and be retried.
+    html = (
+        "<html><head><title>403 - Forbidden</title></head><body><h1>403 - Forbidden</h1>"
+        "<p>Sorry your network appears to be sending automated queries so we can't process "
+        "your search at this time.</p><a href='http://localhost:8158/about/contact'>contact us</a>"
+        "</body></html>"
+    )
+    assert classify_page(html, 0) == "blocked"
+
+
 def test_mojeek_altcha_challenge_is_blocked_not_zero_results():
     # Reconstructed from the text Mojeek served for real queries (title "Captcha",
     # body "Verification required", "Protected by ALTCHA"). Before this fix it was
