@@ -3,75 +3,19 @@ import path from "node:path";
 import { pipeline } from "node:stream/promises";
 import crypto from "node:crypto";
 
-// One entry page is enough: the crawler follows relevant pages from it.
-const DEFAULT_ENTRY_URL =
-  "https://www.dhammadownload.com/AbhidhammaInMyanmar.htm";
-const ENTRY_URL = process.argv[2] || DEFAULT_ENTRY_URL;
+// Consume a crawler-generated URL list by default. Pass entry_list.txt to download
+// the separate Dhammadownload-site crawl results instead.
+const DEFAULT_ENTRY_LIST = process.env.DOWNLOAD_LIST || "search_entry_list.txt";
+const ENTRY_INPUT = process.argv[2] || DEFAULT_ENTRY_LIST;
 const OUT_DIR = path.resolve(
   process.env.DOWNLOAD_DIR || process.env.PDF_OUT_DIR || "dhammadownload_files",
 );
 const TIMEOUT_MS = 120_000;
 const RETRIES = 3;
-const DELAY_MS = 500;
 const DOWNLOAD_CONCURRENCY = Math.max(1, Number.parseInt(process.env.DOWNLOAD_CONCURRENCY || "4", 10) || 4);
 const DOWNLOAD_DELAY_MS = Math.max(0, Number.parseInt(process.env.DOWNLOAD_DELAY_MS || "200", 10) || 0);
-const MAX_PAGES = 200;
-const USER_AGENT = "Mozilla/5.0 (compatible; dhamma-pdf-crawler/1.0)";
+const USER_AGENT = "Mozilla/5.0 (compatible; dhamma-book-list-downloader/1.0)";
 
-const NON_PAGE_EXTENSIONS = new Set([
-  ".7z",
-  ".apk",
-  ".avi",
-  ".bmp",
-  ".css",
-  ".csv",
-  ".doc",
-  ".docx",
-  ".epub",
-  ".exe",
-  ".gif",
-  ".gz",
-  ".ico",
-  ".jpeg",
-  ".jpg",
-  ".js",
-  ".json",
-  ".m4a",
-  ".m4v",
-  ".mid",
-  ".midi",
-  ".mkv",
-  ".mov",
-  ".mp3",
-  ".mp4",
-  ".mpeg",
-  ".mpg",
-  ".odp",
-  ".ods",
-  ".odt",
-  ".ogg",
-  ".ogv",
-  ".pdf",
-  ".png",
-  ".ppt",
-  ".pptx",
-  ".rar",
-  ".rss",
-  ".rtf",
-  ".svg",
-  ".tar",
-  ".tgz",
-  ".txt",
-  ".wav",
-  ".webm",
-  ".webp",
-  ".woff",
-  ".woff2",
-  ".xls",
-  ".xlsx",
-  ".xml",
-  ".zip",
-]);
 
 mkdirSync(OUT_DIR, { recursive: true });
 const DOWNLOAD_HISTORY_PATH = path.join(OUT_DIR, ".download-history.json");
@@ -172,92 +116,6 @@ function decodeURIComponentSafely(value) {
   }
 }
 
-function decodeHtmlEntities(value) {
-  const namedEntities = {
-    amp: "&",
-    apos: "'",
-    gt: ">",
-    lt: "<",
-    nbsp: " ",
-    quot: '"',
-  };
-
-  return value.replace(
-    /&(?:#x([\da-f]+);?|#(\d+);?|([a-z][a-z\d]+);)/gi,
-    (match, hex, decimal, named) => {
-      if (hex) {
-        const codePoint = Number.parseInt(hex, 16);
-        return Number.isFinite(codePoint) && codePoint <= 0x10ffff
-          ? String.fromCodePoint(codePoint)
-          : match;
-      }
-      if (decimal) {
-        const codePoint = Number.parseInt(decimal, 10);
-        return Number.isFinite(codePoint) && codePoint <= 0x10ffff
-          ? String.fromCodePoint(codePoint)
-          : match;
-      }
-      return namedEntities[named.toLowerCase()] ?? match;
-    },
-  );
-}
-
-function getAttribute(tag, attributeName) {
-  const escapedName = attributeName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const pattern = new RegExp(
-    `(?:^|\\s)${escapedName}\\s*=\\s*(?:"([^"]*)"|'([^']*)'|([^\\s"'=<>\\x60]+))`,
-    "i",
-  );
-  const match = tag.match(pattern);
-  return match ? (match[1] ?? match[2] ?? match[3] ?? "") : null;
-}
-
-function getDocumentBase(html, pageUrl) {
-  const baseTag = html.match(/<base\b[^>]*>/i)?.[0];
-  const href = baseTag && getAttribute(baseTag, "href");
-  if (!href) return pageUrl;
-
-  try {
-    return new URL(decodeHtmlEntities(href.trim()), pageUrl).href;
-  } catch {
-    return pageUrl;
-  }
-}
-
-function extractLinks(html, pageUrl) {
-  // Strip comments and script/style contents so markup-like strings are not
-  // mistaken for real links. The target is a static .htm site, so reading the
-  // relevant URL-bearing elements is sufficient and avoids a runtime package.
-  const markup = html
-    .replace(/<!--[\s\S]*?-->/g, "")
-    .replace(/<(script|style)\b[^>]*>[\s\S]*?<\/\1\s*>/gi, "");
-  const documentBase = getDocumentBase(markup, pageUrl);
-  const links = new Set();
-  const tagPattern = /<(a|area|iframe|frame|embed|object|source)\b[^>]*>/gi;
-
-  for (const match of markup.matchAll(tagPattern)) {
-    const tag = match[0];
-    const tagName = match[1].toLowerCase();
-    const attributeName = tagName === "object" ? "data" :
-      tagName === "iframe" || tagName === "frame" || tagName === "embed" || tagName === "source"
-        ? "src"
-        : "href";
-    const rawLink = getAttribute(tag, attributeName);
-    if (!rawLink) continue;
-
-    try {
-      const url = new URL(decodeHtmlEntities(rawLink.trim()), documentBase);
-      if (url.protocol !== "http:" && url.protocol !== "https:") continue;
-      url.hash = "";
-      links.add(url.href);
-    } catch {
-      // Ignore malformed or intentionally non-URL hrefs.
-    }
-  }
-
-  return [...links];
-}
-
 function getDecodedPathname(url) {
   return decodeURIComponentSafely(url.pathname).toLowerCase();
 }
@@ -268,51 +126,6 @@ function isPdfUrl(url) {
 
 function isDocxUrl(url) {
   return getDecodedPathname(url).endsWith(".docx");
-}
-
-function isDownloadableUrl(url) {
-  return isPdfUrl(url) || isDocxUrl(url);
-}
-
-function normalizedHostname(hostname) {
-  return hostname.toLowerCase().replace(/^www\./, "");
-}
-
-function isSameSite(url, entryUrl) {
-  // The target site serves its pages on www and its PDFs from the apex host.
-  return normalizedHostname(url.hostname) === normalizedHostname(entryUrl.hostname);
-}
-
-function inferPageScope(entryUrl) {
-  const filename = path.posix.basename(decodeURIComponentSafely(entryUrl.pathname));
-  const stem = filename.replace(/\.[^.]+$/, "");
-  const words = stem.match(/[A-Z]+(?=[A-Z][a-z]|\b)|[A-Z]?[a-z]+|\d+/g) || [];
-  const ignoredWords = new Set([
-    "default",
-    "home",
-    "index",
-    "in",
-    "page",
-    "the",
-  ]);
-  const topic = words
-    .map((word) => word.toLowerCase())
-    .find((word) => word.length >= 6 && !ignoredWords.has(word));
-
-  // For a descriptive entry-page filename, follow pages about that subject
-  // without restricting the crawl to any particular language.
-  return topic ? { topic } : null;
-}
-
-function isRelevantPage(url, entryUrl, scope) {
-  if (!isSameSite(url, entryUrl)) return false;
-
-  const extension = path.posix.extname(getDecodedPathname(url));
-  if (extension && NON_PAGE_EXTENSIONS.has(extension)) return false;
-
-  if (scope && !getDecodedPathname(url).includes(scope.topic)) return false;
-
-  return true;
 }
 
 function safeFilename(name) {
@@ -558,92 +371,11 @@ async function downloadFiles(fileUrls) {
   return downloaded;
 }
 
-async function crawl(entryUrl, initialReferer = null) {
-  const pageScope = inferPageScope(entryUrl);
-  // Keep the source page with each link for sites that check the Referer header.
-  const downloadUrls = new Map();
-  const pendingPages = [{ url: entryUrl.href, referer: initialReferer }];
-  const queuedPages = new Set([entryUrl.href]);
-  const visitedPages = new Set();
-
-  while (pendingPages.length > 0 && visitedPages.size < MAX_PAGES) {
-    const { url: pageUrl, referer } = pendingPages.shift();
-    if (visitedPages.has(pageUrl)) continue;
-    visitedPages.add(pageUrl);
-
-    console.log(`Page ${visitedPages.size}/${MAX_PAGES}: ${pageUrl}`);
-
-    try {
-      const response = await fetchWithRetry(pageUrl, { referer });
-      const contentType = (response.headers.get("content-type") || "").toLowerCase();
-
-      // A page-like URL can still be a PDF endpoint (for example, download.php).
-      const responseFilename = filenameFromResponse(response, pageUrl).toLowerCase();
-      const isDocxResponse = contentType.includes("officedocument.wordprocessingml.document");
-      if (
-        contentType.includes("pdf") ||
-        isDocxResponse ||
-        /\.(pdf|docx)$/i.test(responseFilename) ||
-        isDownloadableUrl(new URL(pageUrl))
-      ) {
-        await saveFileResponse(response, pageUrl);
-        await sleep(DELAY_MS);
-        continue;
-      }
-
-      if (contentType && !contentType.includes("html") && !contentType.includes("xhtml")) {
-        await response.body?.cancel();
-        await sleep(DELAY_MS);
-        continue;
-      }
-
-      const html = await response.text();
-      const finalPageUrl = new URL(response.url || pageUrl);
-      const pageLinks = extractLinks(html, finalPageUrl.href);
-      let pageFileCount = 0;
-      let queuedPageCount = 0;
-
-      for (const link of pageLinks) {
-        const url = new URL(link);
-        if (isDownloadableUrl(url)) {
-          if (!downloadUrls.has(url.href)) {
-            downloadUrls.set(url.href, finalPageUrl.href);
-            pageFileCount++;
-          }
-          continue;
-        }
-
-        if (
-          isRelevantPage(url, entryUrl, pageScope) &&
-          !visitedPages.has(url.href) &&
-          !queuedPages.has(url.href)
-        ) {
-          queuedPages.add(url.href);
-          pendingPages.push({ url: url.href, referer: finalPageUrl.href });
-          queuedPageCount++;
-        }
-      }
-
-      console.log(`  Found ${pageFileCount} PDF/DOCX link(s); queued ${queuedPageCount} related page(s).`);
-    } catch (error) {
-      console.warn(`Page fetch failed: ${pageUrl} (${error.message})`);
-    }
-
-    await sleep(DELAY_MS);
-  }
-
-  if (pendingPages.length > 0) {
-    console.warn(`Reached the ${MAX_PAGES}-page safety limit; ${pendingPages.length} page(s) remain.`);
-  }
-
-  console.log(`\nFound ${downloadUrls.size} unique PDF/DOCX link(s). Downloading...\n`);
-  const downloaded = await downloadFiles(downloadUrls);
-
-  console.log(`\nDone. Visited ${visitedPages.size} page(s); saved ${downloaded} file(s) to ${OUT_DIR}.`);
-}
-
 function readEntryItems(input) {
-  if (!/^https?:\/\//i.test(input) && existsSync(input)) {
+  if (!/^https?:\/\//i.test(input)) {
+    if (!existsSync(input)) {
+      throw new Error(`Entry list not found: ${input}. Run a crawler first or pass its output-list path.`);
+    }
     const lines = readFileSync(input, "utf8")
       .split(/\r?\n/)
       .map((line) => line.trim())
@@ -659,7 +391,7 @@ function readEntryItems(input) {
         const columns = line.split("\t");
         return {
           url: columns[urlIndex]?.trim(),
-          referer: (sourceIndex >= 0 ? columns[sourceIndex] : "")?.trim() || DEFAULT_ENTRY_URL,
+          referer: (sourceIndex >= 0 ? columns[sourceIndex] : "")?.trim() || null,
         };
       }).filter((item) => item.url);
       if (items.length === 0) throw new Error(`No URL entries found in ${input}`);
@@ -673,7 +405,7 @@ function readEntryItems(input) {
       const possibleReferer = columns[entryIndex + 1];
       return {
         url: columns[entryIndex],
-        referer: /^https?:\/\//i.test(possibleReferer || "") ? possibleReferer : DEFAULT_ENTRY_URL,
+        referer: /^https?:\/\//i.test(possibleReferer || "") ? possibleReferer : null,
       };
     });
   }
@@ -681,31 +413,22 @@ function readEntryItems(input) {
 }
 
 async function main() {
-  const entries = readEntryItems(ENTRY_URL);
-  const pageUrls = new Map();
+  const entries = readEntryItems(ENTRY_INPUT);
   const fileUrls = new Map();
 
   for (const item of entries) {
     const url = parseEntryUrl(item.url);
-    if (isDownloadableUrl(url)) {
-      if (!fileUrls.has(url.href)) fileUrls.set(url.href, item.referer);
-    } else if (!pageUrls.has(url.href)) {
-      pageUrls.set(url.href, item.referer);
-    }
+    if (!fileUrls.has(url.href)) fileUrls.set(url.href, item.referer);
   }
 
-  if (fileUrls.size) {
-    console.log(`Downloading ${fileUrls.size} file(s) from the entry list...`);
-    await downloadFiles(fileUrls);
-  }
-
-  for (const [pageUrl, referer] of pageUrls) {
-    await crawl(parseEntryUrl(pageUrl), referer);
-  }
+  if (fileUrls.size === 0) throw new Error(`No download URLs found in ${ENTRY_INPUT}`);
+  console.log(`Downloading ${fileUrls.size} URL(s) from ${ENTRY_INPUT}...`);
+  const downloaded = await downloadFiles(fileUrls);
+  console.log(`\nDone. Saved ${downloaded} new file(s) to ${OUT_DIR}.`);
 }
 
 main().catch((error) => {
   console.error(error.message);
-  console.error("Usage: node download.js [entry-url|entry-list.txt]");
+  console.error("Usage: node node/download.js [crawler-output-list.txt|direct-file-url]");
   process.exitCode = 1;
 });

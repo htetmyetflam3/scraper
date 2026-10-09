@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
+// Separate, site-specific crawler. General discovery uses search_crawl_books.js.
 const DEFAULT_ENTRY_URL =
   "https://www.dhammadownload.com/AbhidhammaInMyanmar.htm";
 const ENTRY_URL = process.argv[2] || DEFAULT_ENTRY_URL;
