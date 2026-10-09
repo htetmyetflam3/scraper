@@ -13,6 +13,8 @@ const OUT_DIR = path.resolve(
 const TIMEOUT_MS = 120_000;
 const RETRIES = 3;
 const DELAY_MS = 500;
+const DOWNLOAD_CONCURRENCY = Math.max(1, Number.parseInt(process.env.DOWNLOAD_CONCURRENCY || "4", 10) || 4);
+const DOWNLOAD_DELAY_MS = Math.max(0, Number.parseInt(process.env.DOWNLOAD_DELAY_MS || "200", 10) || 0);
 const MAX_PAGES = 200;
 const USER_AGENT = "Mozilla/5.0 (compatible; dhamma-pdf-crawler/1.0)";
 
@@ -72,6 +74,7 @@ const NON_PAGE_EXTENSIONS = new Set([
 ]);
 
 mkdirSync(OUT_DIR, { recursive: true });
+const reservedOutPaths = new Set();
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -310,6 +313,35 @@ function supportedContentExtension(contentType) {
   return "";
 }
 
+function reserveOutputPath(filename, fileUrl, extension) {
+  const initialPath = path.join(OUT_DIR, filename);
+  if (!existsSync(initialPath) && !reservedOutPaths.has(initialPath)) {
+    reservedOutPaths.add(initialPath);
+    return { path: initialPath, alreadyDownloaded: false };
+  }
+
+  const outputExtension = path.extname(filename) || extension;
+  const basename = filename.slice(0, filename.length - outputExtension.length);
+  const hash = crypto.createHash("sha1").update(fileUrl).digest("hex").slice(0, 10);
+  let suffix = 0;
+  while (true) {
+    const extra = suffix === 0 ? hash : `${hash}_${suffix}`;
+    const candidate = path.join(OUT_DIR, `${basename}__${extra}${outputExtension}`);
+    if (existsSync(candidate)) {
+      // The URL-derived name is stable, so an existing hashed copy is a repeat.
+      if (suffix === 0) return { path: candidate, alreadyDownloaded: true };
+      suffix++;
+      continue;
+    }
+    if (reservedOutPaths.has(candidate)) {
+      suffix++;
+      continue;
+    }
+    reservedOutPaths.add(candidate);
+    return { path: candidate, alreadyDownloaded: false };
+  }
+}
+
 async function saveFileResponse(response, fileUrl) {
   const contentType = (response.headers.get("content-type") || "").toLowerCase();
   const filename = filenameFromResponse(response, fileUrl);
@@ -327,36 +359,63 @@ async function saveFileResponse(response, fileUrl) {
     return false;
   }
 
-  const safeName = namedExtension
-    ? safeFilename(filename)
-    : `${safeFilename(filename.replace(/\.[^.]+$/, "")) || "download"}${extension}`;
-  let outPath = path.join(OUT_DIR, safeName);
-
-  if (existsSync(outPath)) {
-    const hash = crypto.createHash("sha1").update(fileUrl).digest("hex").slice(0, 8);
-    const outputExtension = path.extname(safeName) || extension;
-    const outputBasename = safeName.slice(0, safeName.length - outputExtension.length);
-    outPath = path.join(OUT_DIR, `${outputBasename}__${hash}${outputExtension}`);
-    if (existsSync(outPath)) {
-      console.log(`Already downloaded: ${outPath}`);
-      await response.body?.cancel();
-      return false;
-    }
-  }
-
   if (!response.body) {
     console.warn(`Skip (empty response body): ${fileUrl}`);
     return false;
   }
 
-  await pipeline(response.body, createWriteStream(outPath, { flags: "wx" }));
-  console.log(`Saved: ${outPath}`);
-  return true;
+  const safeName = namedExtension
+    ? safeFilename(filename)
+    : `${safeFilename(filename.replace(/\.[^.]+$/, "")) || "download"}${extension}`;
+  const reservation = reserveOutputPath(safeName, fileUrl, extension);
+  if (reservation.alreadyDownloaded) {
+    console.log(`Already downloaded: ${reservation.path}`);
+    await response.body.cancel();
+    return false;
+  }
+
+  try {
+    await pipeline(response.body, createWriteStream(reservation.path, { flags: "wx" }));
+    console.log(`Saved: ${reservation.path}`);
+    return true;
+  } finally {
+    reservedOutPaths.delete(reservation.path);
+  }
 }
 
 async function downloadFile(fileUrl, referer) {
   const response = await fetchWithRetry(fileUrl, { referer });
   return saveFileResponse(response, fileUrl);
+}
+
+async function downloadFiles(fileUrls) {
+  const items = [...fileUrls];
+  let nextIndex = 0;
+  let nextStartAt = Date.now();
+  let downloaded = 0;
+
+  async function worker() {
+    while (true) {
+      const index = nextIndex++;
+      if (index >= items.length) return;
+
+      const [fileUrl, referer] = items[index];
+      const startAt = Math.max(Date.now(), nextStartAt);
+      nextStartAt = startAt + DOWNLOAD_DELAY_MS;
+      await sleep(Math.max(0, startAt - Date.now()));
+
+      console.log(`Downloading: ${fileUrl}`);
+      try {
+        if (await downloadFile(fileUrl, referer)) downloaded++;
+      } catch (error) {
+        console.warn(`Download failed: ${fileUrl} (${error.message})`);
+      }
+    }
+  }
+
+  const workerCount = Math.min(DOWNLOAD_CONCURRENCY, items.length);
+  await Promise.all(Array.from({ length: workerCount }, () => worker()));
+  return downloaded;
 }
 
 async function crawl(entryUrl, initialReferer = null) {
@@ -438,17 +497,7 @@ async function crawl(entryUrl, initialReferer = null) {
   }
 
   console.log(`\nFound ${downloadUrls.size} unique PDF/DOCX link(s). Downloading...\n`);
-  let downloaded = 0;
-
-  for (const [fileUrl, fileReferer] of downloadUrls) {
-    console.log(`Downloading: ${fileUrl}`);
-    try {
-      if (await downloadFile(fileUrl, fileReferer)) downloaded++;
-    } catch (error) {
-      console.warn(`Download failed: ${fileUrl} (${error.message})`);
-    }
-    await sleep(DELAY_MS);
-  }
+  const downloaded = await downloadFiles(downloadUrls);
 
   console.log(`\nDone. Visited ${visitedPages.size} page(s); saved ${downloaded} file(s) to ${OUT_DIR}.`);
 }
@@ -505,14 +554,9 @@ async function main() {
     }
   }
 
-  for (const [fileUrl, referer] of fileUrls) {
-    console.log(`Downloading listed file: ${fileUrl}`);
-    try {
-      await downloadFile(fileUrl, referer);
-    } catch (error) {
-      console.warn(`Download failed: ${fileUrl} (${error.message})`);
-    }
-    await sleep(DELAY_MS);
+  if (fileUrls.size) {
+    console.log(`Downloading ${fileUrls.size} file(s) from the entry list...`);
+    await downloadFiles(fileUrls);
   }
 
   for (const [pageUrl, referer] of pageUrls) {
