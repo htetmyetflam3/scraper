@@ -22,20 +22,29 @@ dependencies = [
     "tqdm>=4.66",
 ]
 
-[project.optional-dependencies]
-# Headless browser support for python/search_crawl.py, for engines that answer
-# plain HTTP with 403. Install with:  uv sync --extra browser
-browser = ["playwright>=1.61.0-1"]
+# No browser dependency. The crawler drives the system Chromium
+# (`chromium --headless --dump-dom`), so headless support costs one package from
+# your distro -- apk add chromium / pacman -S chromium / apt install chromium --
+# and nothing from PyPI. Playwright cannot be installed here anyway: it ships no
+# wheel for musl (Alpine), and its bundled Chromium is glibc-only.
+#
+# On a glibc machine Playwright works and is used when installed:
+#   uv pip install playwright && playwright install chromium
+# Nothing here depends on it, so no documented command can fail on musl.
 
 [project.scripts]
-search-crawl = "search_crawl:main"
+crawl = "crawler:main"
+search-crawl = "crawler:main"
 download-books = "download:main"
 
 [tool.pytest.ini_options]
-# python/test/ holds scribdl's upstream tests, which download from scribd.com;
-# they are not part of `pytest` by default.
+# python/test/ holds scribdl's upstream tests (test_images.py, test_text.py),
+# which download from scribd.com; they are not part of `pytest` by default.
 testpaths = ["test/crawler.py", "test/download.py"]
-pythonpath = ["python"]
+pythonpath = ["."]
+# importlib mode keeps test/crawler.py from shadowing the crawler module it is
+# testing (both would otherwise be imported under the name "crawler").
+addopts = "--import-mode=importlib"
 
 
 

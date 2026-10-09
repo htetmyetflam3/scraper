@@ -1,29 +1,69 @@
 # Myanmar book link scraper
 
-This repository has two independent crawlers (Python and Node) and one list-based downloader:
+This repository has two independent crawlers (Python and Node) and one list-based
+downloader. The Python pair lives in `python/` and is the one under active work:
 
 ## 0. Search-engine crawler — Python (recommended)
 
-`python/search_crawl.py` is the crawler to use. It reads results with CSS
-selectors instead of hand-written HTML parsing, keeps cookies across requests
-(the usual cause of a 403 on page two), and can drive a **real headless
-Chromium** through Playwright when an engine refuses plain HTTP.
+`python/crawler.py` is the crawler to use. It reads results with CSS selectors
+instead of hand-written HTML parsing, keeps cookies across requests (the usual
+cause of a 403 on page two), and can drive a **real headless Chromium** when an
+engine refuses plain HTTP.
 
 ```sh
-uv sync                                   # requests + beautifulsoup4
-uv sync --extra browser                   # + playwright for --fetcher=browser
-uv run playwright install chromium        # download the browser once
+cd python
+uv sync                       # requests, beautifulsoup4, httpx, tenacity, tqdm
 
-uv run python/search_crawl.py                          # Mojeek, default terms
-uv run python/search_crawl.py --engine=searx
-uv run python/search_crawl.py --fetcher=browser        # headless Chromium
-uv run python/search_crawl.py --reset-state            # scan everything again
+uv run crawler.py                         # Mojeek, default terms
+uv run crawler.py --engine=searx
+uv run crawler.py --fetcher=chromium      # real headless browser
+uv run crawler.py --reset-state           # scan everything again
+uv run pytest                             # 35 tests, no network needed
 ```
+
+### Headless browser: one distro package, no Python wheel
+
+`--fetcher=chromium` shells out to the browser already on your system and reads
+the DOM with `chromium --headless --dump-dom`. There is **no Python browser
+package to install**, which is deliberate:
+
+- Playwright publishes no wheel for musl, so `uv add playwright` fails on
+  Alpine/aarch64 with *"only has wheels for the following platforms"*.
+- Even where the wheel installs, `playwright install chromium` downloads a
+  Chromium linked against glibc, which will not run on musl either.
+
+So install the browser with your package manager and the crawler finds it
+automatically (`--browser-path`, `$CHROMIUM_PATH`, then `$PATH`):
+
+```sh
+apk add chromium          # Alpine / postmarketOS
+pacman -S chromium        # Arch (incl. Arch Linux ARM)
+apt install chromium      # Debian / Ubuntu
+brew install --cask chromium   # macOS
+```
+
+On a glibc machine Playwright also works, and is used when it is installed
+(`uv pip install playwright && playwright install chromium`). Nothing depends on
+it, so no documented command can fail on musl.
+
+No browser and no package manager? `--browser-path` also takes a whole command,
+so a containerised browser works:
+
+```sh
+docker run --rm -p 53333:53333 jacoblincool/playwright:chromium-light-server
+uv run crawler.py --fetcher=chromium \
+  --browser-path="docker run --rm --entrypoint chromium jacoblincool/playwright:chromium-light"
+```
+
+`jacoblincool/playwright` publishes Alpine ARMv8 images, which is the one
+combination PyPI cannot serve. If the entrypoint differs, `--browser-path` takes
+any command that accepts Chromium flags and ends with the URL.
 
 | Flag | Notes |
 | --- | --- |
 | `--engine` | `mojeek` (default), `searx`, `brave`, `bing`, `google`, `duckduckgo` |
-| `--fetcher` | `http` (requests), `browser` (headless Chromium), `auto` (browser if available, else HTTP) |
+| `--fetcher` | `chromium` (system browser, no Python package), `playwright` (its bundled browser), `http` (requests), `auto` (first one available, else HTTP) |
+| `--browser-path` | path to a Chromium/Chrome binary |
 | `--base-url` | point at your own SearXNG instance |
 | `--delay`, `--jitter` | seconds between requests (default 2 + up to 0.5 random) |
 | `--pages` | result pages per query (default 10) |
@@ -32,17 +72,9 @@ uv run python/search_crawl.py --reset-state            # scan everything again
 
 It writes `search_entry_list.txt`, `search_scribd_links.txt`,
 `search_crawled_pages.txt` and `search_pending_pages.txt` next to the script.
-The row format is identical to the Node crawler's, so the downloader reads
-either. Run the tests with `uv run python -m pytest python/test_search_crawl.py`
-(no network needed — they use saved result pages).
 
-If an engine answers `HTTP 403`, run with `--fetcher=browser`: a real browser
-executes JavaScript, keeps cookies and has a genuine browser fingerprint. That
-is the whole reason this crawler moved to Python — Playwright is far better at
-this than anything in the Node setup.
-
-The Node crawler below still works and shares the same fixtures and output
-format, but the Python one is where new work happens.
+If an engine answers `HTTP 403`, run with `--fetcher=chromium`: a real browser
+executes JavaScript, keeps cookies and has a genuine browser fingerprint.
 
 ## 1. Search-engine crawler (general discovery)
 
@@ -173,9 +205,10 @@ Its progress is persisted separately in `crawled_pages.txt` and `pending_pages.t
 `python/download.py` consumes a crawler-generated TSV or a plain URL list:
 
 ```sh
-uv run python/download.py                          # search_entry_list.txt
-uv run python/download.py entry_list.txt           # the other crawler's output
-uv run python/download.py --concurrency=8 --verify-pdf
+cd python
+uv run download.py                        # search_entry_list.txt
+uv run download.py entry_list.txt         # a plain URL list
+uv run download.py --concurrency=8 --verify-pdf
 ```
 
 It downloads concurrently with `httpx`, retries with `tenacity` (exponential
@@ -189,13 +222,13 @@ PDF must start with `%PDF`, a DOCX must be a zip — and optionally opened with
 `pikepdf` (`--verify-pdf`). Failures are listed at the end and stay downloadable
 on the next run.
 
-`python/download.py --help` for concurrency, timeout, delay and retry options.
-Tests: `uv run pytest` (no network needed).
+`uv run download.py --help` for concurrency, timeout, delay and retry
+options. Tests: `uv run pytest` (no network needed).
 
 Scribd documents are not direct files — they need the vendored `scribdl`:
 
 ```sh
-cd python && uv run python -m scribdl.scribdl "https://www.scribd.com/document/123/Title"
+uv run python -m scribdl.scribdl "https://www.scribd.com/document/123/Title"
 ```
 
 The Node downloader below still works, but the Python one is where new work happens.

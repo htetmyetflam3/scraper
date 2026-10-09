@@ -3,12 +3,15 @@
 
 Finds Burmese PDF/DOCX files and Scribd documents by paging through search
 engine results. Results are read from the DOM with CSS selectors, so no
-hand-written HTML parsing: `--fetcher=browser` runs a real headless Chromium
-(Playwright) when an engine refuses plain HTTP requests.
+hand-written HTML parsing: `--fetcher=chromium` runs a real headless Chromium
+when an engine refuses plain HTTP requests. It drives the system browser
+(`chromium --headless --dump-dom`), so there is no Python browser package to
+install -- which matters on platforms where the Playwright wheel does not
+exist, such as Alpine/musl on aarch64.
 
     python search_crawl.py                       # Mojeek, default terms
     python search_crawl.py --engine=searx
-    python search_crawl.py --fetcher=browser     # headless Chromium
+    python crawler.py --fetcher=chromium    # headless Chromium (system binary)
     python search_crawl.py --reset-state         # re-read everything
 
 State lives in search_crawled_pages.txt / search_pending_pages.txt next to this
@@ -21,9 +24,14 @@ from __future__ import annotations
 import argparse
 import base64
 import dataclasses
+import os
 import random
 import re
+import shlex
+import shutil
+import subprocess
 import sys
+import tempfile
 import time
 import urllib.parse
 from contextlib import ExitStack
@@ -36,7 +44,7 @@ except ModuleNotFoundError:  # pragma: no cover
     sys.exit("Missing dependencies. Run:  uv sync  (or pip install requests beautifulsoup4)")
 
 HERE = Path(__file__).resolve().parent
-FIXTURES = HERE.parent / "js" / "test" / "fixtures"
+FIXTURES = HERE / "test" / "fixtures"
 
 USER_AGENT = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
@@ -147,8 +155,9 @@ class Engine:
         params = {"q": "{query}"}
         if self.name == "mojeek":
             # Mojeek rate-limits requests that set s=0, so page one omits it.
+            # s is a 1-based result index: page two starts at result 11.
             if page > 0:
-                params["s"] = str(page * self.per_page)
+                params["s"] = str(page * self.per_page + 1)
         elif self.name == "searx":
             params.update(pageno=str(page + 1), categories="general", safesearch="0", language="all")
         elif self.name == "brave":
@@ -405,8 +414,10 @@ class BrowserFetcher:
             from playwright.sync_api import sync_playwright  # noqa: PLC0415
         except ModuleNotFoundError as error:  # pragma: no cover
             raise RuntimeError(
-                "Playwright is not installed. Run:  uv sync --extra browser  "
-                "&& uv run playwright install chromium"
+                "Playwright is not installed (it ships no wheel for musl/Alpine, and its "
+                "bundled Chromium needs glibc). Install the system Chromium instead: "
+                "  apk add chromium   /   pacman -S chromium   /   apt install chromium  "
+                "-- the crawler uses it automatically."
             ) from error
         self._sync_playwright = sync_playwright
         self.wait_selector = wait_selector
@@ -451,6 +462,131 @@ class BrowserFetcher:
         except Exception:
             pass  # Rendered HTML is still usable if the selector never appears.
         return self._page.content(), self._page.url or url
+
+
+# Chromium binaries to look for, in order. Alpine ships "chromium", Arch/Debian
+# ship "chromium" too, Google's builds are "google-chrome*".
+CHROMIUM_NAMES = (
+    "chromium",
+    "chromium-browser",
+    "chromium-headless-shell",
+    "google-chrome",
+    "google-chrome-stable",
+    "chrome",
+)
+
+
+def find_chromium(explicit: str | None = None) -> list[str] | None:
+    """Locate a Chromium binary: --browser-path, $CHROMIUM_PATH, then $PATH.
+
+    Returns an argv prefix. --browser-path may be a whole command, which is how
+    you point at a browser inside a container, e.g.
+
+        --browser-path="docker run --rm --entrypoint chromium IMAGE"
+    """
+    if explicit:
+        argv = shlex.split(explicit)
+        if not argv:
+            return None
+        head = Path(argv[0]).expanduser()
+        if head.exists():
+            return [str(head)] + argv[1:]
+        if shutil.which(argv[0]):
+            return [shutil.which(argv[0])] + argv[1:]
+        return None
+    env = os.environ.get("CHROMIUM_PATH")
+    if env:
+        head = Path(env).expanduser()
+        if head.exists():
+            return [str(head)]
+    for name in CHROMIUM_NAMES:
+        found = shutil.which(name)
+        if found:
+            return [found]
+    return None
+
+
+class ChromiumFetcher:
+    """Headless Chromium driven through the system binary, with no Python package.
+
+    `chromium --headless --dump-dom` renders the page (JavaScript included) and
+    prints the DOM to stdout, which is all the parser needs. It needs nothing
+    installed beyond the browser itself, so it works on platforms where the
+    Playwright wheel is unavailable -- Alpine/musl on aarch64, for instance,
+    where Playwright ships no wheel and its bundled Chromium would not run
+    anyway because that build is linked against glibc.
+
+    One browser per page is slower than a persistent browser, so a --user-data-dir
+    keeps cookies between pages.
+    """
+
+    def __init__(
+        self,
+        binary: str | None = None,
+        timeout: float = 60.0,
+        user_agent: str = USER_AGENT,
+        virtual_time_budget_ms: int = 5_000,
+        no_sandbox: bool = True,
+    ):
+        self.argv = find_chromium(binary)
+        if not self.argv:
+            raise RuntimeError(
+                "No Chromium binary found. Install one, e.g.  apk add chromium  "
+                "(Alpine),  pacman -S chromium  (Arch),  apt install chromium  "
+                "(Debian), or point at one with --browser-path=/path/to/chromium."
+            )
+        self.timeout = timeout
+        self.user_agent = user_agent
+        self.virtual_time_budget_ms = virtual_time_budget_ms
+        self.no_sandbox = no_sandbox
+        self._profile = None
+
+    def __enter__(self) -> "ChromiumFetcher":
+        self._profile = tempfile.mkdtemp(prefix="search-crawl-chromium-")
+        return self
+
+    def __exit__(self, *exc_info) -> None:
+        self.close()
+
+    def close(self) -> None:
+        if self._profile:
+            shutil.rmtree(self._profile, ignore_errors=True)
+            self._profile = None
+
+    def command(self, url: str) -> list[str]:
+        cmd = list(self.argv) + [
+            "--headless=new",
+            "--disable-gpu",
+            "--disable-dev-shm-usage",
+            "--hide-scrollbars",
+            "--no-first-run",
+            f"--user-agent={self.user_agent}",
+            f"--virtual-time-budget={self.virtual_time_budget_ms}",
+            f"--user-data-dir={self._profile}",
+        ]
+        if self.no_sandbox:
+            cmd.append("--no-sandbox")  # required when running as root, e.g. in a container
+        cmd += ["--dump-dom", url]
+        return cmd
+
+    def fetch(self, url: str) -> tuple[str, str]:
+        if self._profile is None:  # pragma: no cover - used as a context manager
+            raise RuntimeError("ChromiumFetcher used without entering its context")
+        try:
+            proc = subprocess.run(
+                self.command(url),
+                capture_output=True,
+                timeout=self.timeout,
+            )
+        except subprocess.TimeoutExpired as error:
+            raise RuntimeError(f"Chromium timed out after {self.timeout:.0f}s") from error
+        except OSError as error:  # pragma: no cover - binary missing/not executable
+            raise RuntimeError(f"Could not run {' '.join(self.argv)}: {error}") from error
+        html = proc.stdout.decode("utf-8", "replace")
+        if proc.returncode != 0 and not html.strip():
+            detail = proc.stderr.decode("utf-8", "replace").strip().splitlines()
+            raise RuntimeError(f"Chromium exited {proc.returncode}: {detail[-1] if detail else 'no output'}")
+        return html, url
 
 
 def parse_retry_after(value: str | None) -> float:
@@ -609,8 +745,8 @@ def crawl(args: argparse.Namespace) -> int:
                 if consecutive_blocked >= args.max_blocked:
                     print(
                         f"\n{consecutive_blocked} consecutive refused pages: {engine.name} is refusing requests. "
-                        "Stopping; the remaining pages stay queued. Try --fetcher=browser (headless Chromium looks "
-                        "like a real browser), switch --engine, or set --user-agent."
+                        "Stopping; the remaining pages stay queued. Try --fetcher=chromium (a real browser looks "
+                        "nothing like this client), switch --engine, or set --user-agent."
                     )
                     break
                 index += 1
@@ -667,7 +803,7 @@ def crawl(args: argparse.Namespace) -> int:
                     if consecutive_blocked >= args.max_blocked:
                         print(
                             f"\n{consecutive_blocked} consecutive blocked pages: {engine.name} is refusing "
-                            "requests. Stopping; the remaining pages stay queued. Try --fetcher=browser."
+                            "requests. Stopping; the remaining pages stay queued. Try --fetcher=chromium."
                         )
                         break
                 index += 1
@@ -709,8 +845,20 @@ def same_engine(url: str, engine: Engine) -> bool:
 
 
 def make_fetcher(args: argparse.Namespace, engine: Engine, stack: ExitStack):
-    """Return a fetcher registered with `stack`, falling back to HTTP for --fetcher=auto."""
-    if args.fetcher in ("browser", "auto"):
+    """Return a fetcher registered with `stack`, falling back to HTTP when a browser is absent."""
+    notes: list[str] = []
+
+    if args.fetcher in ("auto", "chromium"):
+        try:
+            fetcher = ChromiumFetcher(binary=args.browser_path, user_agent=args.user_agent)
+            stack.enter_context(fetcher)
+            return fetcher
+        except RuntimeError as error:
+            if args.fetcher == "chromium":
+                raise
+            notes.append(str(error))
+
+    if args.fetcher in ("auto", "playwright", "browser"):
         try:
             browser = BrowserFetcher(
                 wait_selector=engine.result_selector,
@@ -720,10 +868,16 @@ def make_fetcher(args: argparse.Namespace, engine: Engine, stack: ExitStack):
             stack.enter_context(browser)
             return browser
         except RuntimeError as error:
-            if args.fetcher == "browser":
+            if args.fetcher in ("playwright", "browser"):
                 raise
-            print(f"Headless browser unavailable: {error}")
-            print("Falling back to plain HTTP requests.")
+            notes.append(str(error))
+
+    if args.fetcher != "http":
+        print("No headless browser available:")
+        for note in notes or ["none found"]:
+            print(f"  - {note}")
+        print("Falling back to plain HTTP requests.")
+
     fetcher = HttpFetcher(user_agent=args.user_agent)
     stack.callback(fetcher.close)
     return fetcher
@@ -734,9 +888,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("query", nargs="*", help="exact queries (default: generated from --terms)")
     parser.add_argument("--engine", default="mojeek", choices=sorted(ENGINES))
     parser.add_argument("--base-url", default="", help="override the engine URL, e.g. your own SearXNG instance")
-    parser.add_argument("--fetcher", default="auto", choices=("auto", "http", "browser"),
-                        help="http = requests; browser = headless Chromium (Playwright); auto = browser if available")
-    parser.add_argument("--headful", action="store_true", help="show the browser window (debug)")
+    parser.add_argument("--fetcher", default="auto", choices=("auto", "http", "chromium", "playwright", "browser"),
+                        help="http = requests; chromium = system Chromium (--headless --dump-dom, no Python package "
+                             "needed); playwright = Playwright's bundled Chromium; auto = whichever is available")
+    parser.add_argument("--browser-path", default=None, metavar="PATH",
+                        help="path to a Chromium/Chrome binary (else $CHROMIUM_PATH, then $PATH)")
+    parser.add_argument("--headful", action="store_true", help="show the browser window (debug; Playwright only)")
     parser.add_argument("--delay", type=float, default=2.0, help="seconds between requests (default 2)")
     parser.add_argument("--jitter", type=float, default=0.5, help="random extra delay, seconds (default 0.5)")
     parser.add_argument("--pages", type=int, default=10, help="result pages per query (default 10)")
