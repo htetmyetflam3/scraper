@@ -455,16 +455,38 @@ async function crawl(entryUrl, initialReferer = null) {
 
 function readEntryItems(input) {
   if (!/^https?:\/\//i.test(input) && existsSync(input)) {
-    const items = readFileSync(input, "utf8")
+    const lines = readFileSync(input, "utf8")
       .split(/\r?\n/)
       .map((line) => line.trim())
-      .filter((line) => line && !line.startsWith("#"))
-      .map((line) => {
-        const [url, referer] = line.split(/\s+\|\s+|\t+/);
-        return { url: url.trim(), referer: referer?.trim() || DEFAULT_ENTRY_URL };
-      });
-    if (items.length === 0) throw new Error(`No URL entries found in ${input}`);
-    return items;
+      .filter((line) => line && !line.startsWith("#"));
+    if (lines.length === 0) throw new Error(`No URL entries found in ${input}`);
+
+    const header = lines[0].split("\t").map((cell) => cell.trim().toLowerCase());
+    const urlIndex = header.indexOf("url");
+    if (urlIndex >= 0) {
+      const sourceIndex = header.indexOf("source page");
+      const firstDataRow = lines[0].includes("\t") ? 1 : 0;
+      const items = lines.slice(firstDataRow).map((line) => {
+        const columns = line.split("\t");
+        return {
+          url: columns[urlIndex]?.trim(),
+          referer: (sourceIndex >= 0 ? columns[sourceIndex] : "")?.trim() || DEFAULT_ENTRY_URL,
+        };
+      }).filter((item) => item.url);
+      if (items.length === 0) throw new Error(`No URL entries found in ${input}`);
+      return items;
+    }
+
+    return lines.map((line) => {
+      const columns = line.split(/\s+\|\s+|\t+/).map((cell) => cell.trim());
+      const entryIndex = columns.findIndex((cell) => /^https?:\/\//i.test(cell));
+      if (entryIndex < 0) throw new Error(`No URL found in entry: ${line}`);
+      const possibleReferer = columns[entryIndex + 1];
+      return {
+        url: columns[entryIndex],
+        referer: /^https?:\/\//i.test(possibleReferer || "") ? possibleReferer : DEFAULT_ENTRY_URL,
+      };
+    });
   }
   return [{ url: input, referer: null }];
 }

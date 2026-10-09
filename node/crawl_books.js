@@ -1,4 +1,4 @@
-import { mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
 const DEFAULT_ENTRY_URL =
@@ -13,6 +13,7 @@ const USER_AGENT = "Mozilla/5.0 (compatible; dhamma-book-link-crawler/1.0)";
 const ENTRY_LIST_PATH = path.resolve(process.env.ENTRY_LIST_OUT || "entry_list.txt");
 const SCRIBD_LIST_PATH = path.resolve(process.env.SCRIBD_LIST_OUT || "scribd_links.txt");
 const CRAWLED_PAGES_PATH = path.resolve(process.env.CRAWLED_PAGES_OUT || "crawled_pages.txt");
+const PENDING_PAGES_PATH = path.resolve(process.env.PENDING_PAGES_OUT || "pending_pages.txt");
 const SKIP_PAGE_EXTENSIONS = new Set([
   ".7z", ".apk", ".avi", ".bmp", ".css", ".csv", ".doc", ".docx", ".epub",
   ".exe", ".gif", ".gz", ".ico", ".jpeg", ".jpg", ".js", ".json", ".m4a",
@@ -73,6 +74,25 @@ function getAttribute(tag, attributeName) {
   return match ? (match[1] ?? match[2] ?? match[3] ?? "") : null;
 }
 
+function cleanLabel(value) {
+  return decodeHtmlEntities(value.replace(/<[^>]*>/g, " "))
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function labelFromAnchor(markup, tag, startAfterTag) {
+  const title = getAttribute(tag, "title") || getAttribute(tag, "aria-label");
+  const closeIndex = markup.toLowerCase().indexOf("</a", startAfterTag);
+  const inner = closeIndex >= 0 ? markup.slice(startAfterTag, closeIndex) : "";
+  const text = cleanLabel(inner.replace(/<br\b[^>]*>/gi, " "));
+  if (text) return text;
+  if (title) return cleanLabel(title);
+
+  const imageTag = inner.match(/<img\b[^>]*>/i)?.[0];
+  const imageAlt = imageTag && getAttribute(imageTag, "alt");
+  return imageAlt ? cleanLabel(imageAlt) : "";
+}
+
 function getDocumentBase(html, pageUrl) {
   const baseTag = html.match(/<base\b[^>]*>/i)?.[0];
   const href = baseTag && getAttribute(baseTag, "href");
@@ -89,7 +109,7 @@ function extractLinks(html, pageUrl) {
     .replace(/<!--[\s\S]*?-->/g, "")
     .replace(/<(script|style)\b[^>]*>[\s\S]*?<\/\1\s*>/gi, "");
   const baseUrl = getDocumentBase(markup, pageUrl);
-  const links = new Set();
+  const links = new Map();
   const tags = /<(a|area|iframe|frame|embed|object|source)\b[^>]*>/gi;
 
   for (const match of markup.matchAll(tags)) {
@@ -107,17 +127,28 @@ function extractLinks(html, pageUrl) {
       const url = new URL(decodeHtmlEntities(raw.trim()), baseUrl);
       if (url.protocol !== "http:" && url.protocol !== "https:") continue;
       url.hash = "";
-      links.add(url.href);
+      const name = tagName === "a"
+        ? labelFromAnchor(markup, tag, match.index + tag.length)
+        : getAttribute(tag, "title") || getAttribute(tag, "aria-label") || "";
+      links.set(url.href, { url: url.href, name: cleanLabel(name) });
     } catch {
       // Ignore malformed and non-HTTP links.
     }
   }
 
-  return [...links];
+  return [...links.values()];
 }
 
 function decodedPathname(url) {
   return decodeURIComponentSafely(url.pathname).toLowerCase();
+}
+
+function filenameFromUrl(url) {
+  return path.posix.basename(decodeURIComponentSafely(url.pathname));
+}
+
+function fallbackBookName(url) {
+  return filenameFromUrl(url).replace(/\.(pdf|docx)$/i, "") || url.href;
 }
 
 function normalizedHostname(hostname) {
@@ -140,13 +171,13 @@ function isScribdUrl(url) {
 }
 
 function matchesBookFilename(url) {
-  const filename = path.posix.basename(decodeURIComponentSafely(url.pathname));
+  const filename = filenameFromUrl(url);
   const extension = path.posix.extname(filename).toLowerCase();
   if (extension !== ".pdf" && extension !== ".docx") return false;
 
   const stem = filename.slice(0, -extension.length);
   const matchesLanguageName = /myanmar|burmese|burma/i.test(stem);
-  // The range is inclusive: Myanmar code points U+1000 through U+1041.
+  // Match the supplied Myanmar Unicode range anywhere in the filename stem.
   const containsMyanmarCharacter = /[\u1000-\u1041]/u.test(stem);
   return matchesLanguageName || containsMyanmarCharacter;
 }
@@ -171,98 +202,186 @@ async function fetchWithRetry(url, referer) {
   throw lastError;
 }
 
+function cleanTsvCell(value) {
+  return String(value || "").replace(/[\t\r\n]+/g, " ").trim();
+}
+
+function recordFromUrl(url, name = "", source = "") {
+  return {
+    name: cleanTsvCell(name) || fallbackBookName(new URL(url)),
+    url,
+    source: cleanTsvCell(source),
+  };
+}
+
+function readBookList(filePath) {
+  const records = new Map();
+  if (!existsSync(filePath)) return records;
+  const lines = readFileSync(filePath, "utf8").split(/\r?\n/).filter((line) => line.trim());
+  if (!lines.length) return records;
+
+  const header = lines[0].split("\t").map((cell) => cell.trim().toLowerCase());
+  const headerUrlIndex = header.indexOf("url");
+  if (headerUrlIndex >= 0 && header.includes("book name")) {
+    const nameIndex = header.indexOf("book name");
+    const sourceIndex = header.indexOf("source page");
+    for (const line of lines.slice(1)) {
+      const columns = line.split("\t");
+      const url = columns[headerUrlIndex]?.trim();
+      if (!url) continue;
+      records.set(url, recordFromUrl(url, columns[nameIndex], columns[sourceIndex]));
+    }
+    return records;
+  }
+
+  // Also load older one-URL-per-line entry lists.
+  for (const line of lines) {
+    if (line.trim().startsWith("#")) continue;
+    const columns = line.split(/\s+\|\s+|\t+/).map((cell) => cell.trim());
+    const urlIndex = columns.findIndex((cell) => /^https?:\/\//i.test(cell));
+    if (urlIndex < 0) continue;
+    const url = columns[urlIndex];
+    records.set(url, recordFromUrl(url, columns[urlIndex + 1], columns[urlIndex + 2]));
+  }
+  return records;
+}
+
+function readUrlList(filePath) {
+  if (!existsSync(filePath)) return [];
+  return readFileSync(filePath, "utf8")
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line && !line.startsWith("#"));
+}
+
+function writeBookList(filePath, records) {
+  mkdirSync(path.dirname(filePath), { recursive: true });
+  const rows = [...records.values()].sort((a, b) => a.url.localeCompare(b.url));
+  const lines = ["Book Name\tURL\tSource Page"];
+  for (const record of rows) {
+    lines.push(`${cleanTsvCell(record.name)}\t${record.url}\t${cleanTsvCell(record.source)}`);
+  }
+  writeFileSync(filePath, `${lines.join("\n")}\n`, "utf8");
+}
+
 function writeUrlList(filePath, urls) {
   mkdirSync(path.dirname(filePath), { recursive: true });
-  const lines = [...urls].sort((a, b) => a.localeCompare(b));
+  const lines = [...new Set(urls)].sort((a, b) => a.localeCompare(b));
   writeFileSync(filePath, lines.length ? `${lines.join("\n")}\n` : "", "utf8");
 }
 
-async function crawl(entryUrl) {
-  const pendingPages = [{ url: entryUrl.href, referer: null }];
-  const queuedPages = new Set([entryUrl.href]);
-  const visitedPages = new Set();
-  const fileLinks = new Set();
-  const scribdLinks = new Set();
+function upsertRecord(records, url, name, source) {
+  const next = recordFromUrl(url, name, source);
+  const previous = records.get(url);
+  if (!previous || (previous.name === fallbackBookName(new URL(url)) && next.name)) {
+    records.set(url, next);
+  }
+}
 
-  while (pendingPages.length && visitedPages.size < MAX_PAGES) {
-    const { url: pageUrl, referer } = pendingPages.shift();
-    if (visitedPages.has(pageUrl)) continue;
-    visitedPages.add(pageUrl);
-    console.log(`Page ${visitedPages.size}/${MAX_PAGES}: ${pageUrl}`);
+async function crawl(entryUrl) {
+  const fileLinks = readBookList(ENTRY_LIST_PATH);
+  const scribdLinks = readBookList(SCRIBD_LIST_PATH);
+  const completedPages = new Set(readUrlList(CRAWLED_PAGES_PATH));
+  const pendingPages = readUrlList(PENDING_PAGES_PATH).filter((url) => !completedPages.has(url));
+  if (!completedPages.has(entryUrl.href) && !pendingPages.includes(entryUrl.href)) {
+    pendingPages.unshift(entryUrl.href);
+  }
+
+  const queuedPages = new Set(pendingPages);
+  const newlyCompleted = new Set();
+  let attempts = 0;
+  writeUrlList(PENDING_PAGES_PATH, pendingPages);
+
+  while (pendingPages.length && attempts < MAX_PAGES) {
+    const pageUrl = pendingPages[0];
+    if (completedPages.has(pageUrl)) {
+      pendingPages.shift();
+      writeUrlList(PENDING_PAGES_PATH, pendingPages);
+      continue;
+    }
+
+    attempts++;
+    console.log(`Page attempt ${attempts}/${MAX_PAGES}: ${pageUrl}`);
 
     try {
-      const response = await fetchWithRetry(pageUrl, referer);
+      const response = await fetchWithRetry(pageUrl);
       const contentType = (response.headers.get("content-type") || "").toLowerCase();
+      const finalPageUrl = response.url || pageUrl;
+
       if (contentType && !contentType.includes("html") && !contentType.includes("xhtml")) {
         await response.body?.cancel();
+        completedPages.add(pageUrl);
+        completedPages.add(finalPageUrl);
+        newlyCompleted.add(pageUrl);
+        pendingPages.shift();
+        writeUrlList(CRAWLED_PAGES_PATH, completedPages);
+        writeUrlList(PENDING_PAGES_PATH, pendingPages);
         await sleep(DELAY_MS);
         continue;
       }
 
       const html = await response.text();
-      const finalPageUrl = response.url || pageUrl;
-      let pageFileCount = 0;
-      let pageScribdCount = 0;
-      let pageCount = 0;
-
+      let fileCount = 0;
+      let scribdCount = 0;
       for (const link of extractLinks(html, finalPageUrl)) {
-        const url = new URL(link);
+        const url = new URL(link.url);
+        const name = link.name || fallbackBookName(url);
+
         if (isScribdUrl(url)) {
-          if (!scribdLinks.has(url.href)) {
-            scribdLinks.add(url.href);
-            pageScribdCount++;
-          }
+          if (!scribdLinks.has(url.href)) scribdCount++;
+          upsertRecord(scribdLinks, url.href, name, finalPageUrl);
           continue;
         }
 
         if (matchesBookFilename(url)) {
-          if (!fileLinks.has(url.href)) {
-            fileLinks.add(url.href);
-            pageFileCount++;
-          }
+          if (!fileLinks.has(url.href)) fileCount++;
+          upsertRecord(fileLinks, url.href, name, finalPageUrl);
           continue;
         }
 
         if (
           isCrawlablePage(url, entryUrl) &&
-          !visitedPages.has(url.href) &&
+          !completedPages.has(url.href) &&
           !queuedPages.has(url.href)
         ) {
           queuedPages.add(url.href);
-          pendingPages.push({ url: url.href, referer: finalPageUrl });
-          pageCount++;
+          pendingPages.push(url.href);
         }
       }
 
-      console.log(
-        `  Matching files: ${pageFileCount}; Scribd links: ${pageScribdCount}; related pages queued: ${pageCount}.`,
-      );
+      completedPages.add(pageUrl);
+      completedPages.add(finalPageUrl);
+      newlyCompleted.add(pageUrl);
+      pendingPages.shift();
+      writeBookList(ENTRY_LIST_PATH, fileLinks);
+      writeBookList(SCRIBD_LIST_PATH, scribdLinks);
+      writeUrlList(CRAWLED_PAGES_PATH, completedPages);
+      writeUrlList(PENDING_PAGES_PATH, pendingPages);
+      console.log(`  Matched files: ${fileCount}; Scribd links: ${scribdCount}.`);
     } catch (error) {
       console.warn(`Page fetch failed: ${pageUrl} (${error.message})`);
+      pendingPages.shift();
+      pendingPages.push(pageUrl);
+      writeUrlList(PENDING_PAGES_PATH, pendingPages);
     }
 
     await sleep(DELAY_MS);
   }
 
-  if (pendingPages.length) {
-    console.warn(`Reached the ${MAX_PAGES}-page safety limit; ${pendingPages.length} page(s) remain.`);
-  }
+  writeBookList(ENTRY_LIST_PATH, fileLinks);
+  writeBookList(SCRIBD_LIST_PATH, scribdLinks);
+  writeUrlList(CRAWLED_PAGES_PATH, completedPages);
+  writeUrlList(PENDING_PAGES_PATH, pendingPages);
 
-  return { fileLinks, scribdLinks, visitedPages };
+  console.log(`\nProcessed ${attempts} page attempt(s); ${newlyCompleted.size} new page(s) completed.`);
+  console.log(`Total matched PDF/DOCX links: ${fileLinks.size} (${ENTRY_LIST_PATH})`);
+  console.log(`Total Scribd links: ${scribdLinks.size} (${SCRIBD_LIST_PATH})`);
+  console.log(`Completed page history: ${completedPages.size} (${CRAWLED_PAGES_PATH})`);
+  if (pendingPages.length) console.log(`Pages left to process: ${pendingPages.length} (${PENDING_PAGES_PATH})`);
 }
 
 async function main() {
-  const entryUrl = parseHttpUrl(ENTRY_URL);
-  const { fileLinks, scribdLinks, visitedPages } = await crawl(entryUrl);
-
-  writeUrlList(ENTRY_LIST_PATH, fileLinks);
-  writeUrlList(SCRIBD_LIST_PATH, scribdLinks);
-  writeUrlList(CRAWLED_PAGES_PATH, visitedPages);
-
-  console.log(`\nVisited ${visitedPages.size} page(s).`);
-  console.log(`Matched ${fileLinks.size} PDF/DOCX link(s): ${ENTRY_LIST_PATH}`);
-  console.log(`Found ${scribdLinks.size} Scribd link(s): ${SCRIBD_LIST_PATH}`);
-  console.log(`Visited page list: ${CRAWLED_PAGES_PATH}`);
+  await crawl(parseHttpUrl(ENTRY_URL));
 }
 
 main().catch((error) => {
