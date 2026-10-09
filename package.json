@@ -1,5 +1,11 @@
 {
   "type": "module",
+  "scripts": {
+    "test": "node --test js/test/*.test.js",
+    "search": "node js/searchbooks.js",
+    "crawl": "node js/crawl_books.js",
+    "download": "node js/download.js"
+  },
   "dependencies": {
     "better-sqlite3": "^13.0.3",
     "cheerio": "^1.2.0"
