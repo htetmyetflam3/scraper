@@ -9,6 +9,8 @@ const TIMEOUT_MS = 120_000;
 const RETRIES = 3;
 // Page attempts per batch; the crawler automatically continues in more batches.
 const MAX_PAGES = Math.max(1, Number.parseInt(process.env.MAX_PAGES || "500", 10) || 500);
+// Default to the entry page's topic to avoid unrelated navigation; set to 1 for the whole site.
+const CRAWL_ALL_SITE = process.env.CRAWL_ALL_SITE === "1";
 const USER_AGENT = "Mozilla/5.0 (compatible; dhamma-book-link-crawler/1.0)";
 
 const ENTRY_LIST_PATH = path.resolve(process.env.ENTRY_LIST_OUT || "entry_list.txt");
@@ -160,10 +162,21 @@ function isSameSite(url, entryUrl) {
   return normalizedHostname(url.hostname) === normalizedHostname(entryUrl.hostname);
 }
 
-function isCrawlablePage(url, entryUrl) {
+function inferTopic(entryUrl) {
+  if (CRAWL_ALL_SITE) return null;
+  const filename = path.posix.basename(decodeURIComponentSafely(entryUrl.pathname));
+  const stem = filename.replace(/\\.[^.]+$/, "");
+  const words = stem.match(/[A-Z]+(?=[A-Z][a-z]|\\b)|[A-Z]?[a-z]+|\\d+/g) || [];
+  const ignored = new Set(["default", "home", "index", "in", "page", "the"]);
+  return words.map((word) => word.toLowerCase()).find((word) => word.length >= 6 && !ignored.has(word)) || null;
+}
+
+function isCrawlablePage(url, entryUrl, topic) {
   if (!isSameSite(url, entryUrl)) return false;
-  const extension = path.posix.extname(decodedPathname(url));
-  return !extension || !SKIP_PAGE_EXTENSIONS.has(extension);
+  const pathname = decodedPathname(url);
+  const extension = path.posix.extname(pathname);
+  if (extension && SKIP_PAGE_EXTENSIONS.has(extension)) return false;
+  return !topic || pathname.includes(topic);
 }
 
 function isScribdUrl(url) {
@@ -280,11 +293,19 @@ function upsertRecord(records, url, name, source) {
 }
 
 async function crawl(entryUrl) {
+  const topic = inferTopic(entryUrl);
+  console.log(`Crawl scope: ${topic ? `same-site pages containing "${topic}"` : "all same-site pages"}.`);
   const fileLinks = readBookList(ENTRY_LIST_PATH);
   const scribdLinks = readBookList(SCRIBD_LIST_PATH);
   const completedPages = new Set(readUrlList(CRAWLED_PAGES_PATH));
-  const pendingPages = [...new Set(readUrlList(PENDING_PAGES_PATH))]
-    .filter((url) => !completedPages.has(url));
+  const pendingPages = [...new Set(readUrlList(PENDING_PAGES_PATH))].filter((url) => {
+    if (completedPages.has(url)) return false;
+    try {
+      return isCrawlablePage(new URL(url), entryUrl, topic);
+    } catch {
+      return false;
+    }
+  });
   if (!completedPages.has(entryUrl.href) && !pendingPages.includes(entryUrl.href)) {
     pendingPages.unshift(entryUrl.href);
   }
@@ -358,7 +379,7 @@ async function crawl(entryUrl) {
         }
 
         if (
-          isCrawlablePage(url, entryUrl) &&
+          isCrawlablePage(url, entryUrl, topic) &&
           !completedPages.has(url.href) &&
           !queuedPages.has(url.href)
         ) {
