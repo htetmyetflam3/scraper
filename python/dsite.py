@@ -231,21 +231,45 @@ class SearchStopped(Exception):
     """The search API refused us, failed or ran out of budget: stop the run, do not retry through it."""
 
 
+def _read_env_text(path: Path) -> str:
+    """Read a .env file the way Windows editors and shells write it: UTF-8 (with or without BOM) or UTF-16."""
+    raw = path.read_bytes()
+    if raw[:2] in (b"\xff\xfe", b"\xfe\xff"):
+        return raw.decode("utf-16")
+    return raw.decode("utf-8-sig")
+
+
 def load_serpapi_key(env_file: Path | None = None) -> str:
-    """SERPAPI from the environment, else from a SERPAPI=value line in the .env file."""
+    """SERPAPI from the environment, else from a SERPAPI=value line in the .env file.
+
+    Accepts "SERPAPI=key", "export SERPAPI=key", quotes around the value, and a BOM.
+    """
     key = os.environ.get("SERPAPI", "").strip()
     if key:
         return key
     env_file = env_file or ENV_FILE
     if env_file.exists():
-        for line in env_file.read_text(encoding="utf8").splitlines():
-            line = line.strip()
+        for raw_line in _read_env_text(env_file).splitlines():
+            line = raw_line.strip()
+            if line.startswith("export "):
+                line = line[len("export "):].strip()
             if not line or line.startswith("#") or "=" not in line:
                 continue
             name, value = line.split("=", 1)
             if name.strip() == "SERPAPI":
-                return value.strip().strip("\"'")
+                value = value.strip().strip("\"'").strip()
+                if value:
+                    return value
     return ""
+
+
+def explain_missing_key(env_file: Path | None = None) -> str:
+    env_file = env_file or ENV_FILE
+    if not env_file.exists():
+        return (f"No SerpApi key. The file {env_file} does not exist. Create it with one line: "
+                "SERPAPI=your-key (or set the SERPAPI environment variable).")
+    return (f"No SerpApi key. The file {env_file} exists, but it has no line of the form SERPAPI=your-key "
+            "with a value after the '='. Check the variable name, and that the file is named exactly .env.")
 
 
 class SearchBudget:
@@ -304,8 +328,7 @@ def download_new(entry_list: Path) -> None:
 def run_search(args: argparse.Namespace, fetcher, entries, scribd, not_kept) -> int:
     api_key = load_serpapi_key()
     if not api_key:
-        print("No SerpApi key. Put SERPAPI=your-key in python/.env, or set the SERPAPI environment variable.",
-              file=sys.stderr)
+        print(explain_missing_key(), file=sys.stderr)
         return 1
     terms = [term.strip() for term in args.search_terms.split(",") if term.strip()]
     budget = SearchBudget(args.usage_file, args.monthly_limit)

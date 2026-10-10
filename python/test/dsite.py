@@ -294,3 +294,35 @@ def test_serpapi_search_stops_on_refused_key_and_rate_limit(monkeypatch):
         monkeypatch.setattr(dsite.httpx, "get", lambda *a, _s=status, **k: Response(_s))
         with pytest.raises(dsite.SearchStopped):
             dsite.serpapi_search("q", 0, "k")
+
+
+def test_key_file_variants_are_all_read(tmp_path, monkeypatch):
+    monkeypatch.delenv("SERPAPI", raising=False)
+    cases = {
+        "bom.env": "\ufeffSERPAPI=abc\n",                      # Windows editors add a BOM
+        "export.env": "export SERPAPI=abc\n",
+        "quoted.env": 'SERPAPI="abc"\r\n',                      # CRLF line ends and quotes
+        "spaced.env": "  SERPAPI = abc  \n",
+    }
+    for name, text in cases.items():
+        path = tmp_path / name
+        path.write_text(text, encoding="utf8")
+        assert dsite.load_serpapi_key(path) == "abc", name
+    utf16 = tmp_path / "utf16.env"
+    utf16.write_bytes("SERPAPI=abc\n".encode("utf-16"))      # PowerShell `>` writes UTF-16
+    assert dsite.load_serpapi_key(utf16) == "abc"
+
+
+def test_empty_value_is_not_a_key(tmp_path, monkeypatch):
+    monkeypatch.delenv("SERPAPI", raising=False)
+    path = tmp_path / ".env"
+    path.write_text("SERPAPI=\n", encoding="utf8")
+    assert dsite.load_serpapi_key(path) == ""
+
+
+def test_missing_key_message_says_what_is_wrong(tmp_path):
+    missing = tmp_path / "nope.env"
+    assert "does not exist" in dsite.explain_missing_key(missing)
+    present = tmp_path / ".env"
+    present.write_text("OTHER=1\n", encoding="utf8")
+    assert "has no line of the form SERPAPI=" in dsite.explain_missing_key(present)
