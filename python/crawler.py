@@ -410,6 +410,9 @@ class HttpFetcher:
             content_type = response.headers.get("Content-Type", "").lower()
             if content_type and "html" not in content_type and "xhtml" not in content_type:
                 raise RuntimeError(f"not an HTML response ({content_type})")
+            if "charset" not in content_type:
+                # Many sites send no charset; requests then decodes as Latin-1 and Burmese names turn to mojibake.
+                response.encoding = "utf-8"
             return response.text, response.url
 
         raise last_error or RuntimeError("request failed")
