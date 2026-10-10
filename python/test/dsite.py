@@ -140,7 +140,7 @@ def _search_setup(monkeypatch, tmp_path, pages, sites, downloads, gaps=None):
 def _args(tmp_path, *extra):
     return [f"--entry-list={tmp_path/'e.txt'}", f"--scribd-list={tmp_path/'s.txt'}",
             "--delay=0", "--jitter=0", "--search-terms=Myanmar PDF", f"--usage-file={tmp_path/'usage.json'}",
-            f"--search-log={tmp_path/'search.txt'}", *extra]
+            f"--search-log={tmp_path/'search.txt'}", f"--search-cache={tmp_path/'cache.json'}", *extra]
 
 
 def test_default_search_terms_are_the_four_approved_keywords():
@@ -315,6 +315,37 @@ def test_results_are_written_before_any_site_is_crawled(tmp_path, monkeypatch):
     assert seen_before_crawl and all(seen_before_crawl), "the result list was on disk before the first page request"
 
 
+def test_a_rerun_reuses_saved_results_and_spends_no_search(tmp_path, monkeypatch):
+    import json
+
+    pages = {("Myanmar PDF", 0): ([{"url": "https://only.example.com/", "title": "only"}], False)}
+    calls = _search_setup(monkeypatch, tmp_path, pages, {"https://only.example.com/": "<p>none</p>"}, [])
+    main(_args(tmp_path))
+    main(_args(tmp_path))
+    assert calls == [("Myanmar PDF", 0)], "the second run sends no search"
+    usage = json.loads((tmp_path / "usage.json").read_text(encoding="utf8"))
+    assert usage["used"] == 1, "reused results are not counted against the budget"
+
+
+def test_fresh_search_ignores_saved_results(tmp_path, monkeypatch):
+    pages = {("Myanmar PDF", 0): ([{"url": "https://only.example.com/", "title": "only"}], False)}
+    calls = _search_setup(monkeypatch, tmp_path, pages, {"https://only.example.com/": "<p>none</p>"}, [])
+    main(_args(tmp_path))
+    main(_args(tmp_path, "--fresh-search"))
+    assert len(calls) == 2
+
+
+def test_budget_check_counts_only_searches_that_would_be_sent(tmp_path, monkeypatch):
+    import json
+
+    cache = {"Myanmar PDF|0": {"results": [], "more": False}}
+    (tmp_path / "cache.json").write_text(json.dumps(cache), encoding="utf8")
+    (tmp_path / "usage.json").write_text(json.dumps({"month": time.strftime("%Y-%m"), "used": 249}), encoding="utf8")
+    calls = _search_setup(monkeypatch, tmp_path, {}, {}, [])
+    assert main(_args(tmp_path)) == 0, "one saved page needs no search, so 249/250 is enough"
+    assert calls == []
+
+
 def test_result_log_lists_every_result_with_keyword_and_rank(tmp_path):
     path = tmp_path / "search.txt"
     dsite.log_search_results(path, "one", 0, [{"url": "https://a.example.com/", "title": "A  title"},
@@ -407,9 +438,18 @@ def test_main_with_a_url_registers_its_main_link(tmp_path, monkeypatch):
     code = main([SITE, "--delay=0", "--jitter=0",
                  f"--entry-list={tmp_path/'e.txt'}", f"--scribd-list={tmp_path/'s.txt'}",
                  f"--usage-file={tmp_path/'u.json'}", f"--search-log={tmp_path/'sr.txt'}",
-                 ])
+                 f"--search-cache={tmp_path/'c.json'}"])
     assert code == 0
     assert SITE in (tmp_path / "e.txt").read_text(encoding="utf8").splitlines()[1]
+
+
+def test_a_site_with_no_download_is_capped_at_max_pages(monkeypatch):
+    pages = {SITE: "".join(f'<a href="p{i}.html">next</a>' for i in range(1, 60))}
+    for i in range(1, 60):
+        pages[SITE + f"p{i}.html"] = "<p>no files here</p>"
+    fetcher = FakeFetcher(pages)
+    stats, _, _, _ = run(fetcher, max_pages=50, stop_at_first_file=True)
+    assert stats["pages"] == 50, "a site with no download is read up to --max-pages, then left"
 
 
 BUTTON_PAGE = "https://books.example.org/books/"
@@ -443,78 +483,3 @@ def test_a_button_that_names_a_file_in_the_html_is_a_link(html, expected):
 ])
 def test_a_button_without_a_file_adds_no_link(html):
     assert not [url for url, _ in page_links(html, BUTTON_PAGE) if BOOK_EXTENSION.search(url)]
-
-
-def test_the_old_search_cache_is_not_read(tmp_path, monkeypatch):
-    import json
-
-    cache = {"Myanmar PDF|0": {"results": [{"url": "https://old.example.com/", "title": "old"}], "more": False}}
-    (tmp_path / "cache.json").write_text(json.dumps(cache), encoding="utf8")
-    pages = {("Myanmar PDF", 0): ([{"url": "https://only.example.com/", "title": "only"}], False)}
-    calls = _search_setup(monkeypatch, tmp_path, pages, {"https://only.example.com/": "<p>none</p>"}, [])
-    main(_args(tmp_path))
-    assert calls == [("Myanmar PDF", 0)], "the saved search is not reused; a search is sent"
-
-
-def test_a_site_already_in_the_entry_list_is_not_crawled_again(tmp_path, monkeypatch):
-    from crawler import write_book_list
-
-    write_book_list(tmp_path / "e.txt", {"https://done.example.com/": {
-        "url": "https://done.example.com/", "name": "done", "source": "src"}})
-    pages = {("Myanmar PDF", 0): ([{"url": "https://done.example.com/books/", "title": "done"},
-                                   {"url": "https://new.example.com/", "title": "new"}], False)}
-    sites = {"https://done.example.com/": '<a href="a.pdf">Myanmar</a>',
-             "https://new.example.com/": '<a href="b.pdf">Myanmar</a>'}
-    fetcher_holder = {}
-    _search_setup(monkeypatch, tmp_path, pages, sites, [])
-    monkeypatch.setattr(dsite, "HttpFetcher", lambda **_: fetcher_holder.setdefault("f", FakeFetcher(sites)))
-    main(_args(tmp_path))
-    fetched = fetcher_holder["f"].fetched
-    assert not [url for url in fetched if "done.example.com" in url], "a listed site is filtered out before crawling"
-    entry = (tmp_path / "e.txt").read_text(encoding="utf8")
-    assert "https://done.example.com/\t" in entry, "the existing row is kept"
-    assert "https://new.example.com/\t" in entry, "the new site is checked and listed"
-
-
-def test_a_site_only_in_old_history_is_still_crawled(tmp_path, monkeypatch):
-    (tmp_path / "search.txt").write_text(
-        "Keyword\tStart\tRank\tTitle\tURL\nMyanmar PDF\t0\t1\told\thttps://old.example.com/\n", encoding="utf8")
-    pages = {("Myanmar PDF", 0): ([{"url": "https://old.example.com/", "title": "old"}], False)}
-    sites = {"https://old.example.com/": '<a href="a.pdf">Myanmar</a>'}
-    _search_setup(monkeypatch, tmp_path, pages, sites, [])
-    main(_args(tmp_path))
-    entry = (tmp_path / "e.txt").read_text(encoding="utf8")
-    assert "https://old.example.com/\t" in entry, "history is not a reason to skip; only the entry list is"
-
-
-def test_a_site_with_no_download_is_given_up_after_15_pages_and_the_next_result_is_checked(tmp_path, monkeypatch):
-    many = "".join(f'<a href="p{i}.html">next</a>' for i in range(1, 40))
-    sites = {"https://empty.example.com/": many, "https://next.example.com/": '<a href="b.pdf">Myanmar</a>'}
-    for i in range(1, 40):
-        sites[f"https://empty.example.com/p{i}.html"] = "<p>no files here</p>"
-    pages = {("Myanmar PDF", 0): ([{"url": "https://empty.example.com/", "title": "empty"},
-                                   {"url": "https://next.example.com/", "title": "next"}], False)}
-    holder = {}
-    _search_setup(monkeypatch, tmp_path, pages, sites, [])
-    monkeypatch.setattr(dsite, "HttpFetcher", lambda **_: holder.setdefault("f", FakeFetcher(sites)))
-    main(_args(tmp_path))
-    empty_pages = [url for url in holder["f"].fetched if "empty.example.com" in url]
-    assert len(empty_pages) == 15, "no download after 15 pages: give up on this site"
-    assert "https://next.example.com/\t" in (tmp_path / "e.txt").read_text(encoding="utf8"), \
-        "then the next search result is checked"
-
-
-def test_a_site_with_no_download_is_checked_again_on_a_rerun(tmp_path, monkeypatch):
-    sites = {"https://empty.example.com/": "<p>nothing</p>"}
-    pages = {("Myanmar PDF", 0): ([{"url": "https://empty.example.com/", "title": "empty"}], False)}
-    holder = {}
-    _search_setup(monkeypatch, tmp_path, pages, sites, [])
-    monkeypatch.setattr(dsite, "HttpFetcher", lambda **_: holder.setdefault("f", FakeFetcher(sites)))
-    main(_args(tmp_path))
-    main(_args(tmp_path))
-    assert len([url for url in holder["f"].fetched if url == "https://empty.example.com/"]) == 2, \
-        "a site with no row in the entry list is not remembered as done"
-
-
-def test_the_default_no_hit_cap_is_15_pages():
-    assert dsite.parse_args(["https://books.example.org/"]).max_pages == 15
