@@ -22,8 +22,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))  # python/
 from download import (  # noqa: E402
     choose_filename,
     download_all,
+    extract_download_links,
     filename_from_disposition,
     filename_from_url,
+    is_pdf,
+    pdf_header_offset,
     read_entries,
     safe_filename,
 )
@@ -46,7 +49,17 @@ class Handler(http.server.BaseHTTPRequestHandler):
         pass
 
     def do_GET(self):  # noqa: N802
-        if self.path.startswith("/ok"):
+        if self.path.startswith("/mediafire"):
+            body = (
+                b'<html><a id="downloadButton" class="download_link" '
+                b'href="/actual/download">Download</a></html>'
+            )
+            ctype = "text/html; charset=UTF-8"
+        elif self.path.startswith("/actual"):
+            body, ctype = PDF_BYTES, "application/pdf"
+        elif self.path.startswith("/old-pdf"):
+            body, ctype = b"old-format-header " + PDF_BYTES, "application/pdf"
+        elif self.path.startswith("/ok"):
             body, ctype = PDF_BYTES, "application/pdf"
         elif self.path.startswith("/fake"):
             body, ctype = HTML_BYTES, "application/pdf"  # lies about its type
@@ -107,6 +120,24 @@ def test_choose_filename_uses_content_type_when_url_has_no_extension():
     assert name.endswith(".pdf")
 
 
+def test_pdf_header_can_follow_a_short_legacy_preamble():
+    data = b"old-format-header " + PDF_BYTES
+    assert pdf_header_offset(data) == len(b"old-format-header ")
+    assert is_pdf(data)
+    assert pdf_header_offset(HTML_BYTES) is None
+    assert not is_pdf(HTML_BYTES)
+    assert not is_pdf(b"<!doctype html><html><body>%PDF-1.7 is only page text</body></html>")
+
+
+def test_extracts_mediafire_download_button_but_not_an_external_link():
+    page = "https://www.mediafire.com/file/id/book.pdf"
+    html = (
+        '<a id="downloadButton" href="https://download1017.mediafire.com/a/book.pdf">Download</a>'
+        '<a href="https://evil.example/book.pdf">other</a>'
+    )
+    assert extract_download_links(html, page) == ["https://download1017.mediafire.com/a/book.pdf"]
+
+
 def test_read_entries_tsv_and_plain(tmp_path):
     tsv = tmp_path / "entries.txt"
     tsv.write_text("Book Name\tURL\tSource Page\nA book\thttps://example.org/a.pdf\thttps://bing.com\nB\thttps://example.org/b.docx\tx\n", encoding="utf8")
@@ -124,6 +155,7 @@ def test_download_end_to_end(tmp_path, server, monkeypatch):
     monkeypatch.setenv("TQDM_DISABLE", "1")
     entries = [
         {"name": "real", "url": f"{server}/ok/myanmar-book.pdf"},
+        {"name": "old-format", "url": f"{server}/old-pdf/old-burmese-book.pdf"},
         {"name": "fake", "url": f"{server}/fake/login-wall.pdf"},
         {"name": "word", "url": f"{server}/docx/notes.docx"},
         {"name": "missing", "url": f"{server}/nope.pdf"},
@@ -143,14 +175,37 @@ def test_download_end_to_end(tmp_path, server, monkeypatch):
     outcomes = asyncio.run(download_all(entries, out_dir, History(out_dir / ".history.json"), Args()))
 
     assert "saved" in outcomes[f"{server}/ok/myanmar-book.pdf"]
+    assert "saved" in outcomes[f"{server}/old-pdf/old-burmese-book.pdf"], "a short preamble before %PDF is accepted"
     assert "saved" in outcomes[f"{server}/docx/notes.docx"]
     assert outcomes[f"{server}/fake/login-wall.pdf"].startswith("rejected")
     assert outcomes[f"{server}/nope.pdf"].startswith("failed")
 
     assert (out_dir / "myanmar-book.pdf").read_bytes() == PDF_BYTES
+    assert (out_dir / "old-burmese-book.pdf").read_bytes() == b"old-format-header " + PDF_BYTES
     assert (out_dir / "notes.docx").read_bytes()[:2] == b"PK"
     assert not (out_dir / "login-wall.pdf").exists()
     assert (out_dir / "rejected").is_dir()
+
+
+def test_mediafire_html_page_download_button_is_followed(tmp_path, server, monkeypatch):
+    monkeypatch.setenv("TQDM_DISABLE", "1")
+    url = f"{server}/mediafire/file/id/recovered-burmese-book.pdf"
+    out_dir = tmp_path / "files"
+
+    class Args:
+        concurrency = 1
+        retries = 2
+        timeout = 30.0
+        delay = 0
+        verify_pdf = False
+        keep_rejected = False
+
+    from download import History
+
+    outcomes = asyncio.run(download_all([{"name": "Myanmar book", "url": url}], out_dir,
+                                        History(out_dir / ".history.json"), Args()))
+    assert outcomes[url].startswith("saved"), "the HTML button resolves to the actual PDF URL"
+    assert (out_dir / "recovered-burmese-book.pdf").read_bytes() == PDF_BYTES
 
 
 def test_re_run_skips_downloaded_files(tmp_path, server, monkeypatch):

@@ -24,6 +24,7 @@ from __future__ import annotations
 import argparse
 import base64
 import dataclasses
+import gzip
 import os
 import random
 import re
@@ -42,6 +43,8 @@ try:
     from bs4 import BeautifulSoup
 except ModuleNotFoundError:  # pragma: no cover
     sys.exit("Missing dependencies. Run:  uv sync  (or pip install requests beautifulsoup4)")
+
+from siteguard import excluded_site_reason
 
 HERE = Path(__file__).resolve().parent
 
@@ -146,6 +149,10 @@ class RateLimited(Exception):
 
 class Blocked(Exception):
     pass
+
+
+class OffsiteRedirect(Exception):
+    """A same-site crawl URL redirects to a different host."""
 
 
 # --------------------------------------------------------------------------- #
@@ -359,7 +366,14 @@ def classify_page(html: str, result_count: int) -> str:
 
 
 class HttpFetcher:
-    """requests.Session fetcher: keeps cookies, backs off on 429/503."""
+    """requests.Session fetcher: keeps cookies, backs off on 429/503.
+
+    ``fetch`` preserves normal redirect behavior for search-result fetching.
+    Site traversal opts into ``fetch_same_site`` so a share button or other local
+    redirect cannot send the walker off to another host.
+    """
+
+    REDIRECT_STATUSES = {301, 302, 303, 307, 308}
 
     def __init__(self, timeout: float = 60.0, retries: int = 3, backoff: float = 5.0, max_backoff: float = 120.0, user_agent: str = USER_AGENT):
         self.session = requests.Session()
@@ -378,23 +392,75 @@ class HttpFetcher:
     def close(self) -> None:
         self.session.close()
 
-    def fetch(self, url: str) -> tuple[str, str]:
+    @staticmethod
+    def _site_identity(value: str) -> tuple[str, int | None, str]:
+        parts = urllib.parse.urlsplit(value if "://" in value else "//" + value)
+        return (parts.hostname or "").lower().removeprefix("www."), parts.port, parts.scheme.lower()
+
+    @classmethod
+    def _same_site_redirect(cls, target: str, allowed_site: str) -> bool:
+        target_host, target_port, target_scheme = cls._site_identity(target)
+        allowed_host, allowed_port, allowed_scheme = cls._site_identity(allowed_site)
+        if not target_host or target_host != allowed_host:
+            return False
+        # Allow ordinary HTTP-to-HTTPS canonical redirects, but not a redirect
+        # to a different service running on an explicit non-default port.
+        if target_port is not None and allowed_port is not None:
+            return target_port == allowed_port
+        if target_port is not None:
+            return target_port == (443 if allowed_scheme == "https" else 80)
+        if allowed_port is not None:
+            return allowed_port == (443 if target_scheme == "https" else 80)
+        return True
+
+    def _get_response(
+        self,
+        url: str,
+        *,
+        allowed_site: str | None = None,
+        timeout: float | None = None,
+        retries: int | None = None,
+    ):
+        """GET with retries; optionally stop before following a cross-site redirect."""
+        request_timeout = self.timeout if timeout is None else timeout
+        max_retries = self.retries if retries is None else max(1, retries)
         last_error: Exception | None = None
-        for attempt in range(1, self.retries + 1):
+        for attempt in range(1, max_retries + 1):
             try:
-                response = self.session.get(url, timeout=self.timeout)
+                response = self.session.get(
+                    url,
+                    timeout=request_timeout,
+                    allow_redirects=allowed_site is None,
+                )
+                if allowed_site is not None:
+                    for _ in range(10):
+                        if response.status_code not in self.REDIRECT_STATUSES:
+                            break
+                        location = response.headers.get("Location")
+                        if not location:
+                            break
+                        target = urllib.parse.urljoin(response.url or url, location)
+                        if not self._same_site_redirect(target, allowed_site):
+                            response.close()
+                            raise OffsiteRedirect(f"{url} redirects outside {allowed_site} to {target}")
+                        response.close()
+                        response = self.session.get(target, timeout=request_timeout, allow_redirects=False)
+                    else:
+                        raise RuntimeError(f"too many redirects while fetching {url}")
+            except OffsiteRedirect:
+                raise
             except requests.RequestException as error:
                 # A dropped connection is not a throttle: retry quickly, and save
                 # the long backoff for 429/503.
                 last_error = error
-                if attempt < self.retries:
+                if attempt < max_retries:
                     time.sleep(min(2 * attempt, 10))
                 continue
 
             if response.status_code in RATE_LIMIT_STATUSES:
                 wait = parse_retry_after(response.headers.get("Retry-After"))
                 wait = min(max(wait, self.backoff * 2 ** (attempt - 1)), self.max_backoff)
-                if attempt < self.retries:
+                if attempt < max_retries:
                     print(f"  Rate limited (HTTP {response.status_code}); waiting {wait:.0f}s.")
                     time.sleep(wait)
                     continue
@@ -405,16 +471,54 @@ class HttpFetcher:
 
             if not response.ok:
                 raise RuntimeError(f"HTTP {response.status_code} {response.reason}")
-
-            content_type = response.headers.get("Content-Type", "").lower()
-            if content_type and "html" not in content_type and "xhtml" not in content_type:
-                raise RuntimeError(f"not an HTML response ({content_type})")
-            if "charset" not in content_type:
-                # Many sites send no charset; requests then decodes as Latin-1 and Burmese names turn to mojibake.
-                response.encoding = "utf-8"
-            return response.text, response.url
+            return response
 
         raise last_error or RuntimeError("request failed")
+
+    @staticmethod
+    def _decode_text(response, accepted_types: tuple[str, ...], description: str, *, decompress_gzip: bool = False) -> str:
+        content_type = response.headers.get("Content-Type", "").lower()
+        if content_type and not any(kind in content_type for kind in accepted_types):
+            raise RuntimeError(f"not a {description} response ({content_type})")
+
+        if decompress_gzip:
+            data = response.content
+            if data.startswith(b"\x1f\x8b"):
+                data = gzip.decompress(data)
+            encoding = response.encoding or "utf-8"
+            return data.decode(encoding, "replace")
+
+        if "charset" not in content_type:
+            # Many sites send no charset; requests then decodes as Latin-1 and Burmese names turn to mojibake.
+            response.encoding = "utf-8"
+        return response.text
+
+    def fetch(self, url: str) -> tuple[str, str]:
+        response = self._get_response(url)
+        return self._decode_text(response, ("html", "xhtml"), "HTML"), response.url
+
+    def fetch_same_site(self, url: str, allowed_site: str) -> tuple[str, str]:
+        """Fetch HTML but refuse cross-host redirects during site traversal."""
+        response = self._get_response(url, allowed_site=allowed_site)
+        return self._decode_text(response, ("html", "xhtml"), "HTML"), response.url
+
+    def fetch_robots(self, url: str, *, allowed_site: str | None = None) -> tuple[str, str]:
+        response = self._get_response(url, allowed_site=allowed_site)
+        return self._decode_text(response, ("text/plain", "html", "xhtml"), "robots.txt"), response.url
+
+    def fetch_sitemap(self, url: str, *, allowed_site: str | None = None) -> tuple[str, str]:
+        response = self._get_response(
+            url,
+            allowed_site=allowed_site,
+            timeout=min(self.timeout, 20.0),
+            retries=1,
+        )
+        return self._decode_text(
+            response,
+            ("xml", "gzip", "octet-stream", "text/plain"),
+            "XML sitemap",
+            decompress_gzip=True,
+        ), response.url
 
 
 class BrowserFetcher:
@@ -696,12 +800,15 @@ def site_host(url: str) -> str:
 def is_site_seed(url: str) -> bool:
     """A search result page on an ordinary website: worth crawling for PDFs.
 
-    Scribd documents, direct files and the search engines' own pages are not.
+    Scribd documents, direct files, known huge/video sites, and search-engine
+    pages are not useful site-crawl seeds.
     """
     parts = urllib.parse.urlsplit(url)
     if parts.scheme not in ("http", "https") or not parts.netloc:
         return False
     if is_scribd_document_url(url) or BOOK_EXTENSION.search(parts.path.lower()):
+        return False
+    if excluded_site_reason(url):
         return False
     engine_hosts = {site_host(engine.base_url) for engine in ENGINES.values()}
     host = site_host(url)
