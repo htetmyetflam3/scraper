@@ -126,7 +126,7 @@ def test_main_with_a_url_writes_the_entry_list(tmp_path, monkeypatch):
         SITE: '<a href="novel.pdf">မြန်မာဝတ္ထု</a>',
     }))
     monkeypatch.setattr(dsite.time, "sleep", lambda _s: None)
-    code = main([SITE, "--delay=0", "--jitter=0",
+    code = main([SITE, "--delay=0", "--jitter=0", "--no-download",
                  f"--entry-list={tmp_path/'e.txt'}", f"--scribd-list={tmp_path/'s.txt'}"])
     assert code == 0
     assert SITE + "novel.pdf" in (tmp_path / "e.txt").read_text(encoding="utf8")
@@ -411,3 +411,59 @@ def test_both_lists_exist_before_the_first_hit(tmp_path, monkeypatch):
     entry = (tmp_path / "e.txt").read_text(encoding="utf8")
     assert entry.startswith("Book Name\tURL\tSource Page"), "the list is created with its header at start"
     assert (tmp_path / "s.txt").exists()
+
+
+def test_a_site_with_no_links_is_left_after_patience_pages(monkeypatch):
+    links = "".join(f'<a href="p{i}.html">page</a>' for i in range(1, 11))
+    pages = {SITE: links}
+    for i in range(1, 11):
+        pages[SITE + f"p{i}.html"] = "<p>no downloads here</p>"
+    stats, _, _, _ = run(FakeFetcher(pages), patience=3)
+    assert stats["pages"] == 3, "seed plus two empty pages; the third empty page ends the site"
+
+
+def test_patience_none_never_stops_early(monkeypatch):
+    links = "".join(f'<a href="p{i}.html">page</a>' for i in range(1, 6))
+    pages = {SITE: links}
+    for i in range(1, 6):
+        pages[SITE + f"p{i}.html"] = "<p>nothing</p>"
+    stats, _, _, _ = run(FakeFetcher(pages), patience=None)
+    assert stats["pages"] == 6
+
+
+def test_a_pdf_is_downloaded_while_the_site_is_still_being_crawled(tmp_path, monkeypatch):
+    import dsite as module
+
+    downloads = []
+    pages = {
+        SITE: '<a href="p1.html">next</a> <a href="p2.html">next</a>',
+        SITE + "p1.html": '<a href="novel.pdf">မြန်မာဝတ္ထု</a>',
+        SITE + "p2.html": "<p>still crawling</p>",
+    }
+    monkeypatch.setattr(module, "HttpFetcher", lambda **_: FakeFetcher(pages))
+    monkeypatch.setattr(module, "download_new", lambda entry_list: downloads.append(entry_list))
+    monkeypatch.setattr(module.time, "sleep", lambda _s: None)
+    code = main([SITE, "--delay=0", "--jitter=0", "--max-pages=3",
+                 f"--entry-list={tmp_path/'e.txt'}", f"--scribd-list={tmp_path/'s.txt'}",
+                 f"--usage-file={tmp_path/'u.json'}", f"--search-log={tmp_path/'sr.txt'}",
+                 f"--search-cache={tmp_path/'c.json'}"])
+    assert code == 0
+    assert len(downloads) == 1, "the PDF was downloaded once, when its page was crawled"
+    assert "novel.pdf" in (tmp_path / "e.txt").read_text(encoding="utf8")
+
+
+def test_a_failed_download_does_not_stop_the_crawl(tmp_path, monkeypatch):
+    import dsite as module
+
+    def broken(entry_list):
+        raise OSError("network down")
+
+    pages = {SITE: '<a href="novel.pdf">မြန်မာဝတ္ထု</a> <a href="p1.html">next</a>',
+             SITE + "p1.html": "<p>after</p>"}
+    fetcher = FakeFetcher(pages)
+    monkeypatch.setattr(module, "HttpFetcher", lambda **_: fetcher)
+    monkeypatch.setattr(module, "download_new", broken)
+    monkeypatch.setattr(module.time, "sleep", lambda _s: None)
+    main([SITE, "--delay=0", "--jitter=0", f"--entry-list={tmp_path/'e.txt'}",
+          f"--scribd-list={tmp_path/'s.txt'}"])
+    assert SITE + "p1.html" in fetcher.fetched, "the crawl went on after the download error"

@@ -138,6 +138,7 @@ def crawl_site(
     sleep=time.sleep,
     log=print,
     save=None,
+    patience=None,
 ) -> dict[str, int]:
     seed = without_fragment(seed)
     seed_host = host_key(seed)
@@ -152,6 +153,7 @@ def crawl_site(
         return stats
 
     queue: deque[tuple[str, int]] = deque([(seed, 0)])
+    pages_without_hit = 0
     visited: set[str] = {seed}
     while queue and stats["pages"] < max_pages:
         page_url, depth = queue.popleft()
@@ -194,8 +196,15 @@ def crawl_site(
             if same_site(url, seed_host) and depth < max_depth and url not in visited and is_html_candidate(url):
                 visited.add(url)
                 queue.append((url, depth + 1))
-        if save and len(entries) + len(scribd) != found_before:
-            save()
+        if len(entries) + len(scribd) != found_before:
+            pages_without_hit = 0
+            if save:
+                save()
+        else:
+            pages_without_hit += 1
+            if patience and pages_without_hit >= patience:
+                log(f"  No PDF/DOCX/Scribd link in the last {patience} pages. Moving on to the next site.")
+                break
     return stats
 
 
@@ -218,6 +227,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--delay", type=float, default=1.0, help="seconds between page requests (default 1)")
     parser.add_argument("--jitter", type=float, default=0.5, help="extra random seconds (default 0.5)")
     parser.add_argument("--timeout", type=float, default=60.0)
+    parser.add_argument("--patience", type=int, default=30,
+                        help="stop a site after this many pages in a row with no PDF/DOCX/Scribd link "
+                             "(default 30; 0 = never stop early)")
     parser.add_argument("--no-download", action="store_true", help="collect links only; do not download after each site")
     parser.add_argument("--search-terms",
                         default="myanmar books download,myanmar ebooks download,Myanmar PDF free download,free မြန်မာ pdf စာအုပ်များ",
@@ -427,6 +439,17 @@ def save_lists(args, entries, scribd) -> None:
     write_book_list(args.scribd_list, scribd)
 
 
+def on_new_links(args, entries, scribd) -> None:
+    """Called whenever a page adds a link: save the lists, then download what is new."""
+    save_lists(args, entries, scribd)
+    if args.no_download or not entries:
+        return
+    try:
+        download_new(args.entry_list)
+    except Exception as error:  # a failed download must not stop the crawl
+        print(f"  Download error (the crawl continues): {error}")
+
+
 def handle_result(result, args, fetcher, entries, scribd, not_kept, crawled_hosts) -> None:
     url, title = result["url"], result["title"]
     if is_scribd_document_url(url):
@@ -449,13 +472,11 @@ def handle_result(result, args, fetcher, entries, scribd, not_kept, crawled_host
         url, fetcher, entries=entries, scribd=scribd, not_kept=not_kept,
         max_pages=args.max_pages, max_depth=args.max_depth, match_mode=args.match_mode,
         delay=args.delay, jitter=args.jitter,
-        save=lambda: save_lists(args, entries, scribd),
+        save=lambda: on_new_links(args, entries, scribd), patience=args.patience,
     )
     print(f"    pages: {stats['pages']}; PDF/DOCX found: {stats['pdf']}; Scribd: {stats['scribd']}")
     write_book_list(args.entry_list, entries)
     write_book_list(args.scribd_list, scribd)
-    if stats["pdf"] and not args.no_download:
-        download_new(args.entry_list)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -475,13 +496,11 @@ def main(argv: list[str] | None = None) -> int:
                     url, fetcher, entries=entries, scribd=scribd, not_kept=not_kept,
                     max_pages=args.max_pages, max_depth=args.max_depth, match_mode=args.match_mode,
                     delay=args.delay, jitter=args.jitter,
-                    save=lambda: save_lists(args, entries, scribd),
+                    save=lambda: on_new_links(args, entries, scribd), patience=args.patience,
                 )
                 print(f"  pages: {stats['pages']}; PDF/DOCX found: {stats['pdf']}; Scribd: {stats['scribd']}")
                 write_book_list(args.entry_list, entries)
                 write_book_list(args.scribd_list, scribd)
-                if stats["pdf"] and not args.no_download:
-                    download_new(args.entry_list)
             code = 0
         else:
             code = run_search(args, fetcher, entries, scribd, not_kept)
