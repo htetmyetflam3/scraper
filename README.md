@@ -76,20 +76,25 @@ It writes `search_entry_list.txt`, `search_scribd_links.txt`,
 If an engine answers `HTTP 403`, run with `--fetcher=chromium`: a real browser
 executes JavaScript, keeps cookies and has a genuine browser fingerprint.
 
-## 0d. Site crawler — one command, URL or search
+## 0d. Site crawler and downloader — two scripts
 
-`python/dsite.py` crawls websites for PDF/DOCX links. Scribd links are
-recorded separately and not downloaded.
+Two scripts, run in order. Neither one needs the other's code to run.
+
+- **`python/dsite.py` — crawler (search, no downloads).** Finds sites and records
+  where the files are. It does not download anything.
+- **`python/dsite_download.py` — downloader.** Reads the entry list the crawler
+  wrote, downloads the files, and crawls the listed sites for more files.
 
 ```sh
 cd python
-uv run dsite.py https://example.org/books/   # crawl this site
-uv run dsite.py                              # no URL: SerpApi searches, then crawl each result site
-uv run dsite.py --max-pages=30 --max-depth=2 --delay=8
+uv run dsite.py                              # SerpApi searches, then record each site
+uv run dsite.py https://example.org/books/   # or start from one URL
+uv run dsite_download.py                     # download from the entry list
 ```
 
-- A given URL is the start page; the crawl stays on that domain.
-- Without a URL, the search uses **SerpApi** (Google results). The key is read
+### The crawler (`dsite.py`)
+
+- Without a URL, it searches with **SerpApi** (Google results). The key is read
   from `SERPAPI` in `python/.env` (create that file yourself; it is gitignored),
   or from the `SERPAPI` environment variable. The environment wins if both are set.
 - The default search terms are the four approved keywords (`--search-terms`,
@@ -98,30 +103,58 @@ uv run dsite.py --max-pages=30 --max-depth=2 --delay=8
   search, run in order. Two result pages per keyword by default, so a full run
   is **8 searches** (4 keywords × 2 pages). `--search-pages=1` makes it 4.
   Each page is one SerpApi request, and each request counts against the budget.
-- **Stage 1, search (no downloads).** Each result is checked. A PDF/DOCX result goes
-  to `site_entry_list.txt`. A site result is probed: only its first `--probe-pages`
-  pages (default 2) are read. If one of them links a PDF or DOCX, the site's main
-  link goes to `site_list.txt`. Scribd links go to `site_scribd_links.txt`.
-- **Stage 2, crawl the sites.** `uv run dsite.py --crawl-sites` takes `site_list.txt`
-  as its entry. Each site is crawled (up to `--max-pages`, and it stops after
-  `--patience` pages in a row with no link), and each PDF/DOCX is downloaded as
-  it is found.
 - Searches are spaced at least `--search-gap` seconds apart (default 60).
+- **One method, stop at the first download link.** For each site result, pages are
+  read until the first PDF or DOCX link. Then the crawl of that site stops, and the site's **main link** (scheme + host + `/`) is written to
+  `scan/site_entry_list.txt`. A site with no hit is capped at `--max-pages`
+  (default 50).
+- A result that is a PDF or DOCX file itself goes to the same entry list as a file URL.
+- A Scribd result goes to `scan/site_scribd_links.txt`. Its key is the Scribd
+  document URL, and its Source is the **search engine index link**
+  (`https://www.google.com/search?q=<keyword>`), not the site link.
+- A result counts only if the page has a PDF/DOCX link. A `.pdf` or Scribd URL
+  alone does not count.
 - **Monthly budget.** The free SerpApi plan allows 250 successful searches a
   month. The tool counts its own searches in `scan/serpapi_usage.json`
   (gitignored), refuses a run whose planned searches exceed what is left, and
   stops on a refused key, rate limit or SerpApi error. The count only covers
   searches made by this tool, so check your SerpApi dashboard for the real figure.
 - `robots.txt` is honoured. A site that blocks or rate-limits is abandoned at once.
-- Output, all in `scan/` at the repo root (gitignored):
-  - `search_results.txt`: every result of every search (keyword, start, rank,
-    title, URL), written **before** any site is crawled.
-  - `search_cache.json`: the saved search responses. A rerun reuses them, so
-    repeating a run does not spend searches. `--fresh-search` ignores them.
-  - `site_entry_list.txt` (PDF/DOCX found directly by the search),
-    `site_list.txt` (sites with a PDF/DOCX; the entry for stage 2) and
-    `site_scribd_links.txt`.
-  - `serpapi_usage.json`: the monthly search counter.
+- Pages are paced by `--delay` (default 1 s) plus up to `--jitter` (default 0.5 s).
+
+### The downloader (`dsite_download.py`)
+
+- Reads `scan/site_entry_list.txt`.
+- A **file row** (a PDF/DOCX URL) is written to `scan/download_queue.txt` and
+  downloaded with `download.py`.
+- A **site row** (a main link) is crawled: up to `--max-pages` 500 pages, depth 10
+  (`--max-depth`). Each PDF/DOCX is queued and downloaded **as it is found**, not
+  after the whole site is crawled.
+- Files already in `download.py`'s history are skipped, so a file is never
+  downloaded twice, even across runs.
+- Pages are read again on a rerun. There is no page-level resume; only the
+  downloaded files are remembered.
+- Output: the files go to `python/downloaded_files/` (`--out-dir` changes it).
+
+### Output (all in `scan/` at the repo root, gitignored)
+
+- `search_results.txt`: every result of every search (keyword, start, rank,
+  title, URL), written **before** any site is crawled.
+- `search_cache.json`: the saved search responses. A rerun reuses them, so
+  repeating a run does not spend searches. `--fresh-search` ignores them.
+- `site_entry_list.txt`: the entry list, one row per file URL or site main link.
+  It is written with a header row at the start and grows during the run.
+- `site_scribd_links.txt`: Scribd documents, Source = search index link.
+- `download_queue.txt`: file links waiting for `download.py` (rewritten before
+  each download).
+- `serpapi_usage.json`: the monthly search counter.
+
+### Order of work
+
+1. `uv run dsite.py` — searches and the entry list are complete when it exits.
+2. `uv run dsite_download.py` — downloads from the entry list.
+
+Stop a run with Ctrl+C. Files already downloaded are kept, and a rerun skips them.
 
 ## 0c. PDF linearizer — `python/linearize.py`
 

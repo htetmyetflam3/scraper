@@ -1,24 +1,25 @@
-#!/usr/bin/env python3
-"""Crawl each site the search engine pointed to and collect its PDF/DOCX links.
+"""Crawler: search, then find the sites that have PDF/DOCX files. It downloads nothing.
 
-    uv run dsite.py https://example.org/books/   # crawl this site
-    uv run dsite.py                              # no URL: SerpApi searches, then crawl each result
+    uv run dsite.py https://example.org/books/   # check this site
+    uv run dsite.py                              # no URL: SerpApi searches, then check each result
 
-One crawler, two ways to get its starting URLs. Given URLs are crawled as-is.
-Without URLs, SerpApi (Google results) runs each search term, and the results
-are handled in order: each result site is crawled and its PDFs are downloaded
-before the next result. The key is read from SERPAPI in python/.env (or the
-environment). Each search is counted against a monthly limit (default 250).
+Without URLs, SerpApi (Google results) runs each search term in turn. Each search
+result is checked:
 
-For each site the crawler starts at the start URL (a given URL, or the page the search returned) and
-follows links that stay on the same domain, up to --max-depth levels and
---max-pages pages. Every PDF/DOCX it links to goes into site_entry_list.txt
-(the matching filter from crawler.py applies, so --match-mode=loose by default).
-Scribd document links are not downloaded here; they go to site_scribd_links.txt
-for separate handling. Links to other domains are not followed.
+- a PDF/DOCX result goes to site_entry_list.txt as a file URL;
+- a Scribd result goes to site_scribd_links.txt, keyed by the document URL, with
+  the search engine index link as its Source;
+- a site result is read page by page only until the first PDF/DOCX link. That
+  site's main link (scheme + host + "/") then goes to
+  site_entry_list.txt, and the crawl of that site stops. A site with no hit is
+  read up to --max-pages (default 50) and left.
 
-Politeness: robots.txt is honoured, requests are spaced by --delay plus random
---jitter, and the site is abandoned at once if it blocks or rate-limits us.
+dsite_download.py reads site_entry_list.txt and does the downloading.
+
+The key is read from SERPAPI in python/.env (or the environment). Each search is
+counted against a monthly limit (default 250). robots.txt is honoured, requests
+are spaced by --delay plus random --jitter, and a site that blocks or rate-limits
+us is abandoned at once. Links to other domains are not followed.
 """
 
 from __future__ import annotations
@@ -138,7 +139,7 @@ def crawl_site(
     sleep=time.sleep,
     log=print,
     save=None,
-    patience=None,
+    stop_at_first_file=False,
 ) -> dict[str, int]:
     seed = without_fragment(seed)
     seed_host = host_key(seed)
@@ -153,7 +154,6 @@ def crawl_site(
         return stats
 
     queue: deque[tuple[str, int]] = deque([(seed, 0)])
-    pages_without_hit = 0
     visited: set[str] = {seed}
     while queue and stats["pages"] < max_pages:
         page_url, depth = queue.popleft()
@@ -196,15 +196,11 @@ def crawl_site(
             if same_site(url, seed_host) and depth < max_depth and url not in visited and is_html_candidate(url):
                 visited.add(url)
                 queue.append((url, depth + 1))
-        if len(entries) + len(scribd) != found_before:
-            pages_without_hit = 0
-            if save:
-                save()
-        else:
-            pages_without_hit += 1
-            if patience and pages_without_hit >= patience:
-                log(f"  No PDF/DOCX/Scribd link in the last {patience} pages. Moving on to the next site.")
-                break
+        if stop_at_first_file and stats["pdf"]:
+            log(f"  Download link found on {final_url}; stopping this site.")
+            break
+        if len(entries) + len(scribd) != found_before and save:
+            save()
     return stats
 
 
@@ -216,27 +212,20 @@ def read_seeds(path: Path) -> list[str]:
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Crawl websites for PDF/DOCX links, starting from URLs or SerpApi search results.")
-    parser.add_argument("urls", nargs="*", help="start URLs (default: search with SerpApi, see --search-terms)")
-    parser.add_argument("--entry-list", type=Path, default=SCAN_DIR / "site_entry_list.txt")
+    parser = argparse.ArgumentParser(
+        description="Crawler: search, find the sites that link a PDF/DOCX, and register them in the entry list. "
+                    "It does not download; dsite_download.py does.")
+    parser.add_argument("urls", nargs="*", help="site URLs to check (default: search with SerpApi)")
+    parser.add_argument("--entry-list", type=Path, default=SCAN_DIR / "site_entry_list.txt",
+                        help="sites (and direct files) for the downloader")
     parser.add_argument("--scribd-list", type=Path, default=SCAN_DIR / "site_scribd_links.txt")
-    parser.add_argument("--site-list", type=Path, default=SCAN_DIR / "site_list.txt",
-                        help="sites that have a PDF/DOCX; the entry for the crawl stage")
-    parser.add_argument("--probe-pages", type=int, default=2,
-                        help="pages looked at per search-result site before deciding (default 2)")
-    parser.add_argument("--crawl-sites", action="store_true",
-                        help="stage 2: crawl and download every site in the site list, no search")
-    parser.add_argument("--max-pages", type=int, default=500,
-                        help="safety cap on pages fetched per site (default 500; the site is crawled in full below this)")
+    parser.add_argument("--max-pages", type=int, default=50,
+                        help="pages read per site while looking for a download link (default 50)")
     parser.add_argument("--max-depth", type=int, default=10, help="link levels below the start page (default 10)")
     parser.add_argument("--match-mode", default="loose", choices=("loose", "filename"))
     parser.add_argument("--delay", type=float, default=1.0, help="seconds between page requests (default 1)")
     parser.add_argument("--jitter", type=float, default=0.5, help="extra random seconds (default 0.5)")
     parser.add_argument("--timeout", type=float, default=60.0)
-    parser.add_argument("--patience", type=int, default=30,
-                        help="stop a site after this many pages in a row with no PDF/DOCX/Scribd link "
-                             "(default 30; 0 = never stop early)")
-    parser.add_argument("--no-download", action="store_true", help="collect links only; do not download after each site")
     parser.add_argument("--search-terms",
                         default="myanmar books download,myanmar ebooks download,Myanmar PDF free download,free မြန်မာ pdf စာအုပ်များ",
                         help="comma-separated search phrases, run in order (no URL given)")
@@ -246,7 +235,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
                         help="minimum seconds between two search requests (default 60)")
     parser.add_argument("--monthly-limit", type=int, default=250, help="SerpApi searches allowed per month (default 250)")
     parser.add_argument("--search-log", type=Path, default=SCAN_DIR / "search_results.txt",
-                        help="every search result, written before any site is crawled")
+                        help="every search result, written before any site is checked")
     parser.add_argument("--search-cache", type=Path, default=SCAN_DIR / "search_cache.json",
                         help="saved search responses; a rerun reuses them and spends no search")
     parser.add_argument("--fresh-search", action="store_true",
@@ -351,13 +340,6 @@ def serpapi_search(query: str, start: int, api_key: str, timeout: float = 60.0) 
     return results, more
 
 
-def download_new(entry_list: Path) -> None:
-    """Download whatever is in the entry list that is not downloaded yet (download.py keeps history)."""
-    import download
-
-    download.main([str(entry_list)])
-
-
 def search_key(term: str, start: int) -> str:
     return f"{term}|{start}"
 
@@ -386,7 +368,7 @@ def log_search_results(path: Path, term: str, start: int, results: list[dict]) -
             handle.write(f"{term}\t{start}\t{rank}\t{title}\t{result['url']}\n")
 
 
-def run_search(args: argparse.Namespace, fetcher, entries, scribd, not_kept, sites) -> int:
+def run_search(args: argparse.Namespace, fetcher, entries, scribd, not_kept) -> int:
     api_key = load_serpapi_key()
     if not api_key:
         print(explain_missing_key(), file=sys.stderr)
@@ -428,7 +410,7 @@ def run_search(args: argparse.Namespace, fetcher, entries, scribd, not_kept, sit
                     log_search_results(args.search_log, term, start, results)
                     print(f"  page {page_no}: {len(results)} result(s); searches used {budget.used}/{budget.limit}")
                 for result in results:
-                    handle_result(result, args, fetcher, entries, scribd, not_kept, sites, probed, term)
+                    handle_result(result, args, fetcher, entries, scribd, not_kept, probed, term)
                 if not results or not more:
                     break
                 if page_no >= args.search_pages:
@@ -440,9 +422,9 @@ def run_search(args: argparse.Namespace, fetcher, entries, scribd, not_kept, sit
     return 0
 
 
-def save_lists(args, entries, scribd) -> None:
-    write_book_list(args.entry_list, entries)
-    write_book_list(args.scribd_list, scribd)
+def search_index_url(term: str) -> str:
+    """The search engine's own results page for a keyword. Rows from that search are registered under it."""
+    return "https://www.google.com/search?q=" + urllib.parse.quote_plus(term)
 
 
 def site_root(url: str) -> str:
@@ -451,41 +433,39 @@ def site_root(url: str) -> str:
     return f"{parts.scheme}://{parts.netloc}/"
 
 
-def probe_site(url: str, fetcher, args, scribd, not_kept) -> bool:
-    """Discovery: look at only a few pages of the site. True if one of them links a real PDF/DOCX.
+def save_lists(args, entries, scribd) -> None:
+    write_book_list(args.entry_list, entries)
+    write_book_list(args.scribd_list, scribd)
 
-    The probe never downloads and never writes to the entry list. Scribd links it finds go to their own list.
+
+def discover_site(url: str, fetcher, args, scribd, not_kept, index: str) -> bool:
+    """Read the site only until one page links a PDF/DOCX. True if it has one (so the site has a download).
+
+    The crawl stops at that page. Scribd links found on the way are registered under the search index link.
     """
     found: dict[str, dict] = {}
-    crawl_site(
-        url, fetcher, entries=found, scribd=scribd, not_kept=not_kept,
-        max_pages=args.probe_pages, max_depth=args.max_depth, match_mode=args.match_mode,
-        delay=args.delay, jitter=args.jitter,
+    scratch_scribd: dict[str, dict] = {}
+    stats = crawl_site(
+        url, fetcher, entries=found, scribd=scratch_scribd, not_kept=not_kept,
+        max_pages=args.max_pages, max_depth=args.max_depth, match_mode=args.match_mode,
+        delay=args.delay, jitter=args.jitter, stop_at_first_file=True,
     )
-    return bool(found)
+    for link, record in scratch_scribd.items():
+        upsert(scribd, link, record["name"], index)
+    return stats["pdf"] > 0
 
 
-def on_new_links(args, entries, scribd) -> None:
-    """Called whenever a page adds a link: save the lists, then download what is new."""
-    save_lists(args, entries, scribd)
-    if args.no_download or not entries:
-        return
-    try:
-        download_new(args.entry_list)
-    except Exception as error:  # a failed download must not stop the crawl
-        print(f"  Download error (the crawl continues): {error}")
-
-
-def handle_result(result, args, fetcher, entries, scribd, not_kept, sites, probed, term) -> None:
-    """Discovery for one search result: a file goes to the entry list; a site is probed and, if it has a PDF/DOCX,
-    its main link goes to the site list."""
+def handle_result(result, args, fetcher, entries, scribd, not_kept, probed, term) -> None:
+    """One search result. Scribd -> Scribd list (under the search index link). A file -> entry list.
+    A site -> checked once; if it has a download, its main link goes to the entry list."""
     url, title = result["url"], result["title"]
+    index = search_index_url(term)
     if is_scribd_document_url(url):
-        upsert(scribd, url, title, term)
+        upsert(scribd, url, title, index)
         return
     if BOOK_EXTENSION.search(urllib.parse.urlsplit(url).path.lower()):
         if matches_book_candidate(url, title, args.match_mode):
-            upsert(entries, url, title, term)
+            upsert(entries, url, title, index)
         else:
             not_kept.append((title, url))
         return
@@ -496,79 +476,45 @@ def handle_result(result, args, fetcher, entries, scribd, not_kept, sites, probe
         return
     probed.add(host)
     print(f"  Checking site: {host} (from {url})")
-    if probe_site(url, fetcher, args, scribd, not_kept):
+    if discover_site(url, fetcher, args, scribd, not_kept, index):
         root = site_root(url)
-        upsert(sites, root, title, term)
-        write_book_list(args.site_list, sites)
-        print(f"    registered in {args.site_list.name}: {root}")
+        upsert(entries, root, title, index)
+        print(f"    has a download link: registered {root}")
     else:
-        print(f"    no PDF/DOCX on the first {args.probe_pages} page(s); not registered")
-    write_book_list(args.scribd_list, scribd)
-
-
-def crawl_registered_sites(args, fetcher, entries, scribd, not_kept, sites) -> int:
-    """Stage 2: the site list is the entry. Crawl each registered site and download as the files are found."""
-    if not sites:
-        print(f"The site list is empty ({args.site_list}). Run a search first, without --crawl-sites.", file=sys.stderr)
-        return 1
-    if entries and not args.no_download:
-        try:
-            download_new(args.entry_list)  # direct file results found by the search
-        except Exception as error:
-            print(f"  Download error (the crawl continues): {error}")
-    print(f"Sites to crawl: {len(sites)}")
-    for record in sites.values():
-        url = record["url"]
-        print(f"\nSite: {host_key(url)} ({url})")
-        stats = crawl_site(
-            url, fetcher, entries=entries, scribd=scribd, not_kept=not_kept,
-            max_pages=args.max_pages, max_depth=args.max_depth, match_mode=args.match_mode,
-            delay=args.delay, jitter=args.jitter,
-            save=lambda: on_new_links(args, entries, scribd), patience=args.patience,
-        )
-        print(f"  pages: {stats['pages']}; PDF/DOCX found: {stats['pdf']}; Scribd: {stats['scribd']}")
-    return 0
+        print(f"    no PDF/DOCX link in {args.max_pages} page(s) or fewer; not registered")
+    save_lists(args, entries, scribd)
 
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
-    for output in (args.entry_list, args.scribd_list, args.site_list, args.usage_file):
+    for output in (args.entry_list, args.scribd_list, args.usage_file):
         output.parent.mkdir(parents=True, exist_ok=True)
     entries = read_book_list(args.entry_list)
     scribd = read_book_list(args.scribd_list)
-    sites = read_book_list(args.site_list)
-    save_lists(args, entries, scribd)  # create the lists now, so they exist before the first hit
-    write_book_list(args.site_list, sites)
+    save_lists(args, entries, scribd)  # create both lists now, so they exist before the first hit
     not_kept: list[tuple[str, str]] = []
     fetcher = HttpFetcher(timeout=args.timeout)
     try:
-        if args.crawl_sites:
-            code = crawl_registered_sites(args, fetcher, entries, scribd, not_kept, sites)
-        elif args.urls:
+        if args.urls:
             for url in args.urls:
                 print(f"Site: {host_key(url)} (from {url})")
-                stats = crawl_site(
-                    url, fetcher, entries=entries, scribd=scribd, not_kept=not_kept,
-                    max_pages=args.max_pages, max_depth=args.max_depth, match_mode=args.match_mode,
-                    delay=args.delay, jitter=args.jitter,
-                    save=lambda: on_new_links(args, entries, scribd), patience=args.patience,
-                )
-                print(f"  pages: {stats['pages']}; PDF/DOCX found: {stats['pdf']}; Scribd: {stats['scribd']}")
-                write_book_list(args.entry_list, entries)
-                write_book_list(args.scribd_list, scribd)
+                if discover_site(url, fetcher, args, scribd, not_kept, index=url):
+                    root = site_root(url)
+                    upsert(entries, root, root, url)
+                    print(f"  has a download link: registered {root}")
+                else:
+                    print(f"  no PDF/DOCX link in {args.max_pages} page(s) or fewer; not registered")
+                save_lists(args, entries, scribd)
             code = 0
         else:
-            code = run_search(args, fetcher, entries, scribd, not_kept, sites)
+            code = run_search(args, fetcher, entries, scribd, not_kept)
     except KeyboardInterrupt:
         print("\nInterrupted. Saved what was found so far.")
         code = 130
 
-    write_book_list(args.entry_list, entries)
-    write_book_list(args.scribd_list, scribd)
-    write_book_list(args.site_list, sites)
-    print(f"\nPDF/DOCX links: {len(entries)} ({args.entry_list})")
+    save_lists(args, entries, scribd)
+    print(f"\nEntry list:     {len(entries)} ({args.entry_list})")
     print(f"Scribd links:   {len(scribd)} ({args.scribd_list})")
-    print(f"Sites:          {len(sites)} ({args.site_list})")
     if not_kept:
         print("Sample of links not kept (wrong type or no Burmese match):")
         for label, url in not_kept[:5]:
