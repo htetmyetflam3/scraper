@@ -52,6 +52,7 @@ from crawler import (
 )
 
 HERE = Path(__file__).resolve().parent
+SCAN_DIR = HERE.parent / "scan"  # all text output of this crawler goes here
 
 # Page URLs with these extensions are never fetched as HTML.
 SKIP_PAGE_EXTENSIONS = {
@@ -199,8 +200,8 @@ def read_seeds(path: Path) -> list[str]:
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Crawl websites for PDF/DOCX links, starting from URLs or SerpApi search results.")
     parser.add_argument("urls", nargs="*", help="start URLs (default: search with SerpApi, see --search-terms)")
-    parser.add_argument("--entry-list", type=Path, default=HERE / "site_entry_list.txt")
-    parser.add_argument("--scribd-list", type=Path, default=HERE / "site_scribd_links.txt")
+    parser.add_argument("--entry-list", type=Path, default=SCAN_DIR / "site_entry_list.txt")
+    parser.add_argument("--scribd-list", type=Path, default=SCAN_DIR / "site_scribd_links.txt")
     parser.add_argument("--max-pages", type=int, default=500,
                         help="safety cap on pages fetched per site (default 500; the site is crawled in full below this)")
     parser.add_argument("--max-depth", type=int, default=10, help="link levels below the start page (default 10)")
@@ -217,7 +218,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--search-gap", type=float, default=60.0,
                         help="minimum seconds between two search requests (default 60)")
     parser.add_argument("--monthly-limit", type=int, default=250, help="SerpApi searches allowed per month (default 250)")
-    parser.add_argument("--usage-file", type=Path, default=HERE / "serpapi_usage.json",
+    parser.add_argument("--usage-file", type=Path, default=SCAN_DIR / "serpapi_usage.json",
                         help="where the searches made this month are counted")
     return parser.parse_args(argv)
 
@@ -373,6 +374,8 @@ def handle_result(result, args, fetcher, entries, scribd, not_kept, crawled_host
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
+    for output in (args.entry_list, args.scribd_list, args.usage_file):
+        output.parent.mkdir(parents=True, exist_ok=True)
     entries = read_book_list(args.entry_list)
     scribd = read_book_list(args.scribd_list)
     not_kept: list[tuple[str, str]] = []

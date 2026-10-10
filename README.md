@@ -101,13 +101,14 @@ uv run dsite.py --max-pages=30 --max-depth=2 --delay=8
   its PDFs are downloaded before the next result is handled.
 - Searches are spaced at least `--search-gap` seconds apart (default 60).
 - **Monthly budget.** The free SerpApi plan allows 250 successful searches a
-  month. The tool counts its own searches in `python/serpapi_usage.json`
+  month. The tool counts its own searches in `scan/serpapi_usage.json`
   (gitignored), refuses a run whose planned searches exceed what is left, and
   stops on a refused key, rate limit or SerpApi error. The count only covers
   searches made by this tool, so check your SerpApi dashboard for the real figure.
 - `robots.txt` is honoured. A site that blocks or rate-limits is abandoned at once.
-- Output: `site_entry_list.txt` (PDF/DOCX, feed it to `download.py`) and
-  `site_scribd_links.txt`.
+- Output, all in `scan/` at the repo root: `site_entry_list.txt` (PDF/DOCX, the
+  downloader reads it), `site_scribd_links.txt`, and `serpapi_usage.json`
+  (the monthly search counter). `scan/` is gitignored.
 
 ## 0c. PDF linearizer — `python/linearize.py`
 
