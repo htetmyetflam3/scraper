@@ -107,7 +107,7 @@ uv run dsite_download.py                     # download from the entry list
 - **One method, stop at the first download link.** For each site result, pages are
   read until the first PDF or DOCX link. Then the crawl of that site stops, and the site's **main link** (scheme + host + `/`) is written to
   `scan/site_entry_list.txt`. A site with no hit is capped at `--max-pages`
-  (default 50).
+  (default 10).
 - A result that is a PDF or DOCX file itself goes to the same entry list as a file URL.
 - A Scribd result goes to `scan/site_scribd_links.txt`. Its key is the Scribd
   document URL, and its Source is the **search engine index link**

@@ -12,7 +12,7 @@ result is checked:
 - a site result is read page by page only until the first PDF/DOCX link. That
   site's main link (scheme + host + "/") then goes to
   site_entry_list.txt, and the crawl of that site stops. A site with no hit is
-  read up to --max-pages (default 50) and left.
+  read up to --max-pages (default 10) and left.
 
 dsite_download.py reads site_entry_list.txt and does the downloading.
 
@@ -248,8 +248,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--entry-list", type=Path, default=SCAN_DIR / "site_entry_list.txt",
                         help="sites (and direct files) for the downloader")
     parser.add_argument("--scribd-list", type=Path, default=SCAN_DIR / "site_scribd_links.txt")
-    parser.add_argument("--max-pages", type=int, default=50,
-                        help="pages read per site while looking for a download link (default 50)")
+    parser.add_argument("--max-pages", type=int, default=10,
+                        help="pages read per site while looking for a download link (default 10)")
     parser.add_argument("--max-depth", type=int, default=10, help="link levels below the start page (default 10)")
     parser.add_argument("--match-mode", default="loose", choices=("loose", "filename"))
     parser.add_argument("--delay", type=float, default=1.0, help="seconds between page requests (default 1)")
