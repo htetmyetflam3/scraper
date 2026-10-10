@@ -326,3 +326,11 @@ def test_missing_key_message_says_what_is_wrong(tmp_path):
     present = tmp_path / ".env"
     present.write_text("OTHER=1\n", encoding="utf8")
     assert "has no line of the form SERPAPI=" in dsite.explain_missing_key(present)
+
+
+def test_a_found_pdf_is_logged_and_saved_at_once():
+    saves, logs = [], []
+    fetcher = FakeFetcher({SITE: '<a href="novel.pdf">မြန်မာဝတ္ထု</a>'})
+    run(fetcher, log=logs.append, save=lambda: saves.append(1))
+    assert saves, "the lists are saved when the page adds a link, not only at the end of the site"
+    assert any("PDF/DOCX found: https://books.example.org/novel.pdf" in line for line in logs)

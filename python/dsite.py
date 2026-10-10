@@ -137,12 +137,14 @@ def crawl_site(
     jitter: float,
     sleep=time.sleep,
     log=print,
+    save=None,
 ) -> dict[str, int]:
     seed = without_fragment(seed)
     seed_host = host_key(seed)
     scheme = urllib.parse.urlsplit(seed).scheme
     stats = {"pages": 0, "pdf": 0, "scribd": 0, "not_kept": 0}
 
+    log(f"  reading robots.txt for {seed_host}")
     try:
         robots = RobotsRules(fetcher, seed_host, scheme)
     except Blocked as error:
@@ -158,6 +160,7 @@ def crawl_site(
             continue
         if stats["pages"] > 0:
             sleep(delay + random.uniform(0, jitter))
+        log(f"  requesting {page_url}")
         try:
             html, final_url = fetcher.fetch(page_url)
         except (Blocked, RateLimited) as error:
@@ -169,8 +172,11 @@ def crawl_site(
         stats["pages"] += 1
         log(f"  [{stats['pages']}/{max_pages}] depth {depth}: {final_url}")
 
+        found_before = len(entries) + len(scribd)
         for url, label in page_links(html, final_url):
             if is_scribd_document_url(url):
+                if url not in scribd:
+                    log(f"    Scribd: {url}")
                 upsert(scribd, url, label, final_url)
                 stats["scribd"] += 1
                 continue
@@ -179,6 +185,7 @@ def crawl_site(
                 if matches_book_candidate(url, label, match_mode):
                     if url not in entries:
                         stats["pdf"] += 1
+                        log(f"    PDF/DOCX found: {url}")
                     upsert(entries, url, label, final_url)
                 else:
                     stats["not_kept"] += 1
@@ -187,6 +194,8 @@ def crawl_site(
             if same_site(url, seed_host) and depth < max_depth and url not in visited and is_html_candidate(url):
                 visited.add(url)
                 queue.append((url, depth + 1))
+        if save and len(entries) + len(scribd) != found_before:
+            save()
     return stats
 
 
@@ -365,6 +374,11 @@ def run_search(args: argparse.Namespace, fetcher, entries, scribd, not_kept) -> 
     return 0
 
 
+def save_lists(args, entries, scribd) -> None:
+    write_book_list(args.entry_list, entries)
+    write_book_list(args.scribd_list, scribd)
+
+
 def handle_result(result, args, fetcher, entries, scribd, not_kept, crawled_hosts) -> None:
     url, title = result["url"], result["title"]
     if is_scribd_document_url(url):
@@ -387,6 +401,7 @@ def handle_result(result, args, fetcher, entries, scribd, not_kept, crawled_host
         url, fetcher, entries=entries, scribd=scribd, not_kept=not_kept,
         max_pages=args.max_pages, max_depth=args.max_depth, match_mode=args.match_mode,
         delay=args.delay, jitter=args.jitter,
+        save=lambda: save_lists(args, entries, scribd),
     )
     print(f"    pages: {stats['pages']}; PDF/DOCX found: {stats['pdf']}; Scribd: {stats['scribd']}")
     write_book_list(args.entry_list, entries)
@@ -411,6 +426,7 @@ def main(argv: list[str] | None = None) -> int:
                     url, fetcher, entries=entries, scribd=scribd, not_kept=not_kept,
                     max_pages=args.max_pages, max_depth=args.max_depth, match_mode=args.match_mode,
                     delay=args.delay, jitter=args.jitter,
+                    save=lambda: save_lists(args, entries, scribd),
                 )
                 print(f"  pages: {stats['pages']}; PDF/DOCX found: {stats['pdf']}; Scribd: {stats['scribd']}")
                 write_book_list(args.entry_list, entries)
