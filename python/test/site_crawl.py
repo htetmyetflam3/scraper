@@ -1,9 +1,28 @@
 """Site crawler tests: offline, with a fake fetcher."""
 
+import time
+
 import pytest
 
+import importlib.util
+import sys
+from pathlib import Path
+
 from crawler import Blocked, is_site_seed
-from site_crawl import crawl_site, host_key, main, page_links
+
+
+def _load_site():
+    """Load python/site.py by path. A plain `import site` would get Python's built-in `site` module."""
+    path = Path(__file__).resolve().parents[1] / "site.py"
+    spec = importlib.util.spec_from_file_location("site_crawler", path)
+    module = importlib.util.module_from_spec(spec)
+    sys.modules["site_crawler"] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+site_crawl = _load_site()
+crawl_site, host_key, main, page_links = site_crawl.crawl_site, site_crawl.host_key, site_crawl.main, site_crawl.page_links
 
 
 class FakeFetcher:
@@ -119,8 +138,6 @@ def test_search_results_become_sites_only_when_they_are_ordinary_pages():
 
 
 def test_main_with_a_url_writes_the_entry_list(tmp_path, monkeypatch):
-    import site_crawl
-
     monkeypatch.setattr(site_crawl, "HttpFetcher", lambda **_: FakeFetcher({
         SITE: '<a href="novel.pdf">မြန်မာဝတ္ထု</a>',
     }))
@@ -132,17 +149,16 @@ def test_main_with_a_url_writes_the_entry_list(tmp_path, monkeypatch):
 
 
 def _search_setup(monkeypatch, tmp_path, pages, sites, downloads, gaps=None):
-    """pages: {offset: (results, more)}; sites: {url: html}. Returns the list of search calls."""
-    import site_crawl
-
+    """pages: {(query, start): (results, more)}; sites: {url: html}. Returns the list of search calls."""
     calls = []
 
-    def fake_brave(query, offset, api_key, timeout=30.0):
-        calls.append((query, offset))
-        return pages.get(offset, ([], False))
+    def fake_search(query, start, api_key, timeout=60.0):
+        calls.append((query, start))
+        return pages.get((query, start), ([], False))
 
-    monkeypatch.setenv("BRAVE_API_KEY", "test-key")
-    monkeypatch.setattr(site_crawl, "brave_search", fake_brave)
+    monkeypatch.setenv("SERPAPI", "test-key")
+    monkeypatch.setattr(site_crawl, "ENV_FILE", tmp_path / "no-such.env")
+    monkeypatch.setattr(site_crawl, "serpapi_search", fake_search)
     monkeypatch.setattr(site_crawl, "HttpFetcher", lambda **_: FakeFetcher(sites))
     monkeypatch.setattr(site_crawl, "download_new", lambda entry_list: downloads.append(entry_list))
     monkeypatch.setattr(site_crawl.time, "sleep", lambda s: gaps.append(s) if gaps is not None else None)
@@ -151,64 +167,146 @@ def _search_setup(monkeypatch, tmp_path, pages, sites, downloads, gaps=None):
 
 def _args(tmp_path, *extra):
     return [f"--entry-list={tmp_path/'e.txt'}", f"--scribd-list={tmp_path/'s.txt'}",
-            "--delay=0", "--jitter=0", "--search-terms=Myanmar PDF", *extra]
+            "--delay=0", "--jitter=0", "--search-terms=Myanmar PDF", f"--usage-file={tmp_path/'usage.json'}", *extra]
+
+
+def test_default_search_terms_are_the_four_approved_keywords():
+    terms = site_crawl.parse_args([]).search_terms.split(",")
+    assert terms == ["myanmar books download", "myanmar ebooks download", "Myanmar PDF free download",
+                     "free မြန်မာ pdf စာအုပ်များ"]
+    assert site_crawl.parse_args([]).search_pages == 1, "one page per keyword by default"
+    assert site_crawl.parse_args([]).monthly_limit == 250
 
 
 def test_no_url_follows_results_in_order_and_downloads_after_each_site(tmp_path, monkeypatch):
     downloads = []
-    pages = {0: ([{"url": "https://first.example.com/", "title": "first"},
-                  {"url": "https://second.example.com/", "title": "second"}], True),
-             1: ([{"url": "https://third.example.com/", "title": "third"}], False)}
+    pages = {("Myanmar PDF", 0): ([{"url": "https://first.example.com/", "title": "first"},
+                                   {"url": "https://second.example.com/", "title": "second"}], False)}
     sites = {
         "https://first.example.com/": '<a href="a.pdf">Myanmar A</a>',
         "https://second.example.com/": '<a href="b.pdf">Myanmar B</a>',
-        "https://third.example.com/": '<a href="c.pdf">Myanmar C</a>',
     }
     calls = _search_setup(monkeypatch, tmp_path, pages, sites, downloads)
     code = main(_args(tmp_path))
     assert code == 0
-    assert calls == [("Myanmar PDF", 0), ("Myanmar PDF", 1)], "stops when more_results_available is false"
-    assert len(downloads) == 3, "each site with a PDF is downloaded before the next result"
+    assert calls == [("Myanmar PDF", 0)]
+    assert len(downloads) == 2, "each site with a PDF is downloaded before the next result"
     entries = (tmp_path / "e.txt").read_text(encoding="utf8")
-    assert "a.pdf" in entries and "b.pdf" in entries and "c.pdf" in entries
+    assert "a.pdf" in entries and "b.pdf" in entries
+
+
+def test_one_search_per_keyword_and_no_pagination_by_default(tmp_path, monkeypatch):
+    pages = {("one", 0): ([], True), ("one", 10): ([], True), ("two", 0): ([], False)}
+    calls = _search_setup(monkeypatch, tmp_path, pages, {}, [])
+    main(_args(tmp_path, "--search-terms=one,two"))
+    assert calls == [("one", 0), ("two", 0)], "page 1 only, no next page unless --search-pages allows it"
+
+
+def test_search_pages_flag_follows_pages_while_engine_says_more(tmp_path, monkeypatch):
+    hit = [{"url": "https://x.example.com/", "title": "x"}]
+    pages = {("one", 0): (hit, True), ("one", 10): (hit, True), ("one", 20): (hit, False)}
+    calls = _search_setup(monkeypatch, tmp_path, pages, {}, [])
+    main(_args(tmp_path, "--search-terms=one", "--search-pages=5"))
+    assert calls == [("one", 0), ("one", 10), ("one", 20)], "stops when SerpApi has no next page"
 
 
 def test_no_url_waits_between_search_requests(tmp_path, monkeypatch):
     gaps = []
-    pages = {0: ([{"url": "https://only.example.com/", "title": "x"}], True),
-             1: ([], False)}
-    _search_setup(monkeypatch, tmp_path, pages, {"https://only.example.com/": "<p>none</p>"}, [], gaps)
-    main(_args(tmp_path, "--search-gap=30"))
-    assert gaps and all(g > 0 for g in gaps), "a second search is never sent right after the first"
+    pages = {("Myanmar PDF", 0): ([], False)}
+    calls = _search_setup(monkeypatch, tmp_path, pages, {}, [], gaps)
+    main(_args(tmp_path, "--search-terms=Myanmar PDF,Myanmar PDF", "--search-gap=60"))
+    assert len(calls) == 2
+    assert gaps and all(0 < g <= 60 for g in gaps), "a second search waits up to the 60 s gap, never zero"
 
 
-def test_no_url_stops_on_brave_rate_limit(tmp_path, monkeypatch):
-    import site_crawl
+def test_no_url_stops_on_serpapi_error(tmp_path, monkeypatch):
+    monkeypatch.setenv("SERPAPI", "test-key")
+    monkeypatch.setattr(site_crawl, "ENV_FILE", tmp_path / "no-such.env")
 
-    monkeypatch.setenv("BRAVE_API_KEY", "test-key")
+    def refused(query, start, api_key, timeout=60.0):
+        raise site_crawl.SearchStopped("SerpApi rate limit reached (HTTP 429).")
 
-    def limited(query, offset, api_key, timeout=30.0):
-        raise site_crawl.SearchStopped("Brave rate limit reached (HTTP 429).")
-
-    monkeypatch.setattr(site_crawl, "brave_search", limited)
-    code = main(_args(tmp_path))
-    assert code == 1
+    monkeypatch.setattr(site_crawl, "serpapi_search", refused)
+    assert main(_args(tmp_path, "--search-terms=one,two")) == 1
 
 
 def test_no_url_without_a_key_does_nothing(tmp_path, monkeypatch):
-    monkeypatch.delenv("BRAVE_API_KEY", raising=False)
+    monkeypatch.delenv("SERPAPI", raising=False)
+    monkeypatch.setattr(site_crawl, "ENV_FILE", tmp_path / "no-such.env")
+    calls = _search_setup(monkeypatch, tmp_path, {}, {}, [])
+    monkeypatch.delenv("SERPAPI", raising=False)
     assert main(_args(tmp_path)) == 1
+    assert calls == []
 
 
-def test_brave_search_parses_results_and_more_flag(monkeypatch):
-    import site_crawl
+def test_key_is_read_from_dotenv_when_environment_is_empty(tmp_path, monkeypatch):
+    monkeypatch.delenv("SERPAPI", raising=False)
+    env = tmp_path / ".env"
+    env.write_text("# keys\nOTHER=1\nSERPAPI=\"abc123\"\n", encoding="utf8")
+    assert site_crawl.load_serpapi_key(env) == "abc123"
+    monkeypatch.setenv("SERPAPI", "from-env")
+    assert site_crawl.load_serpapi_key(env) == "from-env", "the environment wins over .env"
+
+
+def test_run_is_refused_when_planned_searches_exceed_the_monthly_budget(tmp_path, monkeypatch):
+    import json
+
+    usage = tmp_path / "usage.json"
+    usage.write_text(json.dumps({"month": time.strftime("%Y-%m"), "used": 249}), encoding="utf8")
+    calls = _search_setup(monkeypatch, tmp_path, {}, {}, [])
+    code = main(_args(tmp_path, "--search-terms=a,b", f"--usage-file={usage}"))
+    assert code == 1
+    assert calls == [], "2 searches needed, 1 left: nothing is sent"
+
+
+def test_budget_counts_each_successful_search(tmp_path, monkeypatch):
+    import json
+
+    pages = {("one", 0): ([], False), ("two", 0): ([], False)}
+    _search_setup(monkeypatch, tmp_path, pages, {}, [])
+    main(_args(tmp_path, "--search-terms=one,two"))
+    data = json.loads((tmp_path / "usage.json").read_text(encoding="utf8"))
+    assert data["used"] == 2
+
+
+def test_budget_resets_in_a_new_month(tmp_path):
+    import json
+    path = tmp_path / "usage.json"
+    path.write_text(json.dumps({"month": "2000-01", "used": 250}), encoding="utf8")
+    assert site_crawl.SearchBudget(path, 250).remaining() == 250
+
+
+def test_serpapi_search_parses_results_and_next_page(monkeypatch):
+    seen = {}
 
     class Response:
         status_code = 200
 
         def json(self):
-            return {"web": {"results": [{"url": "https://x.example.com/", "title": "X"}]},
-                    "query": {"more_results_available": True}}
+            return {"organic_results": [{"link": "https://x.example.com/", "title": "X"}, {"title": "no link"}],
+                    "serpapi_pagination": {"next": "https://serpapi.com/search.json?start=10"}}
 
-    monkeypatch.setattr(site_crawl.httpx, "get", lambda *a, **k: Response())
-    assert site_crawl.brave_search("q", 0, "k") == ([{"url": "https://x.example.com/", "title": "X"}], True)
+    def fake_get(url, params=None, timeout=None):
+        seen.update(url=url, params=params)
+        return Response()
+
+    monkeypatch.setattr(site_crawl.httpx, "get", fake_get)
+    results, more = site_crawl.serpapi_search("q", 10, "k")
+    assert results == [{"url": "https://x.example.com/", "title": "X"}]
+    assert more is True
+    assert seen["url"] == "https://serpapi.com/search.json"
+    assert seen["params"] == {"engine": "google", "q": "q", "api_key": "k", "start": 10}
+
+
+def test_serpapi_search_stops_on_refused_key_and_rate_limit(monkeypatch):
+    class Response:
+        def __init__(self, status):
+            self.status_code = status
+
+        def json(self):
+            return {"error": "Invalid API key"}
+
+    for status in (401, 403, 429):
+        monkeypatch.setattr(site_crawl.httpx, "get", lambda *a, _s=status, **k: Response(_s))
+        with pytest.raises(site_crawl.SearchStopped):
+            site_crawl.serpapi_search("q", 0, "k")

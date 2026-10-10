@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 """Crawl each site the search engine pointed to and collect its PDF/DOCX links.
 
-    uv run site_crawl.py https://example.org/books/   # crawl this site
-    uv run site_crawl.py                              # no URL: Brave Search API, then crawl each result
+    uv run site.py https://example.org/books/   # crawl this site
+    uv run site.py                              # no URL: SerpApi searches, then crawl each result
 
 One crawler, two ways to get its starting URLs. Given URLs are crawled as-is.
-Without URLs, the Brave Search API runs each search term page by page, and the
-results are handled in order: each result site is crawled and its PDFs are
-downloaded before the next result. Requires BRAVE_API_KEY in the environment.
+Without URLs, SerpApi (Google results) runs each search term, and the results
+are handled in order: each result site is crawled and its PDFs are downloaded
+before the next result. The key is read from SERPAPI in python/.env (or the
+environment). Each search is counted against a monthly limit (default 250).
 
 For each site the crawler starts at the start URL (a given URL, or the page the search returned) and
 follows links that stay on the same domain, up to --max-depth levels and
@@ -23,6 +24,7 @@ Politeness: robots.txt is honoured, requests are spaced by --delay plus random
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import random
 import sys
@@ -35,7 +37,6 @@ from pathlib import Path
 import httpx
 from bs4 import BeautifulSoup
 
-import crawler
 from crawler import (
     BOOK_EXTENSION,
     Blocked,
@@ -196,8 +197,8 @@ def read_seeds(path: Path) -> list[str]:
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Crawl websites for PDF/DOCX links, starting from URLs or Brave search results.")
-    parser.add_argument("urls", nargs="*", help="start URLs (default: search with Brave, see --search-terms)")
+    parser = argparse.ArgumentParser(description="Crawl websites for PDF/DOCX links, starting from URLs or SerpApi search results.")
+    parser.add_argument("urls", nargs="*", help="start URLs (default: search with SerpApi, see --search-terms)")
     parser.add_argument("--entry-list", type=Path, default=HERE / "site_entry_list.txt")
     parser.add_argument("--scribd-list", type=Path, default=HERE / "site_scribd_links.txt")
     parser.add_argument("--max-pages", type=int, default=500,
@@ -208,43 +209,88 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--jitter", type=float, default=2.0, help="extra random seconds (default 2)")
     parser.add_argument("--timeout", type=float, default=60.0)
     parser.add_argument("--no-download", action="store_true", help="collect links only; do not download after each site")
-    parser.add_argument("--search-terms", default="Myanmar book PDF free download",
+    parser.add_argument("--search-terms",
+                        default="myanmar books download,myanmar ebooks download,Myanmar PDF free download,free မြန်မာ pdf စာအုပ်များ",
                         help="comma-separated search phrases, run in order (no URL given)")
-    parser.add_argument("--search-gap", type=float, default=30.0,
-                        help="minimum seconds between two search requests (default 30)")
-    parser.add_argument("--search-max-offset", type=int, default=9,
-                        help="last result-page offset to request; Brave allows 0-9 (default 9)")
+    parser.add_argument("--search-pages", type=int, default=1,
+                        help="result pages per phrase; each page is one SerpApi search (default 1)")
+    parser.add_argument("--search-gap", type=float, default=60.0,
+                        help="minimum seconds between two search requests (default 60)")
+    parser.add_argument("--monthly-limit", type=int, default=250, help="SerpApi searches allowed per month (default 250)")
+    parser.add_argument("--usage-file", type=Path, default=HERE / "serpapi_usage.json",
+                        help="where the searches made this month are counted")
     return parser.parse_args(argv)
 
 
-BRAVE_URL = "https://api.search.brave.com/res/v1/web/search"
+SERPAPI_URL = "https://serpapi.com/search.json"
+ENV_FILE = HERE / ".env"
 
 
 class SearchStopped(Exception):
-    """The search API refused us or failed: stop the whole run, do not retry through it."""
+    """The search API refused us, failed or ran out of budget: stop the run, do not retry through it."""
 
 
-def brave_search(query: str, offset: int, api_key: str, timeout: float = 30.0) -> tuple[list[dict], bool]:
-    """One page of Brave web results: ([{url, title}], more_results_available)."""
-    response = httpx.get(
-        BRAVE_URL,
-        params={"q": query, "count": 20, "offset": offset},
-        headers={"X-Subscription-Token": api_key, "Accept": "application/json"},
-        timeout=timeout,
-    )
+def load_serpapi_key(env_file: Path | None = None) -> str:
+    """SERPAPI from the environment, else from a SERPAPI=value line in the .env file."""
+    key = os.environ.get("SERPAPI", "").strip()
+    if key:
+        return key
+    env_file = env_file or ENV_FILE
+    if env_file.exists():
+        for line in env_file.read_text(encoding="utf8").splitlines():
+            line = line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            name, value = line.split("=", 1)
+            if name.strip() == "SERPAPI":
+                return value.strip().strip("\"'")
+    return ""
+
+
+class SearchBudget:
+    """Counts the searches made this month, so a run cannot go past the plan's limit."""
+
+    def __init__(self, path: Path, limit: int) -> None:
+        self.path = path
+        self.limit = limit
+        self.month = time.strftime("%Y-%m")
+        self.used = 0
+        if path.exists():
+            data = json.loads(path.read_text(encoding="utf8") or "{}")
+            if data.get("month") == self.month:
+                self.used = int(data.get("used", 0))
+
+    def remaining(self) -> int:
+        return self.limit - self.used
+
+    def record(self) -> None:
+        self.used += 1
+        self.path.write_text(json.dumps({"month": self.month, "used": self.used}, indent=2), encoding="utf8")
+
+
+def serpapi_search(query: str, start: int, api_key: str, timeout: float = 60.0) -> tuple[list[dict], bool]:
+    """One page of Google results: ([{url, title}], more_pages_available)."""
+    params = {"engine": "google", "q": query, "api_key": api_key}
+    if start:
+        params["start"] = start
+    response = httpx.get(SERPAPI_URL, params=params, timeout=timeout)
+    try:
+        data = response.json()
+    except ValueError:
+        data = {}
     if response.status_code in (401, 403):
-        raise SearchStopped(f"Brave refused the key (HTTP {response.status_code}). Check BRAVE_API_KEY.")
+        raise SearchStopped(f"SerpApi refused the key (HTTP {response.status_code}). Check SERPAPI in .env.")
     if response.status_code == 429:
-        raise SearchStopped("Brave rate limit reached (HTTP 429). Stopping; try again later.")
-    if response.status_code != 200:
-        raise SearchStopped(f"Brave returned HTTP {response.status_code}.")
-    data = response.json()
+        raise SearchStopped("SerpApi rate limit reached (HTTP 429). Stopping; try again later.")
+    if response.status_code != 200 or data.get("error"):
+        raise SearchStopped(f"SerpApi error: {data.get('error') or 'HTTP ' + str(response.status_code)}")
     results = [
-        {"url": item["url"], "title": item.get("title", "")}
-        for item in (data.get("web", {}) or {}).get("results", [])
-        if item.get("url")
+        {"url": item["link"], "title": item.get("title", "")}
+        for item in data.get("organic_results", [])
+        if item.get("link")
     ]
-    return results, bool((data.get("query") or {}).get("more_results_available"))
+    more = bool((data.get("serpapi_pagination") or {}).get("next"))
+    return results, more
 
 
 def download_new(entry_list: Path) -> None:
@@ -255,30 +301,40 @@ def download_new(entry_list: Path) -> None:
 
 
 def run_search(args: argparse.Namespace, fetcher, entries, scribd, not_kept) -> int:
-    api_key = os.environ.get("BRAVE_API_KEY", "").strip()
+    api_key = load_serpapi_key()
     if not api_key:
-        print("No URL given and BRAVE_API_KEY is not set. Pass a URL, or set the key.", file=sys.stderr)
+        print("No SerpApi key. Put SERPAPI=your-key in python/.env, or set the SERPAPI environment variable.",
+              file=sys.stderr)
         return 1
     terms = [term.strip() for term in args.search_terms.split(",") if term.strip()]
+    budget = SearchBudget(args.usage_file, args.monthly_limit)
+    planned = len(terms) * args.search_pages
+    print(f"Searches for this run: {planned}. Used this month: {budget.used}/{budget.limit}.")
+    if planned > budget.remaining():
+        print(f"This run needs {planned} searches but only {budget.remaining()} are left this month. Not started.",
+              file=sys.stderr)
+        return 1
+
     crawled_hosts: set[str] = set()
     last_search = None
     try:
         for term in terms:
             print(f"\nSearch: {term!r}")
-            for offset in range(args.search_max_offset + 1):
+            start = 0
+            for page in range(args.search_pages):
                 if last_search is not None:
                     wait = args.search_gap - (time.monotonic() - last_search)
                     if wait > 0:
                         time.sleep(wait)
                 last_search = time.monotonic()
-                results, more = brave_search(term, offset, api_key, timeout=args.timeout)
-                print(f"  page {offset + 1}: {len(results)} result(s)")
-                if not results:
-                    break
+                results, more = serpapi_search(term, start, api_key, timeout=args.timeout)
+                budget.record()
+                print(f"  page {page + 1}: {len(results)} result(s); searches used {budget.used}/{budget.limit}")
                 for result in results:
                     handle_result(result, args, fetcher, entries, scribd, not_kept, crawled_hosts)
-                if not more:
+                if not results or not more:
                     break
+                start += 10
     except SearchStopped as error:
         print(f"\nStopped: {error}")
         return 1
@@ -323,10 +379,8 @@ def main(argv: list[str] | None = None) -> int:
     fetcher = HttpFetcher(timeout=args.timeout)
     try:
         if args.urls:
-            crawled_hosts: set[str] = set()
             for url in args.urls:
                 print(f"Site: {host_key(url)} (from {url})")
-                crawled_hosts.add(host_key(url))
                 stats = crawl_site(
                     url, fetcher, entries=entries, scribd=scribd, not_kept=not_kept,
                     max_pages=args.max_pages, max_depth=args.max_depth, match_mode=args.match_mode,

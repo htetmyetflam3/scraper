@@ -18,3 +18,7 @@ Thumbs.db
 
 debug_html/
 python/downloaded_files/
+
+# SerpApi key file and monthly search counter (never commit)
+/python/.env
+/python/serpapi_usage.json

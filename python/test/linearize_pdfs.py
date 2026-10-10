@@ -1,4 +1,4 @@
-"""Offline tests for linearize_pdfs.py.
+"""Offline tests for linearize.py.
 
 They build real PDFs with pikepdf in a temporary directory, so nothing here
 touches the network or the actual pdfs/ folder.
@@ -11,7 +11,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))  # python/
 
-from linearize_pdfs import (  # noqa: E402
+from linearize import (  # noqa: E402
     TMP_SUFFIX,
     choose_keeper,
     find_duplicates,

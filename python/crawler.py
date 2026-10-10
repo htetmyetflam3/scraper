@@ -683,7 +683,7 @@ def save_debug_html(directory: Path | None, url: str, html: str, index: int, lim
 
 
 # --------------------------------------------------------------------------- #
-# Sites to crawl (handed to site_crawl.py)
+# Sites to crawl (handed to site.py)
 # --------------------------------------------------------------------------- #
 
 
@@ -984,7 +984,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--entry-list", type=Path, default=HERE / "search_entry_list.txt")
     parser.add_argument("--scribd-list", type=Path, default=HERE / "search_scribd_links.txt")
     parser.add_argument("--sites", type=Path, default=HERE / "search_sites.txt",
-                        help="ordinary websites found by search, for site_crawl.py")
+                        help="ordinary websites found by search, for site.py")
     parser.add_argument("--crawled", type=Path, default=HERE / "search_crawled_pages.txt")
     parser.add_argument("--pending", type=Path, default=HERE / "search_pending_pages.txt")
     return parser.parse_args(argv)

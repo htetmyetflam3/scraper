@@ -5,9 +5,9 @@
 paint the first page before the whole file arrives, which is what Scribd-style
 viewers and browser PDF plugins want.
 
-    python linearize_pdfs.py              # ../pdfs, the sibling of python/
-    python linearize_pdfs.py /path/to/dir
-    python linearize_pdfs.py --dry-run    # show what would happen
+    python linearize.py              # ../pdfs, the sibling of python/
+    python linearize.py /path/to/dir
+    python linearize.py --dry-run    # show what would happen
 
 Each file is replaced by its linearized version in place: no backups, no
 copies, nothing but the linearized PDF left behind. The original is only

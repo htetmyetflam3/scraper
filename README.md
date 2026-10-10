@@ -78,25 +78,38 @@ executes JavaScript, keeps cookies and has a genuine browser fingerprint.
 
 ## 0d. Site crawler — one command, URL or search
 
-`python/site_crawl.py` crawls websites for PDF/DOCX links. Scribd links are
+`python/site.py` crawls websites for PDF/DOCX links. Scribd links are
 recorded separately and not downloaded.
 
 ```sh
 cd python
-uv run site_crawl.py https://example.org/books/   # crawl this site
-uv run site_crawl.py                              # no URL: one bounded search, then crawl the sites it finds
-uv run site_crawl.py --max-pages=30 --max-depth=2 --delay=8
+uv run site.py https://example.org/books/   # crawl this site
+uv run site.py                              # no URL: SerpApi searches, then crawl each result site
+uv run site.py --max-pages=30 --max-depth=2 --delay=8
 ```
 
 - A given URL is the start page; the crawl stays on that domain.
-- Without a URL, the search runs **once** (`--search-terms`, default one phrase,
-  `--search-pages=2`). Each result site becomes a start URL. The search is not
-  repeated per site.
+- Without a URL, the search uses **SerpApi** (Google results). The key is read
+  from `SERPAPI` in `python/.env` (create that file yourself; it is gitignored),
+  or from the `SERPAPI` environment variable. The environment wins if both are set.
+- The default search terms are the four approved keywords (`--search-terms`,
+  comma-separated): `myanmar books download`, `myanmar ebooks download`,
+  `Myanmar PDF free download`, `free မြန်မာ pdf စာအုပ်များ`. Each keyword is one
+  search, run in order, one result page each by default (`--search-pages`
+  turns on more pages, following SerpApi's next-page marker).
+- Each result site is crawled in full (up to the `--max-pages` safety cap), and
+  its PDFs are downloaded before the next result is handled.
+- Searches are spaced at least `--search-gap` seconds apart (default 60).
+- **Monthly budget.** The free SerpApi plan allows 250 successful searches a
+  month. The tool counts its own searches in `python/serpapi_usage.json`
+  (gitignored), refuses a run whose planned searches exceed what is left, and
+  stops on a refused key, rate limit or SerpApi error. The count only covers
+  searches made by this tool, so check your SerpApi dashboard for the real figure.
 - `robots.txt` is honoured. A site that blocks or rate-limits is abandoned at once.
 - Output: `site_entry_list.txt` (PDF/DOCX, feed it to `download.py`) and
   `site_scribd_links.txt`.
 
-## 0c. PDF linearizer — `python/linearize_pdfs.py`
+## 0c. PDF linearizer — `python/linearize.py`
 
 Sweeps the `pdfs/` folder that sits next to `python/` and rewrites every PDF so
 a browser or Scribd-style viewer can show page 1 before the whole file has
@@ -104,9 +117,9 @@ arrived ("fast web view").
 
 ```sh
 cd python
-uv run linearize_pdfs.py --dry-run       # report only, nothing touched
-uv run linearize_pdfs.py                 # do it
-uv run linearize_pdfs.py --password=xyz  # also unlock files that need a password
+uv run linearize.py --dry-run       # report only, nothing touched
+uv run linearize.py                 # do it
+uv run linearize.py --password=xyz  # also unlock files that need a password
 ```
 
 What it does, in order:
