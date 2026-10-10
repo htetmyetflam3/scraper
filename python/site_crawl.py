@@ -2,13 +2,12 @@
 """Crawl each site the search engine pointed to and collect its PDF/DOCX links.
 
     uv run site_crawl.py https://example.org/books/   # crawl this site
-    uv run site_crawl.py                              # no URL: search first, then crawl what it finds
-    uv run site_crawl.py --search-terms="Myanmar PDF" --search-pages=2
+    uv run site_crawl.py                              # no URL: Brave Search API, then crawl each result
 
 One crawler, two ways to get its starting URLs. Given URLs are crawled as-is.
-Without URLs, a small bounded search (--search-terms, --search-pages) runs once,
-and every site it returns becomes a starting URL. The search is never repeated
-per site.
+Without URLs, the Brave Search API runs each search term page by page, and the
+results are handled in order: each result site is crawled and its PDFs are
+downloaded before the next result. Requires BRAVE_API_KEY in the environment.
 
 For each site the crawler starts at the start URL (a given URL, or the page the search returned) and
 follows links that stay on the same domain, up to --max-depth levels and
@@ -24,6 +23,7 @@ Politeness: robots.txt is honoured, requests are spaced by --delay plus random
 from __future__ import annotations
 
 import argparse
+import os
 import random
 import sys
 import time
@@ -32,6 +32,7 @@ import urllib.robotparser
 from collections import deque
 from pathlib import Path
 
+import httpx
 from bs4 import BeautifulSoup
 
 import crawler
@@ -42,6 +43,7 @@ from crawler import (
     RateLimited,
     matches_book_candidate,
     is_scribd_document_url,
+    is_site_seed,
     read_book_list,
     read_url_list,
     upsert,
@@ -194,81 +196,153 @@ def read_seeds(path: Path) -> list[str]:
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Crawl the sites found by search and collect PDF/DOCX links.")
-    parser.add_argument("urls", nargs="*", help="site URLs to crawl (default: every site in --sites)")
-    parser.add_argument("--sites", type=Path, default=HERE / "search_sites.txt", help="sites found by crawler.py")
+    parser = argparse.ArgumentParser(description="Crawl websites for PDF/DOCX links, starting from URLs or Brave search results.")
+    parser.add_argument("urls", nargs="*", help="start URLs (default: search with Brave, see --search-terms)")
     parser.add_argument("--entry-list", type=Path, default=HERE / "site_entry_list.txt")
     parser.add_argument("--scribd-list", type=Path, default=HERE / "site_scribd_links.txt")
-    parser.add_argument("--max-pages", type=int, default=50, help="pages fetched per site (default 50)")
-    parser.add_argument("--max-depth", type=int, default=3, help="link levels below the start page (default 3)")
+    parser.add_argument("--max-pages", type=int, default=500,
+                        help="safety cap on pages fetched per site (default 500; the site is crawled in full below this)")
+    parser.add_argument("--max-depth", type=int, default=10, help="link levels below the start page (default 10)")
     parser.add_argument("--match-mode", default="loose", choices=("loose", "filename"))
-    parser.add_argument("--delay", type=float, default=5.0, help="seconds between requests (default 5)")
+    parser.add_argument("--delay", type=float, default=5.0, help="seconds between page requests (default 5)")
     parser.add_argument("--jitter", type=float, default=2.0, help="extra random seconds (default 2)")
     parser.add_argument("--timeout", type=float, default=60.0)
-    parser.add_argument("--search-engine", default="mojeek", help="used only when no URL is given")
+    parser.add_argument("--no-download", action="store_true", help="collect links only; do not download after each site")
     parser.add_argument("--search-terms", default="Myanmar book PDF free download",
-                        help="comma-separated; each term gives 4 queries. Used only when no URL is given")
-    parser.add_argument("--search-pages", type=int, default=2, help="result pages per query (default 2)")
-    parser.add_argument("--search-delay", type=float, default=10.0, help="seconds between search requests")
+                        help="comma-separated search phrases, run in order (no URL given)")
+    parser.add_argument("--search-gap", type=float, default=30.0,
+                        help="minimum seconds between two search requests (default 30)")
+    parser.add_argument("--search-max-offset", type=int, default=9,
+                        help="last result-page offset to request; Brave allows 0-9 (default 9)")
     return parser.parse_args(argv)
 
 
-def search_for_sites(args: argparse.Namespace) -> int:
-    """One bounded search pass with crawler.py; its result sites land in args.sites."""
-    print(f"No URL given: searching {args.search_engine} once for {args.search_terms!r} "
-          f"({args.search_pages} pages per query).")
-    return crawler.main([
-        f"--engine={args.search_engine}",
-        f"--terms={args.search_terms}",
-        f"--pages={args.search_pages}",
-        f"--delay={args.search_delay}",
-        "--jitter=2",
-        "--reset-state",
-        f"--sites={args.sites}",
-        f"--entry-list={args.entry_list}",
-        f"--scribd-list={args.scribd_list}",
-    ])
+BRAVE_URL = "https://api.search.brave.com/res/v1/web/search"
+
+
+class SearchStopped(Exception):
+    """The search API refused us or failed: stop the whole run, do not retry through it."""
+
+
+def brave_search(query: str, offset: int, api_key: str, timeout: float = 30.0) -> tuple[list[dict], bool]:
+    """One page of Brave web results: ([{url, title}], more_results_available)."""
+    response = httpx.get(
+        BRAVE_URL,
+        params={"q": query, "count": 20, "offset": offset},
+        headers={"X-Subscription-Token": api_key, "Accept": "application/json"},
+        timeout=timeout,
+    )
+    if response.status_code in (401, 403):
+        raise SearchStopped(f"Brave refused the key (HTTP {response.status_code}). Check BRAVE_API_KEY.")
+    if response.status_code == 429:
+        raise SearchStopped("Brave rate limit reached (HTTP 429). Stopping; try again later.")
+    if response.status_code != 200:
+        raise SearchStopped(f"Brave returned HTTP {response.status_code}.")
+    data = response.json()
+    results = [
+        {"url": item["url"], "title": item.get("title", "")}
+        for item in (data.get("web", {}) or {}).get("results", [])
+        if item.get("url")
+    ]
+    return results, bool((data.get("query") or {}).get("more_results_available"))
+
+
+def download_new(entry_list: Path) -> None:
+    """Download whatever is in the entry list that is not downloaded yet (download.py keeps history)."""
+    import download
+
+    download.main([str(entry_list)])
+
+
+def run_search(args: argparse.Namespace, fetcher, entries, scribd, not_kept) -> int:
+    api_key = os.environ.get("BRAVE_API_KEY", "").strip()
+    if not api_key:
+        print("No URL given and BRAVE_API_KEY is not set. Pass a URL, or set the key.", file=sys.stderr)
+        return 1
+    terms = [term.strip() for term in args.search_terms.split(",") if term.strip()]
+    crawled_hosts: set[str] = set()
+    last_search = None
+    try:
+        for term in terms:
+            print(f"\nSearch: {term!r}")
+            for offset in range(args.search_max_offset + 1):
+                if last_search is not None:
+                    wait = args.search_gap - (time.monotonic() - last_search)
+                    if wait > 0:
+                        time.sleep(wait)
+                last_search = time.monotonic()
+                results, more = brave_search(term, offset, api_key, timeout=args.timeout)
+                print(f"  page {offset + 1}: {len(results)} result(s)")
+                if not results:
+                    break
+                for result in results:
+                    handle_result(result, args, fetcher, entries, scribd, not_kept, crawled_hosts)
+                if not more:
+                    break
+    except SearchStopped as error:
+        print(f"\nStopped: {error}")
+        return 1
+    return 0
+
+
+def handle_result(result, args, fetcher, entries, scribd, not_kept, crawled_hosts) -> None:
+    url, title = result["url"], result["title"]
+    if is_scribd_document_url(url):
+        upsert(scribd, url, title, "search")
+        return
+    if BOOK_EXTENSION.search(urllib.parse.urlsplit(url).path.lower()):
+        if matches_book_candidate(url, title, args.match_mode):
+            upsert(entries, url, title, "search")
+        else:
+            not_kept.append((title, url))
+        return
+    if not is_site_seed(url):
+        return
+    host = host_key(url)
+    if host in crawled_hosts:
+        return
+    crawled_hosts.add(host)
+    print(f"  Site: {host} (from {url})")
+    stats = crawl_site(
+        url, fetcher, entries=entries, scribd=scribd, not_kept=not_kept,
+        max_pages=args.max_pages, max_depth=args.max_depth, match_mode=args.match_mode,
+        delay=args.delay, jitter=args.jitter,
+    )
+    print(f"    pages: {stats['pages']}; PDF/DOCX found: {stats['pdf']}; Scribd: {stats['scribd']}")
+    write_book_list(args.entry_list, entries)
+    write_book_list(args.scribd_list, scribd)
+    if stats["pdf"] and not args.no_download:
+        download_new(args.entry_list)
 
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
-    if args.urls:
-        seeds = list(args.urls)
-    else:
-        if search_for_sites(args) != 0:
-            return 1
-        seeds = read_seeds(args.sites)
-    if not seeds:
-        print("No sites found to crawl. Try other --search-terms, or pass a URL.", file=sys.stderr)
-        return 1
-
     entries = read_book_list(args.entry_list)
     scribd = read_book_list(args.scribd_list)
     not_kept: list[tuple[str, str]] = []
     fetcher = HttpFetcher(timeout=args.timeout)
-    print(f"Crawling {len(seeds)} site(s); up to {args.max_pages} pages each, depth {args.max_depth}.")
-
     try:
-        for number, seed in enumerate(seeds, 1):
-            print(f"\nSite {number}/{len(seeds)}: {host_key(seed)} (from {seed})")
-            stats = crawl_site(
-                seed,
-                fetcher,
-                entries=entries,
-                scribd=scribd,
-                not_kept=not_kept,
-                max_pages=args.max_pages,
-                max_depth=args.max_depth,
-                match_mode=args.match_mode,
-                delay=args.delay,
-                jitter=args.jitter,
-            )
-            print(f"  pages: {stats['pages']}; PDF/DOCX found: {stats['pdf']}; Scribd: {stats['scribd']}; "
-                  f"not kept: {stats['not_kept']}")
-            write_book_list(args.entry_list, entries)
-            write_book_list(args.scribd_list, scribd)
+        if args.urls:
+            crawled_hosts: set[str] = set()
+            for url in args.urls:
+                print(f"Site: {host_key(url)} (from {url})")
+                crawled_hosts.add(host_key(url))
+                stats = crawl_site(
+                    url, fetcher, entries=entries, scribd=scribd, not_kept=not_kept,
+                    max_pages=args.max_pages, max_depth=args.max_depth, match_mode=args.match_mode,
+                    delay=args.delay, jitter=args.jitter,
+                )
+                print(f"  pages: {stats['pages']}; PDF/DOCX found: {stats['pdf']}; Scribd: {stats['scribd']}")
+                write_book_list(args.entry_list, entries)
+                write_book_list(args.scribd_list, scribd)
+                if stats["pdf"] and not args.no_download:
+                    download_new(args.entry_list)
+            code = 0
+        else:
+            code = run_search(args, fetcher, entries, scribd, not_kept)
     except KeyboardInterrupt:
         print("\nInterrupted. Saved what was found so far.")
+        code = 130
 
     write_book_list(args.entry_list, entries)
     write_book_list(args.scribd_list, scribd)
@@ -278,7 +352,7 @@ def main(argv: list[str] | None = None) -> int:
         print("Sample of links not kept (wrong type or no Burmese match):")
         for label, url in not_kept[:5]:
             print(f"  {label[:70]!r} -> {url[:140]}")
-    return 0
+    return code
 
 
 if __name__ == "__main__":

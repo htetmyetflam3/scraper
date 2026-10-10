@@ -131,24 +131,84 @@ def test_main_with_a_url_writes_the_entry_list(tmp_path, monkeypatch):
     assert SITE + "novel.pdf" in (tmp_path / "e.txt").read_text(encoding="utf8")
 
 
-def test_main_without_a_url_searches_once_then_crawls_the_result_sites(tmp_path, monkeypatch):
+def _search_setup(monkeypatch, tmp_path, pages, sites, downloads, gaps=None):
+    """pages: {offset: (results, more)}; sites: {url: html}. Returns the list of search calls."""
     import site_crawl
 
     calls = []
 
-    def fake_search(argv):
-        calls.append(argv)
-        (tmp_path / "sites.txt").write_text("https://found.example.com/page.html\n", encoding="utf8")
-        return 0
+    def fake_brave(query, offset, api_key, timeout=30.0):
+        calls.append((query, offset))
+        return pages.get(offset, ([], False))
 
-    monkeypatch.setattr(site_crawl.crawler, "main", fake_search)
-    monkeypatch.setattr(site_crawl, "HttpFetcher", lambda **_: FakeFetcher({
-        "https://found.example.com/page.html": '<a href="book.pdf">Myanmar</a>',
-    }))
-    monkeypatch.setattr(site_crawl.time, "sleep", lambda _s: None)
-    code = main([f"--sites={tmp_path/'sites.txt'}", "--delay=0", "--jitter=0",
-                 f"--entry-list={tmp_path/'e.txt'}", f"--scribd-list={tmp_path/'s.txt'}"])
+    monkeypatch.setenv("BRAVE_API_KEY", "test-key")
+    monkeypatch.setattr(site_crawl, "brave_search", fake_brave)
+    monkeypatch.setattr(site_crawl, "HttpFetcher", lambda **_: FakeFetcher(sites))
+    monkeypatch.setattr(site_crawl, "download_new", lambda entry_list: downloads.append(entry_list))
+    monkeypatch.setattr(site_crawl.time, "sleep", lambda s: gaps.append(s) if gaps is not None else None)
+    return calls
+
+
+def _args(tmp_path, *extra):
+    return [f"--entry-list={tmp_path/'e.txt'}", f"--scribd-list={tmp_path/'s.txt'}",
+            "--delay=0", "--jitter=0", "--search-terms=Myanmar PDF", *extra]
+
+
+def test_no_url_follows_results_in_order_and_downloads_after_each_site(tmp_path, monkeypatch):
+    downloads = []
+    pages = {0: ([{"url": "https://first.example.com/", "title": "first"},
+                  {"url": "https://second.example.com/", "title": "second"}], True),
+             1: ([{"url": "https://third.example.com/", "title": "third"}], False)}
+    sites = {
+        "https://first.example.com/": '<a href="a.pdf">Myanmar A</a>',
+        "https://second.example.com/": '<a href="b.pdf">Myanmar B</a>',
+        "https://third.example.com/": '<a href="c.pdf">Myanmar C</a>',
+    }
+    calls = _search_setup(monkeypatch, tmp_path, pages, sites, downloads)
+    code = main(_args(tmp_path))
     assert code == 0
-    assert len(calls) == 1, "the search runs once, not once per site"
-    assert "--pages=2" in calls[0]
-    assert "https://found.example.com/book.pdf" in (tmp_path / "e.txt").read_text(encoding="utf8")
+    assert calls == [("Myanmar PDF", 0), ("Myanmar PDF", 1)], "stops when more_results_available is false"
+    assert len(downloads) == 3, "each site with a PDF is downloaded before the next result"
+    entries = (tmp_path / "e.txt").read_text(encoding="utf8")
+    assert "a.pdf" in entries and "b.pdf" in entries and "c.pdf" in entries
+
+
+def test_no_url_waits_between_search_requests(tmp_path, monkeypatch):
+    gaps = []
+    pages = {0: ([{"url": "https://only.example.com/", "title": "x"}], True),
+             1: ([], False)}
+    _search_setup(monkeypatch, tmp_path, pages, {"https://only.example.com/": "<p>none</p>"}, [], gaps)
+    main(_args(tmp_path, "--search-gap=30"))
+    assert gaps and all(g > 0 for g in gaps), "a second search is never sent right after the first"
+
+
+def test_no_url_stops_on_brave_rate_limit(tmp_path, monkeypatch):
+    import site_crawl
+
+    monkeypatch.setenv("BRAVE_API_KEY", "test-key")
+
+    def limited(query, offset, api_key, timeout=30.0):
+        raise site_crawl.SearchStopped("Brave rate limit reached (HTTP 429).")
+
+    monkeypatch.setattr(site_crawl, "brave_search", limited)
+    code = main(_args(tmp_path))
+    assert code == 1
+
+
+def test_no_url_without_a_key_does_nothing(tmp_path, monkeypatch):
+    monkeypatch.delenv("BRAVE_API_KEY", raising=False)
+    assert main(_args(tmp_path)) == 1
+
+
+def test_brave_search_parses_results_and_more_flag(monkeypatch):
+    import site_crawl
+
+    class Response:
+        status_code = 200
+
+        def json(self):
+            return {"web": {"results": [{"url": "https://x.example.com/", "title": "X"}]},
+                    "query": {"more_results_available": True}}
+
+    monkeypatch.setattr(site_crawl.httpx, "get", lambda *a, **k: Response())
+    assert site_crawl.brave_search("q", 0, "k") == ([{"url": "https://x.example.com/", "title": "X"}], True)
