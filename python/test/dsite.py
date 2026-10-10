@@ -4,7 +4,7 @@ import time
 
 import pytest
 
-from crawler import Blocked, is_site_seed
+from crawler import BOOK_EXTENSION, Blocked, is_site_seed
 import dsite
 from dsite import crawl_site, host_key, main, page_links
 
@@ -450,3 +450,36 @@ def test_a_site_with_no_download_is_capped_at_max_pages(monkeypatch):
     fetcher = FakeFetcher(pages)
     stats, _, _, _ = run(fetcher, max_pages=50, stop_at_first_file=True)
     assert stats["pages"] == 50, "a site with no download is read up to --max-pages, then left"
+
+
+BUTTON_PAGE = "https://books.example.org/books/"
+
+
+@pytest.mark.parametrize("html, expected", [
+    ('<a href="files/myanmar-book.pdf"><button>Download</button></a>',
+     BUTTON_PAGE + "files/myanmar-book.pdf"),
+    ("<button onclick=\"window.location.href='files/myanmar-book.pdf'\">Download</button>",
+     BUTTON_PAGE + "files/myanmar-book.pdf"),
+    ("<button onclick=\"window.open('https://cdn.example.org/myanmar-book.pdf')\">Get</button>",
+     "https://cdn.example.org/myanmar-book.pdf"),
+    ('<button data-href="files/myanmar-book.pdf">Download</button>', BUTTON_PAGE + "files/myanmar-book.pdf"),
+    ('<div class="btn" data-url="https://cdn.example.org/myanmar-book.docx">Get</div>',
+     "https://cdn.example.org/myanmar-book.docx"),
+    ('<form action="files/myanmar-book.pdf" method="get"><button>Download</button></form>',
+     BUTTON_PAGE + "files/myanmar-book.pdf"),
+    ('<button formaction="files/myanmar-book.pdf">Download</button>', BUTTON_PAGE + "files/myanmar-book.pdf"),
+    ("<a href=\"#\" onclick=\"openBook('files/myanmar-book.pdf')\">Download</a>",
+     BUTTON_PAGE + "files/myanmar-book.pdf"),
+])
+def test_a_button_that_names_a_file_in_the_html_is_a_link(html, expected):
+    assert expected in [url for url, _ in page_links(html, BUTTON_PAGE)]
+
+
+@pytest.mark.parametrize("html", [
+    '<button data-href="next-page.html">Next</button>',         # a page, not a file
+    '<img data-src="cover.jpg">',                               # a picture, not a file
+    "<button onclick=\"location.href='/cart'\">Buy</button>",   # no file named
+    '<a href="javascript:void(0)"><button>Download</button></a>',
+])
+def test_a_button_without_a_file_adds_no_link(html):
+    assert not [url for url, _ in page_links(html, BUTTON_PAGE) if BOOK_EXTENSION.search(url)]

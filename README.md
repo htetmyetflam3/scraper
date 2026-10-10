@@ -125,16 +125,25 @@ uv run dsite_download.py                     # download from the entry list
 ### The downloader (`dsite_download.py`)
 
 - Reads `scan/site_entry_list.txt`.
-- A **file row** (a PDF/DOCX URL) is written to `scan/download_queue.txt` and
-  downloaded with `download.py`.
+- Each file is handled one at a time, in this order:
+  **download -> decrypt (unlock) -> linearize -> save to disk.** PDFs are unlocked
+  and linearized by `linearize.linearize()` (from `linearize.py`). DOCX files are
+  saved as they are. A PDF with a user password stays on disk as downloaded and is
+  reported as `locked`; pass `--password` or `--password-file` to unlock it.
+- A **file row** (a PDF/DOCX URL) is handled directly.
 - A **site row** (a main link) is crawled: up to `--max-pages` 500 pages, depth 10
-  (`--max-depth`). Each PDF/DOCX is queued and downloaded **as it is found**, not
-  after the whole site is crawled.
+  (`--max-depth`). Each file is handled **as soon as the crawler finds it**, before
+  the crawl moves to the next link.
 - Files already in `download.py`'s history are skipped, so a file is never
   downloaded twice, even across runs.
 - Pages are read again on a rerun. There is no page-level resume; only the
   downloaded files are remembered.
 - Output: the files go to `python/downloaded_files/` (`--out-dir` changes it).
+
+**Download buttons.** A button counts as a link when the page HTML names its
+file: an `<a href>` around the button, `onclick="...file.pdf..."`, `data-href` or
+`data-url`, `formaction`, or `<form action>`. A button whose file URL is only
+created by JavaScript at run time is not visible to the crawler.
 
 ### Output (all in `scan/` at the repo root, gitignored)
 
@@ -145,14 +154,12 @@ uv run dsite_download.py                     # download from the entry list
 - `site_entry_list.txt`: the entry list, one row per file URL or site main link.
   It is written with a header row at the start and grows during the run.
 - `site_scribd_links.txt`: Scribd documents, Source = search index link.
-- `download_queue.txt`: file links waiting for `download.py` (rewritten before
-  each download).
 - `serpapi_usage.json`: the monthly search counter.
 
 ### Order of work
 
 1. `uv run dsite.py` — searches and the entry list are complete when it exits.
-2. `uv run dsite_download.py` — downloads from the entry list.
+2. `uv run dsite_download.py` — downloads, unlocks and linearizes from the entry list.
 
 Stop a run with Ctrl+C. Files already downloaded are kept, and a rerun skips them.
 

@@ -28,6 +28,7 @@ import argparse
 import json
 import os
 import random
+import re
 import sys
 import time
 import urllib.parse
@@ -88,21 +89,46 @@ def is_html_candidate(url: str) -> bool:
     return True
 
 
+# A quoted file path inside JavaScript, e.g. onclick="location.href='files/book.pdf'".
+FILE_IN_CODE = re.compile(r"""['"]([^'"\s<>]+?\.(?:pdf|docx)(?:\?[^'"\s<>]*)?)['"]""", re.I)
+
+
 def page_links(html: str, page_url: str) -> list[tuple[str, str]]:
-    """(absolute URL, visible label) for every http(s) link on the page."""
+    """(absolute URL, visible label) for every http(s) link on the page.
+
+    Besides <a href>, a file (PDF/DOCX) can be named by a button or other element:
+    formaction, action, any data-* attribute, or a quoted path in onclick. Those
+    are kept only when they point at a file, so a button still counts as a link
+    when the page HTML names its file.
+    """
     soup = BeautifulSoup(html, "html.parser")
     base_tag = soup.find("base", href=True)
     base = urllib.parse.urljoin(page_url, base_tag["href"]) if base_tag else page_url
     links: dict[str, str] = {}
+
+    def add(href: str, label: str) -> None:
+        url = without_fragment(urllib.parse.urljoin(base, href.strip()))
+        if url.lower().startswith(("http://", "https://")):
+            links.setdefault(url, label)
+
     for anchor in soup.find_all("a", href=True):
         href = anchor["href"].strip()
         if not href or href.startswith(("#", "javascript:", "mailto:", "tel:")):
             continue
-        url = without_fragment(urllib.parse.urljoin(base, href))
-        if not url.lower().startswith(("http://", "https://")):
-            continue
         label = anchor.get_text(" ", strip=True) or anchor.get("title", "") or ""
-        links.setdefault(url, " ".join(label.split()))
+        add(href, " ".join(label.split()))
+
+    for element in soup.find_all(True):
+        label = " ".join(element.get_text(" ", strip=True).split())[:200] or element.get("title", "") or ""
+        for name, value in element.attrs.items():
+            if not isinstance(value, str) or element.name == "a" and name == "href":
+                continue
+            if name in ("formaction", "action") or name.startswith("data-"):
+                if BOOK_EXTENSION.search(urllib.parse.urlsplit(value.strip()).path.lower()):
+                    add(value, label)
+        code = element.get("onclick", "")
+        for match in FILE_IN_CODE.finditer(code if isinstance(code, str) else ""):
+            add(match.group(1), label)
     return list(links.items())
 
 
@@ -185,10 +211,13 @@ def crawl_site(
             path = urllib.parse.urlsplit(url).path
             if BOOK_EXTENSION.search(path.lower()):
                 if matches_book_candidate(url, label, match_mode):
-                    if url not in entries:
+                    is_new = url not in entries
+                    if is_new:
                         stats["pdf"] += 1
                         log(f"    PDF/DOCX found: {url}")
                     upsert(entries, url, label, final_url)
+                    if is_new and save:  # per file: the downloader works on it before the next link
+                        save()
                 else:
                     stats["not_kept"] += 1
                     not_kept.append((label, url))
