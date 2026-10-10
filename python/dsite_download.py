@@ -18,6 +18,7 @@ The crawler (dsite.py) does not download. This script does not search.
 from __future__ import annotations
 
 import argparse
+import math
 import asyncio
 import re
 import sys
@@ -39,7 +40,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         description="Download the PDF/DOCX files listed by dsite.py, unlock and linearize each one, and save it.")
     parser.add_argument("--entry-list", type=Path, default=SCAN_DIR / "site_entry_list.txt")
     parser.add_argument("--out-dir", type=Path, default=DEFAULT_OUT_DIR)
-    parser.add_argument("--max-pages", type=int, default=500, help="pages read per site (default 500)")
+    parser.add_argument("--max-pages", type=int, default=0,
+                        help="pages read per site; 0 means no limit (default: no limit)")
     parser.add_argument("--max-depth", type=int, default=10)
     parser.add_argument("--match-mode", default="loose", choices=("loose", "filename"))
     parser.add_argument("--delay", type=float, default=1.0, help="seconds between page requests (default 1)")
@@ -134,7 +136,7 @@ def main(argv: list[str] | None = None) -> int:
             print(f"\nSite: {host_key(url)} ({url})")
             stats = crawl_site(
                 url, fetcher, entries=queue, scribd=scribd_seen, not_kept=not_kept,
-                max_pages=args.max_pages, max_depth=args.max_depth, match_mode=args.match_mode,
+                max_pages=args.max_pages or math.inf, max_depth=args.max_depth, match_mode=args.match_mode,
                 delay=args.delay, jitter=args.jitter,
                 save=lambda: drain(queue, downloads),
             )

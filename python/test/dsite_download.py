@@ -186,3 +186,21 @@ def test_scribd_is_not_downloaded(tmp_path, monkeypatch, files):
     monkeypatch.setattr(downloader, "HttpFetcher", lambda **_: FakeFetcher(pages, events))
     assert downloader.main(args_for(tmp_path)) == 0
     assert not [event for event in events if event[0] == "download"]
+
+
+def test_the_downloader_has_no_page_limit_by_default(monkeypatch):
+    import math
+
+    seen = {}
+
+    def fake_crawl(url, fetcher, **kwargs):
+        seen["max_pages"] = kwargs["max_pages"]
+        return {"pages": 0, "pdf": 0}
+
+    monkeypatch.setattr(downloader, "crawl_site", fake_crawl)
+    monkeypatch.setattr(downloader, "HttpFetcher", lambda **_: None)
+    import tempfile
+    tmp = Path(tempfile.mkdtemp())
+    write_entries(tmp / "entry.txt", {SITE: "src"})
+    assert downloader.main(args_for(tmp)) == 0
+    assert seen["max_pages"] == math.inf, "default 0 means no page limit"

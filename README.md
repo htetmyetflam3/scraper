@@ -131,7 +131,7 @@ uv run dsite_download.py                     # download from the entry list
   saved as they are. A PDF with a user password stays on disk as downloaded and is
   reported as `locked`; pass `--password` or `--password-file` to unlock it.
 - A **file row** (a PDF/DOCX URL) is handled directly.
-- A **site row** (a main link) is crawled: up to `--max-pages` 500 pages, depth 10
+- A **site row** (a main link) is crawled: no page limit by default (`--max-pages 0`; a positive number sets one), depth 10
   (`--max-depth`). Each file is handled **as soon as the crawler finds it**, before
   the crawl moves to the next link.
 - Files already in `download.py`'s history are skipped, so a file is never

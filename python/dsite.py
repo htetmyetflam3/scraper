@@ -198,7 +198,8 @@ def crawl_site(
             log(f"  Failed {page_url}: {error}")
             continue
         stats["pages"] += 1
-        log(f"  [{stats['pages']}/{max_pages}] depth {depth}: {final_url}")
+        limit = "no limit" if max_pages == float("inf") else max_pages
+        log(f"  [{stats['pages']}/{limit}] depth {depth}: {final_url}")
 
         found_before = len(entries) + len(scribd)
         for url, label in page_links(html, final_url):
