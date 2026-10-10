@@ -7,7 +7,7 @@ import pikepdf
 import pytest
 
 import download
-from crawler import write_book_list
+from entry_list import save_entries
 import dsite_download as downloader
 
 SITE = "https://books.example.org/"
@@ -65,12 +65,12 @@ def files(monkeypatch):
 
 
 def write_entries(path: Path, rows: dict[str, str]) -> None:
-    write_book_list(path, {url: {"url": url, "name": url.rsplit("/", 1)[-1] or "site", "source": src}
-                           for url, src in rows.items()})
+    save_entries(path, {url: {"url": url, "name": url.rsplit("/", 1)[-1] or "site", "source": src}
+                        for url, src in rows.items()})
 
 
 def args_for(tmp_path, *extra):
-    return [f"--entry-list={tmp_path/'entry.txt'}", f"--out-dir={tmp_path/'out'}",
+    return [str(tmp_path / "entry.txt"), f"--out-dir={tmp_path/'out'}",
             "--delay=0", "--jitter=0", *extra]
 
 

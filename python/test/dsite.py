@@ -6,7 +6,8 @@ import pytest
 
 from crawler import BOOK_EXTENSION, Blocked, is_site_seed
 import dsite
-from dsite import crawl_site, host_key, main, page_links
+from dsite import main
+from sitecrawl import crawl_site, host_key, page_links
 
 
 class FakeFetcher:
@@ -33,12 +34,12 @@ SITE = "https://books.example.org/"
 
 
 def run(fetcher, seed=SITE, **kwargs):
-    entries, scribd, not_kept = {}, {}, []
-    options = dict(max_pages=50, max_depth=3, match_mode="loose", delay=0, jitter=0,
+    entries, scribd = {}, {}
+    options = dict(max_pages=50, max_depth=3, delay=0, jitter=0,
                    sleep=lambda _s: None, log=lambda _m: None)
     options.update(kwargs)
-    stats = crawl_site(seed, fetcher, entries=entries, scribd=scribd, not_kept=not_kept, **options)
-    return stats, entries, scribd, not_kept
+    stats = crawl_site(seed, fetcher, entries=entries, scribd=scribd, **options)
+    return stats, entries, scribd
 
 
 def test_follows_same_site_and_collects_matching_pdfs():
@@ -46,7 +47,7 @@ def test_follows_same_site_and_collects_matching_pdfs():
         SITE: '<a href="burmese/novel.pdf">မြန်မာဝတ္ထု</a><a href="/shelf/">Shelf</a>',
         SITE + "shelf/": '<a href="../myanmar-poems.pdf">Myanmar poems</a>',
     })
-    stats, entries, _, _ = run(fetcher)
+    stats, entries, _ = run(fetcher)
     assert set(entries) == {SITE + "burmese/novel.pdf", SITE + "myanmar-poems.pdf"}
     assert stats["pages"] == 2
 
@@ -60,16 +61,15 @@ def test_other_domains_are_not_followed():
 def test_scribd_goes_to_its_own_register_and_is_not_fetched():
     doc = "https://www.scribd.com/document/123/Burmese-Book"
     fetcher = FakeFetcher({SITE: f'<a href="{doc}">Burmese book</a>'})
-    _, entries, scribd, _ = run(fetcher)
+    _, entries, scribd = run(fetcher)
     assert doc in scribd and not entries
     assert doc not in fetcher.fetched
 
 
-def test_pdfs_without_a_burmese_match_are_reported_not_kept():
+def test_every_pdf_link_is_kept_with_no_name_filter():
     fetcher = FakeFetcher({SITE: '<a href="algebra.pdf">Algebra</a>'})
-    _, entries, _, not_kept = run(fetcher)
-    assert not entries
-    assert not_kept == [("Algebra", SITE + "algebra.pdf")]
+    _, entries, _ = run(fetcher)
+    assert list(entries) == [SITE + "algebra.pdf"], "the search is Burmese, so the file name is not checked"
 
 
 def test_robots_txt_disallow_is_respected():
@@ -77,7 +77,7 @@ def test_robots_txt_disallow_is_respected():
         {SITE: '<a href="private/a.html">x</a>', SITE + "private/a.html": '<a href="p.pdf">Myanmar</a>'},
         robots="User-agent: *\nDisallow: /private/\n",
     )
-    _, entries, _, _ = run(fetcher)
+    _, entries, _ = run(fetcher)
     assert SITE + "private/a.html" not in fetcher.fetched
     assert not entries
 
@@ -87,20 +87,20 @@ def test_page_cap_is_respected():
     for i in range(20):
         pages[SITE + f"p{i}.html"] = "<p>nothing</p>"
     fetcher = FakeFetcher(pages)
-    stats, _, _, _ = run(fetcher, max_pages=5)
+    stats, _, _ = run(fetcher, max_pages=5)
     assert stats["pages"] == 5
 
 
 def test_depth_limit_is_respected():
     fetcher = FakeFetcher({SITE: '<a href="a.html">a</a>', SITE + "a.html": '<a href="b.html">b</a>',
                            SITE + "b.html": '<a href="c.pdf">Myanmar</a>'})
-    _, entries, _, _ = run(fetcher, max_depth=1)
+    _, entries, _ = run(fetcher, max_depth=1)
     assert not entries
 
 
 def test_a_blocked_site_is_abandoned_at_once():
     fetcher = FakeFetcher({SITE: '<a href="a.html">a</a>', SITE + "a.html": "<p>x</p>"}, blocked=[SITE])
-    stats, entries, _, _ = run(fetcher)
+    stats, entries, _ = run(fetcher)
     assert stats["pages"] == 0 and not entries
     assert fetcher.fetched == [SITE]
 
@@ -392,7 +392,7 @@ def test_crawl_stops_at_the_first_page_with_a_download_link(monkeypatch):
     for i in range(2, 6):
         pages[SITE + f"p{i}.html"] = "<p>more</p>"
     fetcher = FakeFetcher(pages)
-    stats, _, _, _ = run(fetcher, stop_at_first_file=True)
+    stats, _, _ = run(fetcher, stop_at_first_file=True)
     assert fetcher.fetched == [SITE, SITE + "p1.html"], "stops on the page that has the download link"
     assert stats["pdf"] == 1
 
@@ -402,9 +402,9 @@ def test_search_result_scribd_is_registered_under_the_search_index(tmp_path):
 
     args = module.parse_args([f"--entry-list={tmp_path/'e.txt'}", f"--scribd-list={tmp_path/'s.txt'}",
                               f"--usage-file={tmp_path/'u.json'}"])
-    entries, scribd, not_kept = {}, {}, []
+    entries, scribd = {}, {}
     result = {"url": "https://www.scribd.com/document/123/Myanmar-book", "title": "Myanmar book"}
-    module.handle_result(result, args, None, entries, scribd, not_kept, set(), "myanmar books download")
+    module.handle_result(result, args, None, entries, scribd, set(), "myanmar books download")
     assert entries == {}
     row = scribd[result["url"]]
     assert row["source"] == module.search_index_url("myanmar books download"), "source is the search index link"
@@ -416,9 +416,9 @@ def test_direct_file_result_goes_to_the_entry_list_with_the_search_index(tmp_pat
 
     args = module.parse_args([f"--entry-list={tmp_path/'e.txt'}", f"--scribd-list={tmp_path/'s.txt'}",
                               f"--usage-file={tmp_path/'u.json'}"])
-    entries, scribd, not_kept = {}, {}, []
+    entries, scribd = {}, {}
     result = {"url": "https://files.example.com/myanmar-novel.pdf", "title": "Myanmar novel"}
-    module.handle_result(result, args, None, entries, scribd, not_kept, set(), "Myanmar PDF free download")
+    module.handle_result(result, args, None, entries, scribd, set(), "Myanmar PDF free download")
     row = entries[result["url"]]
     assert row["source"] == module.search_index_url("Myanmar PDF free download")
 
@@ -448,7 +448,7 @@ def test_a_site_with_no_download_is_capped_at_max_pages(monkeypatch):
     for i in range(1, 60):
         pages[SITE + f"p{i}.html"] = "<p>no files here</p>"
     fetcher = FakeFetcher(pages)
-    stats, _, _, _ = run(fetcher, max_pages=50, stop_at_first_file=True)
+    stats, _, _ = run(fetcher, max_pages=50, stop_at_first_file=True)
     assert stats["pages"] == 50, "a site with no download is read up to --max-pages, then left"
 
 

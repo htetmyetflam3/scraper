@@ -27,212 +27,27 @@ from __future__ import annotations
 import argparse
 import json
 import os
-import random
-import re
 import sys
 import time
 import urllib.parse
 import urllib.robotparser
-from collections import deque
 from pathlib import Path
 
 import httpx
-from bs4 import BeautifulSoup
 
 from crawler import (
     BOOK_EXTENSION,
-    Blocked,
     HttpFetcher,
-    RateLimited,
-    matches_book_candidate,
     is_scribd_document_url,
     is_site_seed,
-    read_book_list,
     read_url_list,
     upsert,
-    write_book_list,
 )
+from entry_list import read_entries, save_entries
+from sitecrawl import crawl_site, host_key
 
 HERE = Path(__file__).resolve().parent
 SCAN_DIR = HERE.parent / "scan"  # all text output of this crawler goes here
-
-# Page URLs with these extensions are never fetched as HTML.
-SKIP_PAGE_EXTENSIONS = {
-    ".7z", ".apk", ".avi", ".bmp", ".css", ".csv", ".doc", ".docx", ".epub", ".exe",
-    ".gif", ".gz", ".ico", ".jpeg", ".jpg", ".js", ".json", ".m4a", ".mp3", ".mp4",
-    ".mpeg", ".mpg", ".odt", ".ogg", ".pdf", ".png", ".ppt", ".pptx", ".rar", ".rss",
-    ".svg", ".tar", ".tgz", ".txt", ".wav", ".webm", ".webp", ".woff", ".woff2",
-    ".xls", ".xlsx", ".xml", ".zip",
-}
-
-
-def host_key(url: str) -> str:
-    """Domain used to group search results into one site: 'www.' is ignored."""
-    host = urllib.parse.urlsplit(url).netloc.lower()
-    return host.removeprefix("www.")
-
-
-def same_site(url: str, seed_host: str) -> bool:
-    return host_key(url) == seed_host
-
-
-def without_fragment(url: str) -> str:
-    parts = urllib.parse.urlsplit(url)
-    return urllib.parse.urlunsplit((parts.scheme, parts.netloc, parts.path or "/", parts.query, ""))
-
-
-def is_html_candidate(url: str) -> bool:
-    path = urllib.parse.urlsplit(url).path.lower()
-    extension = path.rsplit("/", 1)[-1]
-    if "." in extension:
-        return "." + extension.rsplit(".", 1)[-1] not in SKIP_PAGE_EXTENSIONS
-    return True
-
-
-# A quoted file path inside JavaScript, e.g. onclick="location.href='files/book.pdf'".
-FILE_IN_CODE = re.compile(r"""['"]([^'"\s<>]+?\.(?:pdf|docx)(?:\?[^'"\s<>]*)?)['"]""", re.I)
-
-
-def page_links(html: str, page_url: str) -> list[tuple[str, str]]:
-    """(absolute URL, visible label) for every http(s) link on the page.
-
-    Besides <a href>, a file (PDF/DOCX) can be named by a button or other element:
-    formaction, action, any data-* attribute, or a quoted path in onclick. Those
-    are kept only when they point at a file, so a button still counts as a link
-    when the page HTML names its file.
-    """
-    soup = BeautifulSoup(html, "html.parser")
-    base_tag = soup.find("base", href=True)
-    base = urllib.parse.urljoin(page_url, base_tag["href"]) if base_tag else page_url
-    links: dict[str, str] = {}
-
-    def add(href: str, label: str) -> None:
-        url = without_fragment(urllib.parse.urljoin(base, href.strip()))
-        if url.lower().startswith(("http://", "https://")):
-            links.setdefault(url, label)
-
-    for anchor in soup.find_all("a", href=True):
-        href = anchor["href"].strip()
-        if not href or href.startswith(("#", "javascript:", "mailto:", "tel:")):
-            continue
-        label = anchor.get_text(" ", strip=True) or anchor.get("title", "") or ""
-        add(href, " ".join(label.split()))
-
-    for element in soup.find_all(True):
-        label = " ".join(element.get_text(" ", strip=True).split())[:200] or element.get("title", "") or ""
-        for name, value in element.attrs.items():
-            if not isinstance(value, str) or element.name == "a" and name == "href":
-                continue
-            if name in ("formaction", "action") or name.startswith("data-"):
-                if BOOK_EXTENSION.search(urllib.parse.urlsplit(value.strip()).path.lower()):
-                    add(value, label)
-        code = element.get("onclick", "")
-        for match in FILE_IN_CODE.finditer(code if isinstance(code, str) else ""):
-            add(match.group(1), label)
-    return list(links.items())
-
-
-class RobotsRules:
-    """robots.txt for one host. A missing robots.txt allows everything."""
-
-    def __init__(self, fetcher, host: str, scheme: str = "https") -> None:
-        self.parser = urllib.robotparser.RobotFileParser()
-        self.parser.allow_all = False
-        try:
-            text, _ = fetcher.fetch(f"{scheme}://{host}/robots.txt")
-            self.parser.parse(text.splitlines())
-        except Blocked:
-            raise  # the site refuses us outright: the caller skips it
-        except Exception:
-            self.parser.parse([])  # unreachable or missing robots.txt: allow
-
-    def allowed(self, url: str) -> bool:
-        return self.parser.can_fetch("*", url)
-
-
-def crawl_site(
-    seed: str,
-    fetcher,
-    *,
-    entries: dict[str, dict],
-    scribd: dict[str, dict],
-    not_kept: list[tuple[str, str]],
-    max_pages: int,
-    max_depth: int,
-    match_mode: str,
-    delay: float,
-    jitter: float,
-    sleep=time.sleep,
-    log=print,
-    save=None,
-    stop_at_first_file=False,
-) -> dict[str, int]:
-    seed = without_fragment(seed)
-    seed_host = host_key(seed)
-    scheme = urllib.parse.urlsplit(seed).scheme
-    stats = {"pages": 0, "pdf": 0, "scribd": 0, "not_kept": 0}
-
-    log(f"  reading robots.txt for {seed_host}")
-    try:
-        robots = RobotsRules(fetcher, seed_host, scheme)
-    except Blocked as error:
-        log(f"  robots.txt refused: {error}. Skipping this site.")
-        return stats
-
-    queue: deque[tuple[str, int]] = deque([(seed, 0)])
-    visited: set[str] = {seed}
-    while queue and stats["pages"] < max_pages:
-        page_url, depth = queue.popleft()
-        if not robots.allowed(page_url):
-            log(f"  robots.txt disallows {page_url}")
-            continue
-        if stats["pages"] > 0:
-            sleep(delay + random.uniform(0, jitter))
-        log(f"  requesting {page_url}")
-        try:
-            html, final_url = fetcher.fetch(page_url)
-        except (Blocked, RateLimited) as error:
-            log(f"  Stopping this site: {error}")
-            break
-        except Exception as error:  # a broken page must not stop the site
-            log(f"  Failed {page_url}: {error}")
-            continue
-        stats["pages"] += 1
-        limit = "no limit" if max_pages == float("inf") else max_pages
-        log(f"  [{stats['pages']}/{limit}] depth {depth}: {final_url}")
-
-        found_before = len(entries) + len(scribd)
-        for url, label in page_links(html, final_url):
-            if is_scribd_document_url(url):
-                if url not in scribd:
-                    log(f"    Scribd: {url}")
-                upsert(scribd, url, label, final_url)
-                stats["scribd"] += 1
-                continue
-            path = urllib.parse.urlsplit(url).path
-            if BOOK_EXTENSION.search(path.lower()):
-                if matches_book_candidate(url, label, match_mode):
-                    is_new = url not in entries
-                    if is_new:
-                        stats["pdf"] += 1
-                        log(f"    PDF/DOCX found: {url}")
-                    upsert(entries, url, label, final_url)
-                    if is_new and save:  # per file: the downloader works on it before the next link
-                        save()
-                else:
-                    stats["not_kept"] += 1
-                    not_kept.append((label, url))
-                continue
-            if same_site(url, seed_host) and depth < max_depth and url not in visited and is_html_candidate(url):
-                visited.add(url)
-                queue.append((url, depth + 1))
-        if stop_at_first_file and stats["pdf"]:
-            log(f"  Download link found on {final_url}; stopping this site.")
-            break
-        if len(entries) + len(scribd) != found_before and save:
-            save()
-    return stats
-
 
 def read_seeds(path: Path) -> list[str]:
     seen: dict[str, str] = {}
@@ -252,7 +67,6 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--max-pages", type=int, default=10,
                         help="pages read per site while looking for a download link (default 10)")
     parser.add_argument("--max-depth", type=int, default=10, help="link levels below the start page (default 10)")
-    parser.add_argument("--match-mode", default="loose", choices=("loose", "filename"))
     parser.add_argument("--delay", type=float, default=1.0, help="seconds between page requests (default 1)")
     parser.add_argument("--jitter", type=float, default=0.5, help="extra random seconds (default 0.5)")
     parser.add_argument("--timeout", type=float, default=60.0)
@@ -398,7 +212,7 @@ def log_search_results(path: Path, term: str, start: int, results: list[dict]) -
             handle.write(f"{term}\t{start}\t{rank}\t{title}\t{result['url']}\n")
 
 
-def run_search(args: argparse.Namespace, fetcher, entries, scribd, not_kept) -> int:
+def run_search(args: argparse.Namespace, fetcher, entries, scribd) -> int:
     api_key = load_serpapi_key()
     if not api_key:
         print(explain_missing_key(), file=sys.stderr)
@@ -440,7 +254,7 @@ def run_search(args: argparse.Namespace, fetcher, entries, scribd, not_kept) -> 
                     log_search_results(args.search_log, term, start, results)
                     print(f"  page {page_no}: {len(results)} result(s); searches used {budget.used}/{budget.limit}")
                 for result in results:
-                    handle_result(result, args, fetcher, entries, scribd, not_kept, probed, term)
+                    handle_result(result, args, fetcher, entries, scribd, probed, term)
                 if not results or not more:
                     break
                 if page_no >= args.search_pages:
@@ -464,11 +278,11 @@ def site_root(url: str) -> str:
 
 
 def save_lists(args, entries, scribd) -> None:
-    write_book_list(args.entry_list, entries)
-    write_book_list(args.scribd_list, scribd)
+    save_entries(args.entry_list, entries)  # merges with the file: hand-added rows are kept
+    save_entries(args.scribd_list, scribd)
 
 
-def discover_site(url: str, fetcher, args, scribd, not_kept, index: str) -> bool:
+def discover_site(url: str, fetcher, args, scribd, index: str) -> bool:
     """Read the site only until one page links a PDF/DOCX. True if it has one (so the site has a download).
 
     The crawl stops at that page. Scribd links found on the way are registered under the search index link.
@@ -476,8 +290,8 @@ def discover_site(url: str, fetcher, args, scribd, not_kept, index: str) -> bool
     found: dict[str, dict] = {}
     scratch_scribd: dict[str, dict] = {}
     stats = crawl_site(
-        url, fetcher, entries=found, scribd=scratch_scribd, not_kept=not_kept,
-        max_pages=args.max_pages, max_depth=args.max_depth, match_mode=args.match_mode,
+        url, fetcher, entries=found, scribd=scratch_scribd,
+        max_pages=args.max_pages, max_depth=args.max_depth,
         delay=args.delay, jitter=args.jitter, stop_at_first_file=True,
     )
     for link, record in scratch_scribd.items():
@@ -485,7 +299,7 @@ def discover_site(url: str, fetcher, args, scribd, not_kept, index: str) -> bool
     return stats["pdf"] > 0
 
 
-def handle_result(result, args, fetcher, entries, scribd, not_kept, probed, term) -> None:
+def handle_result(result, args, fetcher, entries, scribd, probed, term) -> None:
     """One search result. Scribd -> Scribd list (under the search index link). A file -> entry list.
     A site -> checked once; if it has a download, its main link goes to the entry list."""
     url, title = result["url"], result["title"]
@@ -494,10 +308,7 @@ def handle_result(result, args, fetcher, entries, scribd, not_kept, probed, term
         upsert(scribd, url, title, index)
         return
     if BOOK_EXTENSION.search(urllib.parse.urlsplit(url).path.lower()):
-        if matches_book_candidate(url, title, args.match_mode):
-            upsert(entries, url, title, index)
-        else:
-            not_kept.append((title, url))
+        upsert(entries, url, title, index)  # the search is Burmese: no name filter
         return
     if not is_site_seed(url):
         return
@@ -506,7 +317,7 @@ def handle_result(result, args, fetcher, entries, scribd, not_kept, probed, term
         return
     probed.add(host)
     print(f"  Checking site: {host} (from {url})")
-    if discover_site(url, fetcher, args, scribd, not_kept, index):
+    if discover_site(url, fetcher, args, scribd, index):
         root = site_root(url)
         upsert(entries, root, title, index)
         print(f"    has a download link: registered {root}")
@@ -519,16 +330,15 @@ def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     for output in (args.entry_list, args.scribd_list, args.usage_file):
         output.parent.mkdir(parents=True, exist_ok=True)
-    entries = read_book_list(args.entry_list)
-    scribd = read_book_list(args.scribd_list)
+    entries = read_entries(args.entry_list)
+    scribd = read_entries(args.scribd_list)
     save_lists(args, entries, scribd)  # create both lists now, so they exist before the first hit
-    not_kept: list[tuple[str, str]] = []
     fetcher = HttpFetcher(timeout=args.timeout)
     try:
         if args.urls:
             for url in args.urls:
                 print(f"Site: {host_key(url)} (from {url})")
-                if discover_site(url, fetcher, args, scribd, not_kept, index=url):
+                if discover_site(url, fetcher, args, scribd, index=url):
                     root = site_root(url)
                     upsert(entries, root, root, url)
                     print(f"  has a download link: registered {root}")
@@ -537,7 +347,7 @@ def main(argv: list[str] | None = None) -> int:
                 save_lists(args, entries, scribd)
             code = 0
         else:
-            code = run_search(args, fetcher, entries, scribd, not_kept)
+            code = run_search(args, fetcher, entries, scribd)
     except KeyboardInterrupt:
         print("\nInterrupted. Saved what was found so far.")
         code = 130
@@ -545,10 +355,6 @@ def main(argv: list[str] | None = None) -> int:
     save_lists(args, entries, scribd)
     print(f"\nEntry list:     {len(entries)} ({args.entry_list})")
     print(f"Scribd links:   {len(scribd)} ({args.scribd_list})")
-    if not_kept:
-        print("Sample of links not kept (wrong type or no Burmese match):")
-        for label, url in not_kept[:5]:
-            print(f"  {label[:70]!r} -> {url[:140]}")
     return code
 
 

@@ -89,7 +89,8 @@ Two scripts, run in order. Neither one needs the other's code to run.
 cd python
 uv run dsite.py                              # SerpApi searches, then record each site
 uv run dsite.py https://example.org/books/   # or start from one URL
-uv run dsite_download.py                     # download from the entry list
+uv run dsite_download.py                     # download from scan/site_entry_list.txt
+uv run dsite_download.py my_links.txt        # or from any list you give it
 ```
 
 ### The crawler (`dsite.py`)
@@ -112,8 +113,8 @@ uv run dsite_download.py                     # download from the entry list
 - A Scribd result goes to `scan/site_scribd_links.txt`. Its key is the Scribd
   document URL, and its Source is the **search engine index link**
   (`https://www.google.com/search?q=<keyword>`), not the site link.
-- A result counts only if the page has a PDF/DOCX link. A `.pdf` or Scribd URL
-  alone does not count.
+- Every PDF/DOCX link on a page is kept. There is no file-name or Burmese-text
+  check: the searches are already Burmese.
 - **Monthly budget.** The free SerpApi plan allows 250 successful searches a
   month. The tool counts its own searches in `scan/serpapi_usage.json`
   (gitignored), refuses a run whose planned searches exceed what is left, and
@@ -124,7 +125,11 @@ uv run dsite_download.py                     # download from the entry list
 
 ### The downloader (`dsite_download.py`)
 
-- Reads `scan/site_entry_list.txt`.
+- Reads the list given on the command line (default `scan/site_entry_list.txt`).
+  A list you write by hand works: one `http(s)` URL per line, with or without the
+  header, UTF-8 or UTF-16. A file URL is downloaded; a site URL is crawled.
+- The downloader and the crawler are separate scripts. The downloader does not
+  import the crawler, and it never writes the list.
 - Each file is handled one at a time, in this order:
   **download -> decrypt (unlock) -> linearize -> save to disk.** PDFs are unlocked
   and linearized by `linearize.linearize()` (from `linearize.py`). DOCX files are
@@ -152,7 +157,8 @@ created by JavaScript at run time is not visible to the crawler.
 - `search_cache.json`: the saved search responses. A rerun reuses them, so
   repeating a run does not spend searches. `--fresh-search` ignores them.
 - `site_entry_list.txt`: the entry list, one row per file URL or site main link.
-  It is written with a header row at the start and grows during the run.
+  It is written with a header row at the start and grows during the run. The
+  crawler merges its rows into the file on disk, so rows you add by hand are kept.
 - `site_scribd_links.txt`: Scribd documents, Source = search index link.
 - `serpapi_usage.json`: the monthly search counter.
 
