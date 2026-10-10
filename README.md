@@ -78,14 +78,14 @@ executes JavaScript, keeps cookies and has a genuine browser fingerprint.
 
 ## 0d. Site crawler — one command, URL or search
 
-`python/site.py` crawls websites for PDF/DOCX links. Scribd links are
+`python/dsite.py` crawls websites for PDF/DOCX links. Scribd links are
 recorded separately and not downloaded.
 
 ```sh
 cd python
-uv run site.py https://example.org/books/   # crawl this site
-uv run site.py                              # no URL: SerpApi searches, then crawl each result site
-uv run site.py --max-pages=30 --max-depth=2 --delay=8
+uv run dsite.py https://example.org/books/   # crawl this site
+uv run dsite.py                              # no URL: SerpApi searches, then crawl each result site
+uv run dsite.py --max-pages=30 --max-depth=2 --delay=8
 ```
 
 - A given URL is the start page; the crawl stays on that domain.

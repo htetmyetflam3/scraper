@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Crawl each site the search engine pointed to and collect its PDF/DOCX links.
 
-    uv run site.py https://example.org/books/   # crawl this site
-    uv run site.py                              # no URL: SerpApi searches, then crawl each result
+    uv run dsite.py https://example.org/books/   # crawl this site
+    uv run dsite.py                              # no URL: SerpApi searches, then crawl each result
 
 One crawler, two ways to get its starting URLs. Given URLs are crawled as-is.
 Without URLs, SerpApi (Google results) runs each search term, and the results

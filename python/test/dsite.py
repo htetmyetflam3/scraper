@@ -4,25 +4,9 @@ import time
 
 import pytest
 
-import importlib.util
-import sys
-from pathlib import Path
-
 from crawler import Blocked, is_site_seed
-
-
-def _load_site():
-    """Load python/site.py by path. A plain `import site` would get Python's built-in `site` module."""
-    path = Path(__file__).resolve().parents[1] / "site.py"
-    spec = importlib.util.spec_from_file_location("site_crawler", path)
-    module = importlib.util.module_from_spec(spec)
-    sys.modules["site_crawler"] = module
-    spec.loader.exec_module(module)
-    return module
-
-
-site_crawl = _load_site()
-crawl_site, host_key, main, page_links = site_crawl.crawl_site, site_crawl.host_key, site_crawl.main, site_crawl.page_links
+import dsite
+from dsite import crawl_site, host_key, main, page_links
 
 
 class FakeFetcher:
@@ -138,10 +122,10 @@ def test_search_results_become_sites_only_when_they_are_ordinary_pages():
 
 
 def test_main_with_a_url_writes_the_entry_list(tmp_path, monkeypatch):
-    monkeypatch.setattr(site_crawl, "HttpFetcher", lambda **_: FakeFetcher({
+    monkeypatch.setattr(dsite, "HttpFetcher", lambda **_: FakeFetcher({
         SITE: '<a href="novel.pdf">မြန်မာဝတ္ထု</a>',
     }))
-    monkeypatch.setattr(site_crawl.time, "sleep", lambda _s: None)
+    monkeypatch.setattr(dsite.time, "sleep", lambda _s: None)
     code = main([SITE, "--delay=0", "--jitter=0",
                  f"--entry-list={tmp_path/'e.txt'}", f"--scribd-list={tmp_path/'s.txt'}"])
     assert code == 0
@@ -157,11 +141,11 @@ def _search_setup(monkeypatch, tmp_path, pages, sites, downloads, gaps=None):
         return pages.get((query, start), ([], False))
 
     monkeypatch.setenv("SERPAPI", "test-key")
-    monkeypatch.setattr(site_crawl, "ENV_FILE", tmp_path / "no-such.env")
-    monkeypatch.setattr(site_crawl, "serpapi_search", fake_search)
-    monkeypatch.setattr(site_crawl, "HttpFetcher", lambda **_: FakeFetcher(sites))
-    monkeypatch.setattr(site_crawl, "download_new", lambda entry_list: downloads.append(entry_list))
-    monkeypatch.setattr(site_crawl.time, "sleep", lambda s: gaps.append(s) if gaps is not None else None)
+    monkeypatch.setattr(dsite, "ENV_FILE", tmp_path / "no-such.env")
+    monkeypatch.setattr(dsite, "serpapi_search", fake_search)
+    monkeypatch.setattr(dsite, "HttpFetcher", lambda **_: FakeFetcher(sites))
+    monkeypatch.setattr(dsite, "download_new", lambda entry_list: downloads.append(entry_list))
+    monkeypatch.setattr(dsite.time, "sleep", lambda s: gaps.append(s) if gaps is not None else None)
     return calls
 
 
@@ -171,11 +155,11 @@ def _args(tmp_path, *extra):
 
 
 def test_default_search_terms_are_the_four_approved_keywords():
-    terms = site_crawl.parse_args([]).search_terms.split(",")
+    terms = dsite.parse_args([]).search_terms.split(",")
     assert terms == ["myanmar books download", "myanmar ebooks download", "Myanmar PDF free download",
                      "free မြန်မာ pdf စာအုပ်များ"]
-    assert site_crawl.parse_args([]).search_pages == 1, "one page per keyword by default"
-    assert site_crawl.parse_args([]).monthly_limit == 250
+    assert dsite.parse_args([]).search_pages == 1, "one page per keyword by default"
+    assert dsite.parse_args([]).monthly_limit == 250
 
 
 def test_no_url_follows_results_in_order_and_downloads_after_each_site(tmp_path, monkeypatch):
@@ -221,18 +205,18 @@ def test_no_url_waits_between_search_requests(tmp_path, monkeypatch):
 
 def test_no_url_stops_on_serpapi_error(tmp_path, monkeypatch):
     monkeypatch.setenv("SERPAPI", "test-key")
-    monkeypatch.setattr(site_crawl, "ENV_FILE", tmp_path / "no-such.env")
+    monkeypatch.setattr(dsite, "ENV_FILE", tmp_path / "no-such.env")
 
     def refused(query, start, api_key, timeout=60.0):
-        raise site_crawl.SearchStopped("SerpApi rate limit reached (HTTP 429).")
+        raise dsite.SearchStopped("SerpApi rate limit reached (HTTP 429).")
 
-    monkeypatch.setattr(site_crawl, "serpapi_search", refused)
+    monkeypatch.setattr(dsite, "serpapi_search", refused)
     assert main(_args(tmp_path, "--search-terms=one,two")) == 1
 
 
 def test_no_url_without_a_key_does_nothing(tmp_path, monkeypatch):
     monkeypatch.delenv("SERPAPI", raising=False)
-    monkeypatch.setattr(site_crawl, "ENV_FILE", tmp_path / "no-such.env")
+    monkeypatch.setattr(dsite, "ENV_FILE", tmp_path / "no-such.env")
     calls = _search_setup(monkeypatch, tmp_path, {}, {}, [])
     monkeypatch.delenv("SERPAPI", raising=False)
     assert main(_args(tmp_path)) == 1
@@ -243,9 +227,9 @@ def test_key_is_read_from_dotenv_when_environment_is_empty(tmp_path, monkeypatch
     monkeypatch.delenv("SERPAPI", raising=False)
     env = tmp_path / ".env"
     env.write_text("# keys\nOTHER=1\nSERPAPI=\"abc123\"\n", encoding="utf8")
-    assert site_crawl.load_serpapi_key(env) == "abc123"
+    assert dsite.load_serpapi_key(env) == "abc123"
     monkeypatch.setenv("SERPAPI", "from-env")
-    assert site_crawl.load_serpapi_key(env) == "from-env", "the environment wins over .env"
+    assert dsite.load_serpapi_key(env) == "from-env", "the environment wins over .env"
 
 
 def test_run_is_refused_when_planned_searches_exceed_the_monthly_budget(tmp_path, monkeypatch):
@@ -273,7 +257,7 @@ def test_budget_resets_in_a_new_month(tmp_path):
     import json
     path = tmp_path / "usage.json"
     path.write_text(json.dumps({"month": "2000-01", "used": 250}), encoding="utf8")
-    assert site_crawl.SearchBudget(path, 250).remaining() == 250
+    assert dsite.SearchBudget(path, 250).remaining() == 250
 
 
 def test_serpapi_search_parses_results_and_next_page(monkeypatch):
@@ -290,8 +274,8 @@ def test_serpapi_search_parses_results_and_next_page(monkeypatch):
         seen.update(url=url, params=params)
         return Response()
 
-    monkeypatch.setattr(site_crawl.httpx, "get", fake_get)
-    results, more = site_crawl.serpapi_search("q", 10, "k")
+    monkeypatch.setattr(dsite.httpx, "get", fake_get)
+    results, more = dsite.serpapi_search("q", 10, "k")
     assert results == [{"url": "https://x.example.com/", "title": "X"}]
     assert more is True
     assert seen["url"] == "https://serpapi.com/search.json"
@@ -307,6 +291,6 @@ def test_serpapi_search_stops_on_refused_key_and_rate_limit(monkeypatch):
             return {"error": "Invalid API key"}
 
     for status in (401, 403, 429):
-        monkeypatch.setattr(site_crawl.httpx, "get", lambda *a, _s=status, **k: Response(_s))
-        with pytest.raises(site_crawl.SearchStopped):
-            site_crawl.serpapi_search("q", 0, "k")
+        monkeypatch.setattr(dsite.httpx, "get", lambda *a, _s=status, **k: Response(_s))
+        with pytest.raises(dsite.SearchStopped):
+            dsite.serpapi_search("q", 0, "k")
