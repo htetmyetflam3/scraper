@@ -98,8 +98,14 @@ uv run dsite.py --max-pages=30 --max-depth=2 --delay=8
   search, run in order. Two result pages per keyword by default, so a full run
   is **8 searches** (4 keywords × 2 pages). `--search-pages=1` makes it 4.
   Each page is one SerpApi request, and each request counts against the budget.
-- Each result site is crawled in full (up to the `--max-pages` safety cap), and
-  its PDFs are downloaded before the next result is handled.
+- **Stage 1, search (no downloads).** Each result is checked. A PDF/DOCX result goes
+  to `site_entry_list.txt`. A site result is probed: only its first `--probe-pages`
+  pages (default 2) are read. If one of them links a PDF or DOCX, the site's main
+  link goes to `site_list.txt`. Scribd links go to `site_scribd_links.txt`.
+- **Stage 2, crawl the sites.** `uv run dsite.py --crawl-sites` takes `site_list.txt`
+  as its entry. Each site is crawled (up to `--max-pages`, and it stops after
+  `--patience` pages in a row with no link), and each PDF/DOCX is downloaded as
+  it is found.
 - Searches are spaced at least `--search-gap` seconds apart (default 60).
 - **Monthly budget.** The free SerpApi plan allows 250 successful searches a
   month. The tool counts its own searches in `scan/serpapi_usage.json`
@@ -112,7 +118,8 @@ uv run dsite.py --max-pages=30 --max-depth=2 --delay=8
     title, URL), written **before** any site is crawled.
   - `search_cache.json`: the saved search responses. A rerun reuses them, so
     repeating a run does not spend searches. `--fresh-search` ignores them.
-  - `site_entry_list.txt` (PDF/DOCX, the downloader reads it) and
+  - `site_entry_list.txt` (PDF/DOCX found directly by the search),
+    `site_list.txt` (sites with a PDF/DOCX; the entry for stage 2) and
     `site_scribd_links.txt`.
   - `serpapi_usage.json`: the monthly search counter.
 

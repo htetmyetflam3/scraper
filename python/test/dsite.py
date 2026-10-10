@@ -126,7 +126,7 @@ def test_main_with_a_url_writes_the_entry_list(tmp_path, monkeypatch):
         SITE: '<a href="novel.pdf">မြန်မာဝတ္ထု</a>',
     }))
     monkeypatch.setattr(dsite.time, "sleep", lambda _s: None)
-    code = main([SITE, "--delay=0", "--jitter=0", "--no-download",
+    code = main([SITE, "--delay=0", "--jitter=0", "--no-download", f"--site-list={tmp_path/'sites.txt'}",
                  f"--entry-list={tmp_path/'e.txt'}", f"--scribd-list={tmp_path/'s.txt'}"])
     assert code == 0
     assert SITE + "novel.pdf" in (tmp_path / "e.txt").read_text(encoding="utf8")
@@ -152,7 +152,7 @@ def _search_setup(monkeypatch, tmp_path, pages, sites, downloads, gaps=None):
 def _args(tmp_path, *extra):
     return [f"--entry-list={tmp_path/'e.txt'}", f"--scribd-list={tmp_path/'s.txt'}",
             "--delay=0", "--jitter=0", "--search-terms=Myanmar PDF", f"--usage-file={tmp_path/'usage.json'}",
-            f"--search-log={tmp_path/'search.txt'}", f"--search-cache={tmp_path/'cache.json'}", *extra]
+            f"--search-log={tmp_path/'search.txt'}", f"--search-cache={tmp_path/'cache.json'}", f"--site-list={tmp_path/'sites.txt'}", *extra]
 
 
 def test_default_search_terms_are_the_four_approved_keywords():
@@ -163,37 +163,42 @@ def test_default_search_terms_are_the_four_approved_keywords():
     assert dsite.parse_args([]).monthly_limit == 250
 
 
-def test_no_url_follows_results_in_order_and_downloads_after_each_site(tmp_path, monkeypatch):
+def test_search_registers_sites_with_pdfs_and_downloads_nothing(tmp_path, monkeypatch):
     downloads = []
     pages = {("Myanmar PDF", 0): ([{"url": "https://first.example.com/", "title": "first"},
-                                   {"url": "https://second.example.com/", "title": "second"}], False)}
+                                   {"url": "https://second.example.com/", "title": "second"},
+                                   {"url": "https://empty.example.com/", "title": "empty"}], False)}
     sites = {
         "https://first.example.com/": '<a href="a.pdf">Myanmar A</a>',
         "https://second.example.com/": '<a href="b.pdf">Myanmar B</a>',
+        "https://empty.example.com/": "<p>nothing</p>",
     }
-    calls = _search_setup(monkeypatch, tmp_path, pages, sites, downloads)
-    code = main(_args(tmp_path))
-    assert code == 0
-    assert calls == [("Myanmar PDF", 0)]
-    assert len(downloads) == 2, "each site with a PDF is downloaded before the next result"
-    entries = (tmp_path / "e.txt").read_text(encoding="utf8")
-    assert "a.pdf" in entries and "b.pdf" in entries
+    _search_setup(monkeypatch, tmp_path, pages, sites, downloads)
+    assert main(_args(tmp_path)) == 0
+    assert downloads == [], "stage 1 downloads nothing"
+    registered = (tmp_path / "sites.txt").read_text(encoding="utf8")
+    assert "https://first.example.com/" in registered
+    assert "https://second.example.com/" in registered
+    assert "https://empty.example.com/" not in registered, "a site without a PDF/DOCX is not registered"
+    assert "a.pdf" not in (tmp_path / "e.txt").read_text(encoding="utf8"), "PDFs are not listed in stage 1"
 
 
-def test_default_fetches_two_pages_per_keyword(tmp_path, monkeypatch):
-    hit = [{"url": "https://x.example.com/", "title": "x"}]
-    pages = {("one", 0): (hit, True), ("one", 10): (hit, True), ("one", 20): (hit, True)}
-    calls = _search_setup(monkeypatch, tmp_path, pages, {}, [])
-    main(_args(tmp_path, "--search-terms=one"))
-    assert calls == [("one", 0), ("one", 10)], "page 1 and page 2 only, one search each"
+def test_crawl_sites_downloads_from_the_registered_sites(tmp_path, monkeypatch):
+    import dsite as module
 
-
-def test_search_pages_flag_follows_pages_while_engine_says_more(tmp_path, monkeypatch):
-    hit = [{"url": "https://x.example.com/", "title": "x"}]
-    pages = {("one", 0): (hit, True), ("one", 10): (hit, True), ("one", 20): (hit, False)}
-    calls = _search_setup(monkeypatch, tmp_path, pages, {}, [])
-    main(_args(tmp_path, "--search-terms=one", "--search-pages=5"))
-    assert calls == [("one", 0), ("one", 10), ("one", 20)], "stops when SerpApi has no next page"
+    downloads = []
+    pages = {
+        "https://first.example.com/": '<a href="p1.html">next</a>',
+        "https://first.example.com/p1.html": '<a href="a.pdf">Myanmar A</a>',
+    }
+    (tmp_path / "sites.txt").write_text("Book Name\tURL\tSource Page\nfirst\thttps://first.example.com/\tPDF\n",
+                                        encoding="utf8")
+    monkeypatch.setattr(module, "HttpFetcher", lambda **_: FakeFetcher(pages))
+    monkeypatch.setattr(module, "download_new", lambda entry_list: downloads.append(entry_list))
+    monkeypatch.setattr(module.time, "sleep", lambda _s: None)
+    assert main(_args(tmp_path, "--crawl-sites")) == 0
+    assert downloads, "the PDF found on the registered site was downloaded"
+    assert "a.pdf" in (tmp_path / "e.txt").read_text(encoding="utf8")
 
 
 def test_no_url_waits_between_search_requests(tmp_path, monkeypatch):
@@ -443,7 +448,7 @@ def test_a_pdf_is_downloaded_while_the_site_is_still_being_crawled(tmp_path, mon
     monkeypatch.setattr(module, "HttpFetcher", lambda **_: FakeFetcher(pages))
     monkeypatch.setattr(module, "download_new", lambda entry_list: downloads.append(entry_list))
     monkeypatch.setattr(module.time, "sleep", lambda _s: None)
-    code = main([SITE, "--delay=0", "--jitter=0", "--max-pages=3",
+    code = main([SITE, "--delay=0", "--jitter=0", "--max-pages=3", f"--site-list={tmp_path/'sites.txt'}",
                  f"--entry-list={tmp_path/'e.txt'}", f"--scribd-list={tmp_path/'s.txt'}",
                  f"--usage-file={tmp_path/'u.json'}", f"--search-log={tmp_path/'sr.txt'}",
                  f"--search-cache={tmp_path/'c.json'}"])
@@ -464,6 +469,6 @@ def test_a_failed_download_does_not_stop_the_crawl(tmp_path, monkeypatch):
     monkeypatch.setattr(module, "HttpFetcher", lambda **_: fetcher)
     monkeypatch.setattr(module, "download_new", broken)
     monkeypatch.setattr(module.time, "sleep", lambda _s: None)
-    main([SITE, "--delay=0", "--jitter=0", f"--entry-list={tmp_path/'e.txt'}",
+    main([SITE, "--delay=0", "--jitter=0", f"--entry-list={tmp_path/'e.txt'}", f"--site-list={tmp_path/'sites.txt'}",
           f"--scribd-list={tmp_path/'s.txt'}"])
     assert SITE + "p1.html" in fetcher.fetched, "the crawl went on after the download error"

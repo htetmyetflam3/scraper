@@ -220,6 +220,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("urls", nargs="*", help="start URLs (default: search with SerpApi, see --search-terms)")
     parser.add_argument("--entry-list", type=Path, default=SCAN_DIR / "site_entry_list.txt")
     parser.add_argument("--scribd-list", type=Path, default=SCAN_DIR / "site_scribd_links.txt")
+    parser.add_argument("--site-list", type=Path, default=SCAN_DIR / "site_list.txt",
+                        help="sites that have a PDF/DOCX; the entry for the crawl stage")
+    parser.add_argument("--probe-pages", type=int, default=2,
+                        help="pages looked at per search-result site before deciding (default 2)")
+    parser.add_argument("--crawl-sites", action="store_true",
+                        help="stage 2: crawl and download every site in the site list, no search")
     parser.add_argument("--max-pages", type=int, default=500,
                         help="safety cap on pages fetched per site (default 500; the site is crawled in full below this)")
     parser.add_argument("--max-depth", type=int, default=10, help="link levels below the start page (default 10)")
@@ -380,7 +386,7 @@ def log_search_results(path: Path, term: str, start: int, results: list[dict]) -
             handle.write(f"{term}\t{start}\t{rank}\t{title}\t{result['url']}\n")
 
 
-def run_search(args: argparse.Namespace, fetcher, entries, scribd, not_kept) -> int:
+def run_search(args: argparse.Namespace, fetcher, entries, scribd, not_kept, sites) -> int:
     api_key = load_serpapi_key()
     if not api_key:
         print(explain_missing_key(), file=sys.stderr)
@@ -391,7 +397,7 @@ def run_search(args: argparse.Namespace, fetcher, entries, scribd, not_kept) -> 
     print(f"Keywords: {len(terms)}. Pages per keyword: {args.search_pages}. "
           f"Searches used this month: {budget.used}/{budget.limit}.")
 
-    crawled_hosts: set[str] = set()
+    probed: set[str] = set()
     last_search = None
     try:
         for term in terms:
@@ -422,7 +428,7 @@ def run_search(args: argparse.Namespace, fetcher, entries, scribd, not_kept) -> 
                     log_search_results(args.search_log, term, start, results)
                     print(f"  page {page_no}: {len(results)} result(s); searches used {budget.used}/{budget.limit}")
                 for result in results:
-                    handle_result(result, args, fetcher, entries, scribd, not_kept, crawled_hosts)
+                    handle_result(result, args, fetcher, entries, scribd, not_kept, sites, probed, term)
                 if not results or not more:
                     break
                 if page_no >= args.search_pages:
@@ -439,6 +445,26 @@ def save_lists(args, entries, scribd) -> None:
     write_book_list(args.scribd_list, scribd)
 
 
+def site_root(url: str) -> str:
+    """The site's main link: scheme and host only."""
+    parts = urllib.parse.urlsplit(url)
+    return f"{parts.scheme}://{parts.netloc}/"
+
+
+def probe_site(url: str, fetcher, args, scribd, not_kept) -> bool:
+    """Discovery: look at only a few pages of the site. True if one of them links a real PDF/DOCX.
+
+    The probe never downloads and never writes to the entry list. Scribd links it finds go to their own list.
+    """
+    found: dict[str, dict] = {}
+    crawl_site(
+        url, fetcher, entries=found, scribd=scribd, not_kept=not_kept,
+        max_pages=args.probe_pages, max_depth=args.max_depth, match_mode=args.match_mode,
+        delay=args.delay, jitter=args.jitter,
+    )
+    return bool(found)
+
+
 def on_new_links(args, entries, scribd) -> None:
     """Called whenever a page adds a link: save the lists, then download what is new."""
     save_lists(args, entries, scribd)
@@ -450,46 +476,75 @@ def on_new_links(args, entries, scribd) -> None:
         print(f"  Download error (the crawl continues): {error}")
 
 
-def handle_result(result, args, fetcher, entries, scribd, not_kept, crawled_hosts) -> None:
+def handle_result(result, args, fetcher, entries, scribd, not_kept, sites, probed, term) -> None:
+    """Discovery for one search result: a file goes to the entry list; a site is probed and, if it has a PDF/DOCX,
+    its main link goes to the site list."""
     url, title = result["url"], result["title"]
     if is_scribd_document_url(url):
-        upsert(scribd, url, title, "search")
+        upsert(scribd, url, title, term)
         return
     if BOOK_EXTENSION.search(urllib.parse.urlsplit(url).path.lower()):
         if matches_book_candidate(url, title, args.match_mode):
-            upsert(entries, url, title, "search")
+            upsert(entries, url, title, term)
         else:
             not_kept.append((title, url))
         return
     if not is_site_seed(url):
         return
     host = host_key(url)
-    if host in crawled_hosts:
+    if host in probed:
         return
-    crawled_hosts.add(host)
-    print(f"  Site: {host} (from {url})")
-    stats = crawl_site(
-        url, fetcher, entries=entries, scribd=scribd, not_kept=not_kept,
-        max_pages=args.max_pages, max_depth=args.max_depth, match_mode=args.match_mode,
-        delay=args.delay, jitter=args.jitter,
-        save=lambda: on_new_links(args, entries, scribd), patience=args.patience,
-    )
-    print(f"    pages: {stats['pages']}; PDF/DOCX found: {stats['pdf']}; Scribd: {stats['scribd']}")
-    write_book_list(args.entry_list, entries)
+    probed.add(host)
+    print(f"  Checking site: {host} (from {url})")
+    if probe_site(url, fetcher, args, scribd, not_kept):
+        root = site_root(url)
+        upsert(sites, root, title, term)
+        write_book_list(args.site_list, sites)
+        print(f"    registered in {args.site_list.name}: {root}")
+    else:
+        print(f"    no PDF/DOCX on the first {args.probe_pages} page(s); not registered")
     write_book_list(args.scribd_list, scribd)
+
+
+def crawl_registered_sites(args, fetcher, entries, scribd, not_kept, sites) -> int:
+    """Stage 2: the site list is the entry. Crawl each registered site and download as the files are found."""
+    if not sites:
+        print(f"The site list is empty ({args.site_list}). Run a search first, without --crawl-sites.", file=sys.stderr)
+        return 1
+    if entries and not args.no_download:
+        try:
+            download_new(args.entry_list)  # direct file results found by the search
+        except Exception as error:
+            print(f"  Download error (the crawl continues): {error}")
+    print(f"Sites to crawl: {len(sites)}")
+    for record in sites.values():
+        url = record["url"]
+        print(f"\nSite: {host_key(url)} ({url})")
+        stats = crawl_site(
+            url, fetcher, entries=entries, scribd=scribd, not_kept=not_kept,
+            max_pages=args.max_pages, max_depth=args.max_depth, match_mode=args.match_mode,
+            delay=args.delay, jitter=args.jitter,
+            save=lambda: on_new_links(args, entries, scribd), patience=args.patience,
+        )
+        print(f"  pages: {stats['pages']}; PDF/DOCX found: {stats['pdf']}; Scribd: {stats['scribd']}")
+    return 0
 
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
-    for output in (args.entry_list, args.scribd_list, args.usage_file):
+    for output in (args.entry_list, args.scribd_list, args.site_list, args.usage_file):
         output.parent.mkdir(parents=True, exist_ok=True)
     entries = read_book_list(args.entry_list)
     scribd = read_book_list(args.scribd_list)
-    save_lists(args, entries, scribd)  # create both files now, so they exist before the first hit
+    sites = read_book_list(args.site_list)
+    save_lists(args, entries, scribd)  # create the lists now, so they exist before the first hit
+    write_book_list(args.site_list, sites)
     not_kept: list[tuple[str, str]] = []
     fetcher = HttpFetcher(timeout=args.timeout)
     try:
-        if args.urls:
+        if args.crawl_sites:
+            code = crawl_registered_sites(args, fetcher, entries, scribd, not_kept, sites)
+        elif args.urls:
             for url in args.urls:
                 print(f"Site: {host_key(url)} (from {url})")
                 stats = crawl_site(
@@ -503,15 +558,17 @@ def main(argv: list[str] | None = None) -> int:
                 write_book_list(args.scribd_list, scribd)
             code = 0
         else:
-            code = run_search(args, fetcher, entries, scribd, not_kept)
+            code = run_search(args, fetcher, entries, scribd, not_kept, sites)
     except KeyboardInterrupt:
         print("\nInterrupted. Saved what was found so far.")
         code = 130
 
     write_book_list(args.entry_list, entries)
     write_book_list(args.scribd_list, scribd)
+    write_book_list(args.site_list, sites)
     print(f"\nPDF/DOCX links: {len(entries)} ({args.entry_list})")
     print(f"Scribd links:   {len(scribd)} ({args.scribd_list})")
+    print(f"Sites:          {len(sites)} ({args.site_list})")
     if not_kept:
         print("Sample of links not kept (wrong type or no Burmese match):")
         for label, url in not_kept[:5]:
