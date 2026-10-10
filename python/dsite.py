@@ -215,8 +215,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
                         help="safety cap on pages fetched per site (default 500; the site is crawled in full below this)")
     parser.add_argument("--max-depth", type=int, default=10, help="link levels below the start page (default 10)")
     parser.add_argument("--match-mode", default="loose", choices=("loose", "filename"))
-    parser.add_argument("--delay", type=float, default=5.0, help="seconds between page requests (default 5)")
-    parser.add_argument("--jitter", type=float, default=2.0, help="extra random seconds (default 2)")
+    parser.add_argument("--delay", type=float, default=1.0, help="seconds between page requests (default 1)")
+    parser.add_argument("--jitter", type=float, default=0.5, help="extra random seconds (default 0.5)")
     parser.add_argument("--timeout", type=float, default=60.0)
     parser.add_argument("--no-download", action="store_true", help="collect links only; do not download after each site")
     parser.add_argument("--search-terms",
