@@ -106,14 +106,20 @@ uv run dsite_download.py                     # download from the entry list
 - Searches are spaced at least `--search-gap` seconds apart (default 60).
 - **One method, stop at the first download link.** For each site result, pages are
   read until the first PDF or DOCX link. Then the crawl of that site stops, and the site's **main link** (scheme + host + `/`) is written to
-  `scan/site_entry_list.txt`. A site with no hit is capped at `--max-pages`
-  (default 50).
+  `scan/site_entry_list.txt`. A site with no hit gets up to `--max-pages` pages
+  (default 15); after that the crawler gives up on it and moves to the next result.
 - A result that is a PDF or DOCX file itself goes to the same entry list as a file URL.
 - A Scribd result goes to `scan/site_scribd_links.txt`. Its key is the Scribd
   document URL, and its Source is the **search engine index link**
   (`https://www.google.com/search?q=<keyword>`), not the site link.
 - A result counts only if the page has a PDF/DOCX link. A `.pdf` or Scribd URL
   alone does not count.
+- **Filter before checking.** Each page of search results is filtered against the
+  entry list first. A site whose main link is already a row there is not visited
+  again. A site that appears only in old history (`search_results.txt` or an
+  earlier run) is still checked. Only the entry list counts as done. Old search
+  responses are not reused, so a rerun sends its searches again and they count
+  against the monthly budget.
 - **Monthly budget.** The free SerpApi plan allows 250 successful searches a
   month. The tool counts its own searches in `scan/serpapi_usage.json`
   (gitignored), refuses a run whose planned searches exceed what is left, and
@@ -149,8 +155,6 @@ created by JavaScript at run time is not visible to the crawler.
 
 - `search_results.txt`: every result of every search (keyword, start, rank,
   title, URL), written **before** any site is crawled.
-- `search_cache.json`: the saved search responses. A rerun reuses them, so
-  repeating a run does not spend searches. `--fresh-search` ignores them.
 - `site_entry_list.txt`: the entry list, one row per file URL or site main link.
   It is written with a header row at the start and grows during the run.
 - `site_scribd_links.txt`: Scribd documents, Source = search index link.

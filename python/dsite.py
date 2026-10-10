@@ -12,7 +12,7 @@ result is checked:
 - a site result is read page by page only until the first PDF/DOCX link. That
   site's main link (scheme + host + "/") then goes to
   site_entry_list.txt, and the crawl of that site stops. A site with no hit is
-  read up to --max-pages (default 50) and left.
+  read up to --max-pages (default 15) and left.
 
 dsite_download.py reads site_entry_list.txt and does the downloading.
 
@@ -248,8 +248,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--entry-list", type=Path, default=SCAN_DIR / "site_entry_list.txt",
                         help="sites (and direct files) for the downloader")
     parser.add_argument("--scribd-list", type=Path, default=SCAN_DIR / "site_scribd_links.txt")
-    parser.add_argument("--max-pages", type=int, default=50,
-                        help="pages read per site while looking for a download link (default 50)")
+    parser.add_argument("--max-pages", type=int, default=15,
+                        help="pages read per site while looking for a download link; then give up (default 15)")
     parser.add_argument("--max-depth", type=int, default=10, help="link levels below the start page (default 10)")
     parser.add_argument("--match-mode", default="loose", choices=("loose", "filename"))
     parser.add_argument("--delay", type=float, default=1.0, help="seconds between page requests (default 1)")
@@ -265,10 +265,6 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--monthly-limit", type=int, default=250, help="SerpApi searches allowed per month (default 250)")
     parser.add_argument("--search-log", type=Path, default=SCAN_DIR / "search_results.txt",
                         help="every search result, written before any site is checked")
-    parser.add_argument("--search-cache", type=Path, default=SCAN_DIR / "search_cache.json",
-                        help="saved search responses; a rerun reuses them and spends no search")
-    parser.add_argument("--fresh-search", action="store_true",
-                        help="ignore the saved search responses and search again")
     parser.add_argument("--usage-file", type=Path, default=SCAN_DIR / "serpapi_usage.json",
                         help="where the searches made this month are counted")
     return parser.parse_args(argv)
@@ -373,19 +369,6 @@ def search_key(term: str, start: int) -> str:
     return f"{term}|{start}"
 
 
-def load_search_cache(path: Path) -> dict:
-    if not path.exists():
-        return {}
-    try:
-        return json.loads(path.read_text(encoding="utf8") or "{}")
-    except ValueError:
-        return {}
-
-
-def save_search_cache(path: Path, cache: dict) -> None:
-    path.write_text(json.dumps(cache, ensure_ascii=False, indent=1), encoding="utf8")
-
-
 def log_search_results(path: Path, term: str, start: int, results: list[dict]) -> None:
     """Append every result of one search to the readable list, before anything is crawled."""
     new_file = not path.exists()
@@ -397,13 +380,28 @@ def log_search_results(path: Path, term: str, start: int, results: list[dict]) -
             handle.write(f"{term}\t{start}\t{rank}\t{title}\t{result['url']}\n")
 
 
+def already_listed(result: dict, entries: dict, scribd: dict) -> bool:
+    """True if this search result is already in a list, so it is not checked again.
+
+    A site counts as listed only when its main link is a row of the entry list. A
+    site that appears only in old history (search log, earlier output) is still checked.
+    """
+    url = result["url"]
+    if is_scribd_document_url(url):
+        return url in scribd
+    if BOOK_EXTENSION.search(urllib.parse.urlsplit(url).path.lower()):
+        return url in entries
+    if is_site_seed(url):
+        return site_root(url) in entries
+    return False
+
+
 def run_search(args: argparse.Namespace, fetcher, entries, scribd, not_kept) -> int:
     api_key = load_serpapi_key()
     if not api_key:
         print(explain_missing_key(), file=sys.stderr)
         return 1
     terms = [term.strip() for term in args.search_terms.split(",") if term.strip()]
-    cache = {} if args.fresh_search else load_search_cache(args.search_cache)
     budget = SearchBudget(args.usage_file, args.monthly_limit)
     print(f"Keywords: {len(terms)}. Pages per keyword: {args.search_pages}. "
           f"Searches used this month: {budget.used}/{budget.limit}.")
@@ -417,28 +415,24 @@ def run_search(args: argparse.Namespace, fetcher, entries, scribd, not_kept) -> 
             page_no = 0
             while True:
                 page_no += 1
-                key = search_key(term, start)
-                if key in cache:
-                    results, more = cache[key]["results"], cache[key]["more"]
-                    print(f"  page {page_no}: {len(results)} result(s) from saved results (no search used)")
-                else:
-                    if budget.remaining() <= 0:
-                        print(f"\nMonthly SerpApi budget used up ({budget.used}/{budget.limit}). Stopping. "
-                              "Saved results are kept; a later run reuses them.")
-                        return 1
-                    if last_search is not None:
-                        wait = args.search_gap - (time.monotonic() - last_search)
-                        if wait > 0:
-                            time.sleep(wait)
-                    last_search = time.monotonic()
-                    results, more = serpapi_search(term, start, api_key, timeout=args.timeout)
-                    budget.record()
-                    # Save the whole result list first, so nothing is lost if the crawl stops or fails.
-                    cache[key] = {"results": results, "more": more}
-                    save_search_cache(args.search_cache, cache)
-                    log_search_results(args.search_log, term, start, results)
-                    print(f"  page {page_no}: {len(results)} result(s); searches used {budget.used}/{budget.limit}")
-                for result in results:
+                if budget.remaining() <= 0:
+                    print(f"\nMonthly SerpApi budget used up ({budget.used}/{budget.limit}). Stopping. "
+                          "The entry list is kept.")
+                    return 1
+                if last_search is not None:
+                    wait = args.search_gap - (time.monotonic() - last_search)
+                    if wait > 0:
+                        time.sleep(wait)
+                last_search = time.monotonic()
+                results, more = serpapi_search(term, start, api_key, timeout=args.timeout)
+                budget.record()
+                log_search_results(args.search_log, term, start, results)
+                print(f"  page {page_no}: {len(results)} result(s); searches used {budget.used}/{budget.limit}")
+                fresh = [result for result in results if not already_listed(result, entries, scribd)]
+                if len(fresh) != len(results):
+                    print(f"  {len(results) - len(fresh)} already in the lists, not checked again; "
+                          f"{len(fresh)} to check")
+                for result in fresh:
                     handle_result(result, args, fetcher, entries, scribd, not_kept, probed, term)
                 if not results or not more:
                     break
