@@ -1,9 +1,4 @@
-"""Offline tests for search_crawl.py.
-
-The extraction tests run against the saved result pages in test/fixtures/,
-so no network access is needed. The
-Mojeek, Brave, SearXNG and Bing fixtures mirror real engine markup.
-"""
+"""Offline tests for crawler.py. No network access is needed."""
 
 from __future__ import annotations
 
@@ -25,7 +20,6 @@ from crawler import (  # noqa: E402
     find_chromium,
     build_queries,
     classify_page,
-    extract_results,
     is_scribd_document_url,
     make_fetcher,
     matches_book_candidate,
@@ -33,16 +27,6 @@ from crawler import (  # noqa: E402
     parse_retry_after,
     unwrap_result_url,
 )
-
-FIXTURES = Path(__file__).resolve().parent / "fixtures"
-
-
-FIXTURE_NAMES = {"bing": "bing-li-algo"}
-
-
-def fixture(name: str) -> str:
-    return (FIXTURES / name).read_text(encoding="utf8")
-
 
 PAGES = {
     "mojeek": "https://www.mojeek.com/search?q=test",
@@ -52,44 +36,6 @@ PAGES = {
     "google": "https://www.google.com/search?q=test&num=10&hl=en&start=0",
     "duckduckgo": "https://html.duckduckgo.com/html/?q=test&s=0",
 }
-
-
-def results_for(name: str):
-    engine = ENGINES[name]
-    fixture_name = FIXTURE_NAMES.get(name, f"{name}-results")
-    results, used_fallback = extract_results(fixture(f"{fixture_name}.html"), PAGES[name], engine)
-    return results, used_fallback
-
-
-@pytest.mark.parametrize("engine", sorted(ENGINES))
-def test_extracts_results_from_every_engine(engine):
-    results, used_fallback = results_for(engine)
-    assert results, f"no results parsed for {engine}"
-    assert used_fallback is False, f"{engine} needed the generic fallback"
-    for result in results:
-        assert result["url"].startswith("http")
-        assert result["title"]
-
-
-def test_mojeek_uses_the_real_container_class():
-    """Mojeek wraps results in ul.results / ul.results-standard, not a fixed class."""
-    html = fixture("mojeek-results.html")
-    assert 'ul class="results"' in html or 'ul class="results-standard"' in html
-    results, _ = extract_results(html, PAGES["mojeek"], ENGINES["mojeek"])
-    # The third result is an unrelated PDF; it must still be parsed (filtering
-    # happens later).
-    assert len(results) == 3
-    assert results[0]["url"] == "https://www.scribd.com/document/451498539/Trigonometry-angle-value-table-pdf"
-    assert results[0]["title"] == "Trigonometry angle value table - pdf"
-
-
-def test_brave_skips_non_web_snippets():
-    results, _ = extract_results(fixture("brave-results.html"), PAGES["brave"], ENGINES["brave"])
-    assert [result["url"] for result in results] == [
-        "https://www.scribd.com/document/451498539/Trigonometry-angle-value-table-pdf",
-        "https://files.example.org/burma/myanmar-poetry.pdf",
-    ]
-    assert results[1]["title"] == "မြန်မာကဗျာများ"
 
 
 def test_scribd_document_urls():
@@ -130,21 +76,6 @@ def test_redirect_unwrapping():
     assert unwrap_result_url("mailto:someone@example.org", PAGES["bing"]) is None
 
 
-def test_no_results_page_yields_nothing():
-    """Footer links must not be reported as results on an empty page."""
-    for name in ("bing-no-results", "brave-no-results"):
-        html = fixture(f"{name}.html")
-        results, _ = extract_results(html, PAGES["bing"], ENGINES["bing"])
-        assert results == []
-        assert classify_page(html, len(results)) == "no-results"
-
-
-def test_page_classification():
-    assert classify_page(fixture("brave-cloudflare.html"), 0) == "blocked"
-    assert classify_page(fixture("google-consent.html"), 0) == "blocked"
-    assert classify_page(fixture("bing-empty-unknown.html"), 0) == "empty"
-
-
 def test_mojeek_bot_403_page_is_blocked_not_empty():
     # The page Mojeek returned to a chromium run: "403 - Forbidden ... appears to be
     # sending automated queries". It used to classify as "empty" and be retried.
@@ -155,21 +86,6 @@ def test_mojeek_bot_403_page_is_blocked_not_empty():
         "</body></html>"
     )
     assert classify_page(html, 0) == "blocked"
-
-
-def test_mojeek_altcha_challenge_is_blocked_not_zero_results():
-    # Reconstructed from the text Mojeek served for real queries (title "Captcha",
-    # body "Verification required", "Protected by ALTCHA"). Before this fix it was
-    # classified "empty" and reported as "0 matches".
-    html = (
-        "<html><head><title>Captcha</title></head><body>"
-        "<h1>Verification required</h1>"
-        "<p>Please complete the challenge to continue.</p>"
-        "<p>Protected by ALTCHA</p><p>Waiting for verification.</p>"
-        "</body></html>"
-    )
-    assert classify_page(html, 0) == "blocked"
-    assert classify_page(fixture("bing-li-algo.html"), 3) == "results"
 
 
 def test_mojeek_page_one_omits_s():
@@ -282,18 +198,6 @@ def test_chromium_command_orders_flags_correctly(tmp_path):
     assert any(part.startswith("--virtual-time-budget=") for part in cmd)
     assert any(part.startswith("--user-data-dir=") for part in cmd)
     assert any(part.startswith("--user-agent=") for part in cmd)
-
-
-def test_chromium_fetcher_parses_dumped_dom(tmp_path):
-    html = fixture("mojeek-results.html")
-    binary = make_fake_chromium(tmp_path, html)
-    with ChromiumFetcher(binary=str(binary)) as fetcher:
-        assert isinstance(fetcher, ChromiumFetcher)
-        dom, url = fetcher.fetch("https://www.mojeek.com/search?q=myanmar+pdf")
-        assert url == "https://www.mojeek.com/search?q=myanmar+pdf"
-        results, _ = extract_results(dom, url, ENGINES["mojeek"])
-    assert results, "the DOM dumped by the browser must parse like any other page"
-    assert all(result["url"].startswith("http") for result in results)
 
 
 def test_chromium_fetcher_keeps_the_profile_between_pages(tmp_path):

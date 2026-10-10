@@ -44,7 +44,6 @@ except ModuleNotFoundError:  # pragma: no cover
     sys.exit("Missing dependencies. Run:  uv sync  (or pip install requests beautifulsoup4)")
 
 HERE = Path(__file__).resolve().parent
-FIXTURES = HERE / "test" / "fixtures"
 
 USER_AGENT = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "

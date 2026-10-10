@@ -263,7 +263,7 @@ Processed 32 search page attempt(s):
 - **unparseable HTML** — the page loaded but no results could be read from it,
   which means the engine changed its markup. These are **not** recorded as done,
   so they are retried instead of being lost. Set `SEARCH_DEBUG_DIR` to keep the
-  HTML and add a fixture under `js/test/fixtures/` when this happens.
+  HTML when this happens.
 
 ### Rate limiting
 
@@ -299,10 +299,7 @@ marked as done.
 npm test
 ```
 
-The parser is tested offline against saved result pages in
-`js/test/fixtures/`, covering Mojeek, SearXNG, Brave, both Bing result layouts,
-DuckDuckGo and Google (see `js/test/fixtures/README.md`). No network access is
-needed.
+The Python tests in `python/test/` run offline and need no network access.
 
 ## 2. Dhammadownload site crawler (separate, site-specific case)
 
