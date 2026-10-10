@@ -95,8 +95,9 @@ uv run dsite.py --max-pages=30 --max-depth=2 --delay=8
 - The default search terms are the four approved keywords (`--search-terms`,
   comma-separated): `myanmar books download`, `myanmar ebooks download`,
   `Myanmar PDF free download`, `free မြန်မာ pdf စာအုပ်များ`. Each keyword is one
-  search, run in order, one result page each by default (`--search-pages`
-  turns on more pages, following SerpApi's next-page marker).
+  search, run in order. Two result pages per keyword by default, so a full run
+  is **8 searches** (4 keywords × 2 pages). `--search-pages=1` makes it 4.
+  Each page is one SerpApi request, and each request counts against the budget.
 - Each result site is crawled in full (up to the `--max-pages` safety cap), and
   its PDFs are downloaded before the next result is handled.
 - Searches are spaced at least `--search-gap` seconds apart (default 60).

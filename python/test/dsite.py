@@ -159,7 +159,7 @@ def test_default_search_terms_are_the_four_approved_keywords():
     terms = dsite.parse_args([]).search_terms.split(",")
     assert terms == ["myanmar books download", "myanmar ebooks download", "Myanmar PDF free download",
                      "free မြန်မာ pdf စာအုပ်များ"]
-    assert dsite.parse_args([]).search_pages == 1, "one page per keyword by default"
+    assert dsite.parse_args([]).search_pages == 2, "two result pages per keyword by default"
     assert dsite.parse_args([]).monthly_limit == 250
 
 
@@ -180,11 +180,12 @@ def test_no_url_follows_results_in_order_and_downloads_after_each_site(tmp_path,
     assert "a.pdf" in entries and "b.pdf" in entries
 
 
-def test_one_search_per_keyword_and_no_pagination_by_default(tmp_path, monkeypatch):
-    pages = {("one", 0): ([], True), ("one", 10): ([], True), ("two", 0): ([], False)}
+def test_default_fetches_two_pages_per_keyword(tmp_path, monkeypatch):
+    hit = [{"url": "https://x.example.com/", "title": "x"}]
+    pages = {("one", 0): (hit, True), ("one", 10): (hit, True), ("one", 20): (hit, True)}
     calls = _search_setup(monkeypatch, tmp_path, pages, {}, [])
-    main(_args(tmp_path, "--search-terms=one,two"))
-    assert calls == [("one", 0), ("two", 0)], "page 1 only, no next page unless --search-pages allows it"
+    main(_args(tmp_path, "--search-terms=one"))
+    assert calls == [("one", 0), ("one", 10)], "page 1 and page 2 only, one search each"
 
 
 def test_search_pages_flag_follows_pages_while_engine_says_more(tmp_path, monkeypatch):
@@ -233,15 +234,18 @@ def test_key_is_read_from_dotenv_when_environment_is_empty(tmp_path, monkeypatch
     assert dsite.load_serpapi_key(env) == "from-env", "the environment wins over .env"
 
 
-def test_run_is_refused_when_planned_searches_exceed_the_monthly_budget(tmp_path, monkeypatch):
+def test_run_stops_when_the_monthly_budget_runs_out_mid_run(tmp_path, monkeypatch):
     import json
 
     usage = tmp_path / "usage.json"
-    usage.write_text(json.dumps({"month": time.strftime("%Y-%m"), "used": 249}), encoding="utf8")
-    calls = _search_setup(monkeypatch, tmp_path, {}, {}, [])
-    code = main(_args(tmp_path, "--search-terms=a,b", f"--usage-file={usage}"))
+    usage.write_text(json.dumps({"month": time.strftime("%Y-%m"), "used": 248}), encoding="utf8")
+    hit = [{"url": "https://x.example.com/", "title": "x"}]
+    pages = {("a", 0): (hit, False), ("b", 0): (hit, False), ("c", 0): (hit, False)}
+    calls = _search_setup(monkeypatch, tmp_path, pages, {"https://x.example.com/": "<p>none</p>"}, [])
+    code = main(_args(tmp_path, "--search-terms=a,b,c", f"--usage-file={usage}"))
     assert code == 1
-    assert calls == [], "2 searches needed, 1 left: nothing is sent"
+    assert calls == [("a", 0), ("b", 0)], "two searches fit in the 2 left; the third is never sent"
+    assert json.loads(usage.read_text(encoding="utf8"))["used"] == 250
 
 
 def test_budget_counts_each_successful_search(tmp_path, monkeypatch):

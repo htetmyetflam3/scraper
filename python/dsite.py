@@ -222,8 +222,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--search-terms",
                         default="myanmar books download,myanmar ebooks download,Myanmar PDF free download,free မြန်မာ pdf စာအုပ်များ",
                         help="comma-separated search phrases, run in order (no URL given)")
-    parser.add_argument("--search-pages", type=int, default=1,
-                        help="result pages per phrase; each page is one SerpApi search (default 1)")
+    parser.add_argument("--search-pages", type=int, default=2,
+                        help="result pages per keyword; each page is one SerpApi search (default 2)")
     parser.add_argument("--search-gap", type=float, default=60.0,
                         help="minimum seconds between two search requests (default 60)")
     parser.add_argument("--monthly-limit", type=int, default=250, help="SerpApi searches allowed per month (default 250)")
@@ -376,14 +376,8 @@ def run_search(args: argparse.Namespace, fetcher, entries, scribd, not_kept) -> 
     terms = [term.strip() for term in args.search_terms.split(",") if term.strip()]
     cache = {} if args.fresh_search else load_search_cache(args.search_cache)
     budget = SearchBudget(args.usage_file, args.monthly_limit)
-    wanted = [(term, page * 10) for term in terms for page in range(args.search_pages)]
-    new = [key for key in wanted if search_key(*key) not in cache]
-    print(f"Searches for this run: {len(new)} new, {len(wanted) - len(new)} reused from saved results. "
-          f"Used this month: {budget.used}/{budget.limit}.")
-    if len(new) > budget.remaining():
-        print(f"This run needs {len(new)} searches but only {budget.remaining()} are left this month. Not started.",
-              file=sys.stderr)
-        return 1
+    print(f"Keywords: {len(terms)}. Pages per keyword: {args.search_pages}. "
+          f"Searches used this month: {budget.used}/{budget.limit}.")
 
     crawled_hosts: set[str] = set()
     last_search = None
@@ -391,12 +385,18 @@ def run_search(args: argparse.Namespace, fetcher, entries, scribd, not_kept) -> 
         for term in terms:
             print(f"\nSearch: {term!r}")
             start = 0
-            for page in range(args.search_pages):
+            page_no = 0
+            while True:
+                page_no += 1
                 key = search_key(term, start)
                 if key in cache:
                     results, more = cache[key]["results"], cache[key]["more"]
-                    print(f"  page {page + 1}: {len(results)} result(s) from saved results (no search used)")
+                    print(f"  page {page_no}: {len(results)} result(s) from saved results (no search used)")
                 else:
+                    if budget.remaining() <= 0:
+                        print(f"\nMonthly SerpApi budget used up ({budget.used}/{budget.limit}). Stopping. "
+                              "Saved results are kept; a later run reuses them.")
+                        return 1
                     if last_search is not None:
                         wait = args.search_gap - (time.monotonic() - last_search)
                         if wait > 0:
@@ -408,10 +408,12 @@ def run_search(args: argparse.Namespace, fetcher, entries, scribd, not_kept) -> 
                     cache[key] = {"results": results, "more": more}
                     save_search_cache(args.search_cache, cache)
                     log_search_results(args.search_log, term, start, results)
-                    print(f"  page {page + 1}: {len(results)} result(s); searches used {budget.used}/{budget.limit}")
+                    print(f"  page {page_no}: {len(results)} result(s); searches used {budget.used}/{budget.limit}")
                 for result in results:
                     handle_result(result, args, fetcher, entries, scribd, not_kept, crawled_hosts)
                 if not results or not more:
+                    break
+                if page_no >= args.search_pages:
                     break
                 start += 10
     except SearchStopped as error:
