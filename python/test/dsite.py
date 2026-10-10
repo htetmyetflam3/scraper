@@ -402,3 +402,12 @@ def test_result_log_lists_every_result_with_keyword_and_rank(tmp_path):
     assert rows[2] == "one\t0\t2\tB\thttps://b.example.com/"
     assert rows[3] == "one\t10\t1\tC\thttps://c.example.com/"
     assert len(rows) == 4, "the header is written once"
+
+
+def test_both_lists_exist_before_the_first_hit(tmp_path, monkeypatch):
+    monkeypatch.delenv("SERPAPI", raising=False)
+    monkeypatch.setattr(dsite, "ENV_FILE", tmp_path / "no-such.env")
+    main(_args(tmp_path))
+    entry = (tmp_path / "e.txt").read_text(encoding="utf8")
+    assert entry.startswith("Book Name\tURL\tSource Page"), "the list is created with its header at start"
+    assert (tmp_path / "s.txt").exists()

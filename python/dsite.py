@@ -464,6 +464,7 @@ def main(argv: list[str] | None = None) -> int:
         output.parent.mkdir(parents=True, exist_ok=True)
     entries = read_book_list(args.entry_list)
     scribd = read_book_list(args.scribd_list)
+    save_lists(args, entries, scribd)  # create both files now, so they exist before the first hit
     not_kept: list[tuple[str, str]] = []
     fetcher = HttpFetcher(timeout=args.timeout)
     try:
