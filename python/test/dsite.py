@@ -151,7 +151,8 @@ def _search_setup(monkeypatch, tmp_path, pages, sites, downloads, gaps=None):
 
 def _args(tmp_path, *extra):
     return [f"--entry-list={tmp_path/'e.txt'}", f"--scribd-list={tmp_path/'s.txt'}",
-            "--delay=0", "--jitter=0", "--search-terms=Myanmar PDF", f"--usage-file={tmp_path/'usage.json'}", *extra]
+            "--delay=0", "--jitter=0", "--search-terms=Myanmar PDF", f"--usage-file={tmp_path/'usage.json'}",
+            f"--search-log={tmp_path/'search.txt'}", f"--search-cache={tmp_path/'cache.json'}", *extra]
 
 
 def test_default_search_terms_are_the_four_approved_keywords():
@@ -196,9 +197,9 @@ def test_search_pages_flag_follows_pages_while_engine_says_more(tmp_path, monkey
 
 def test_no_url_waits_between_search_requests(tmp_path, monkeypatch):
     gaps = []
-    pages = {("Myanmar PDF", 0): ([], False)}
+    pages = {("Myanmar PDF", 0): ([], False), ("Myanmar books", 0): ([], False)}
     calls = _search_setup(monkeypatch, tmp_path, pages, {}, [], gaps)
-    main(_args(tmp_path, "--search-terms=Myanmar PDF,Myanmar PDF", "--search-gap=60"))
+    main(_args(tmp_path, "--search-terms=Myanmar PDF,Myanmar books", "--search-gap=60"))
     assert len(calls) == 2
     assert gaps and all(0 < g <= 60 for g in gaps), "a second search waits up to the 60 s gap, never zero"
 
@@ -334,3 +335,66 @@ def test_a_found_pdf_is_logged_and_saved_at_once():
     run(fetcher, log=logs.append, save=lambda: saves.append(1))
     assert saves, "the lists are saved when the page adds a link, not only at the end of the site"
     assert any("PDF/DOCX found: https://books.example.org/novel.pdf" in line for line in logs)
+
+
+def test_results_are_written_before_any_site_is_crawled(tmp_path, monkeypatch):
+    import dsite as module
+
+    log_path = tmp_path / "search.txt"
+    seen_before_crawl = []
+
+    class Spy(FakeFetcher):
+        def fetch(self, url):
+            if not url.endswith("/robots.txt"):
+                seen_before_crawl.append(log_path.exists() and "https://only.example.com/" in log_path.read_text(encoding="utf8"))
+            return super().fetch(url)
+
+    pages = {("Myanmar PDF", 0): ([{"url": "https://only.example.com/", "title": "only"}], False)}
+    _search_setup(monkeypatch, tmp_path, pages, {"https://only.example.com/": "<p>none</p>"}, [])
+    monkeypatch.setattr(module, "HttpFetcher", lambda **_: Spy({"https://only.example.com/": "<p>none</p>"}))
+    main(_args(tmp_path))
+    assert seen_before_crawl and all(seen_before_crawl), "the result list was on disk before the first page request"
+
+
+def test_a_rerun_reuses_saved_results_and_spends_no_search(tmp_path, monkeypatch):
+    import json
+
+    pages = {("Myanmar PDF", 0): ([{"url": "https://only.example.com/", "title": "only"}], False)}
+    calls = _search_setup(monkeypatch, tmp_path, pages, {"https://only.example.com/": "<p>none</p>"}, [])
+    main(_args(tmp_path))
+    main(_args(tmp_path))
+    assert calls == [("Myanmar PDF", 0)], "the second run sends no search"
+    usage = json.loads((tmp_path / "usage.json").read_text(encoding="utf8"))
+    assert usage["used"] == 1, "reused results are not counted against the budget"
+
+
+def test_fresh_search_ignores_saved_results(tmp_path, monkeypatch):
+    pages = {("Myanmar PDF", 0): ([{"url": "https://only.example.com/", "title": "only"}], False)}
+    calls = _search_setup(monkeypatch, tmp_path, pages, {"https://only.example.com/": "<p>none</p>"}, [])
+    main(_args(tmp_path))
+    main(_args(tmp_path, "--fresh-search"))
+    assert len(calls) == 2
+
+
+def test_budget_check_counts_only_searches_that_would_be_sent(tmp_path, monkeypatch):
+    import json
+
+    cache = {"Myanmar PDF|0": {"results": [], "more": False}}
+    (tmp_path / "cache.json").write_text(json.dumps(cache), encoding="utf8")
+    (tmp_path / "usage.json").write_text(json.dumps({"month": time.strftime("%Y-%m"), "used": 249}), encoding="utf8")
+    calls = _search_setup(monkeypatch, tmp_path, {}, {}, [])
+    assert main(_args(tmp_path)) == 0, "one saved page needs no search, so 249/250 is enough"
+    assert calls == []
+
+
+def test_result_log_lists_every_result_with_keyword_and_rank(tmp_path):
+    path = tmp_path / "search.txt"
+    dsite.log_search_results(path, "one", 0, [{"url": "https://a.example.com/", "title": "A  title"},
+                                              {"url": "https://b.example.com/", "title": "B"}])
+    dsite.log_search_results(path, "one", 10, [{"url": "https://c.example.com/", "title": "C"}])
+    rows = path.read_text(encoding="utf8").splitlines()
+    assert rows[0] == "Keyword\tStart\tRank\tTitle\tURL"
+    assert rows[1] == "one\t0\t1\tA title\thttps://a.example.com/"
+    assert rows[2] == "one\t0\t2\tB\thttps://b.example.com/"
+    assert rows[3] == "one\t10\t1\tC\thttps://c.example.com/"
+    assert len(rows) == 4, "the header is written once"

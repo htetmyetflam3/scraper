@@ -106,9 +106,14 @@ uv run dsite.py --max-pages=30 --max-depth=2 --delay=8
   stops on a refused key, rate limit or SerpApi error. The count only covers
   searches made by this tool, so check your SerpApi dashboard for the real figure.
 - `robots.txt` is honoured. A site that blocks or rate-limits is abandoned at once.
-- Output, all in `scan/` at the repo root: `site_entry_list.txt` (PDF/DOCX, the
-  downloader reads it), `site_scribd_links.txt`, and `serpapi_usage.json`
-  (the monthly search counter). `scan/` is gitignored.
+- Output, all in `scan/` at the repo root (gitignored):
+  - `search_results.txt`: every result of every search (keyword, start, rank,
+    title, URL), written **before** any site is crawled.
+  - `search_cache.json`: the saved search responses. A rerun reuses them, so
+    repeating a run does not spend searches. `--fresh-search` ignores them.
+  - `site_entry_list.txt` (PDF/DOCX, the downloader reads it) and
+    `site_scribd_links.txt`.
+  - `serpapi_usage.json`: the monthly search counter.
 
 ## 0c. PDF linearizer — `python/linearize.py`
 

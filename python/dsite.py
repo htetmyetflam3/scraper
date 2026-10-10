@@ -227,6 +227,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--search-gap", type=float, default=60.0,
                         help="minimum seconds between two search requests (default 60)")
     parser.add_argument("--monthly-limit", type=int, default=250, help="SerpApi searches allowed per month (default 250)")
+    parser.add_argument("--search-log", type=Path, default=SCAN_DIR / "search_results.txt",
+                        help="every search result, written before any site is crawled")
+    parser.add_argument("--search-cache", type=Path, default=SCAN_DIR / "search_cache.json",
+                        help="saved search responses; a rerun reuses them and spends no search")
+    parser.add_argument("--fresh-search", action="store_true",
+                        help="ignore the saved search responses and search again")
     parser.add_argument("--usage-file", type=Path, default=SCAN_DIR / "serpapi_usage.json",
                         help="where the searches made this month are counted")
     return parser.parse_args(argv)
@@ -334,17 +340,48 @@ def download_new(entry_list: Path) -> None:
     download.main([str(entry_list)])
 
 
+def search_key(term: str, start: int) -> str:
+    return f"{term}|{start}"
+
+
+def load_search_cache(path: Path) -> dict:
+    if not path.exists():
+        return {}
+    try:
+        return json.loads(path.read_text(encoding="utf8") or "{}")
+    except ValueError:
+        return {}
+
+
+def save_search_cache(path: Path, cache: dict) -> None:
+    path.write_text(json.dumps(cache, ensure_ascii=False, indent=1), encoding="utf8")
+
+
+def log_search_results(path: Path, term: str, start: int, results: list[dict]) -> None:
+    """Append every result of one search to the readable list, before anything is crawled."""
+    new_file = not path.exists()
+    with path.open("a", encoding="utf8") as handle:
+        if new_file:
+            handle.write("Keyword\tStart\tRank\tTitle\tURL\n")
+        for rank, result in enumerate(results, start=1):
+            title = " ".join(result["title"].split())
+            handle.write(f"{term}\t{start}\t{rank}\t{title}\t{result['url']}\n")
+
+
 def run_search(args: argparse.Namespace, fetcher, entries, scribd, not_kept) -> int:
     api_key = load_serpapi_key()
     if not api_key:
         print(explain_missing_key(), file=sys.stderr)
         return 1
     terms = [term.strip() for term in args.search_terms.split(",") if term.strip()]
+    cache = {} if args.fresh_search else load_search_cache(args.search_cache)
     budget = SearchBudget(args.usage_file, args.monthly_limit)
-    planned = len(terms) * args.search_pages
-    print(f"Searches for this run: {planned}. Used this month: {budget.used}/{budget.limit}.")
-    if planned > budget.remaining():
-        print(f"This run needs {planned} searches but only {budget.remaining()} are left this month. Not started.",
+    wanted = [(term, page * 10) for term in terms for page in range(args.search_pages)]
+    new = [key for key in wanted if search_key(*key) not in cache]
+    print(f"Searches for this run: {len(new)} new, {len(wanted) - len(new)} reused from saved results. "
+          f"Used this month: {budget.used}/{budget.limit}.")
+    if len(new) > budget.remaining():
+        print(f"This run needs {len(new)} searches but only {budget.remaining()} are left this month. Not started.",
               file=sys.stderr)
         return 1
 
@@ -355,14 +392,23 @@ def run_search(args: argparse.Namespace, fetcher, entries, scribd, not_kept) -> 
             print(f"\nSearch: {term!r}")
             start = 0
             for page in range(args.search_pages):
-                if last_search is not None:
-                    wait = args.search_gap - (time.monotonic() - last_search)
-                    if wait > 0:
-                        time.sleep(wait)
-                last_search = time.monotonic()
-                results, more = serpapi_search(term, start, api_key, timeout=args.timeout)
-                budget.record()
-                print(f"  page {page + 1}: {len(results)} result(s); searches used {budget.used}/{budget.limit}")
+                key = search_key(term, start)
+                if key in cache:
+                    results, more = cache[key]["results"], cache[key]["more"]
+                    print(f"  page {page + 1}: {len(results)} result(s) from saved results (no search used)")
+                else:
+                    if last_search is not None:
+                        wait = args.search_gap - (time.monotonic() - last_search)
+                        if wait > 0:
+                            time.sleep(wait)
+                    last_search = time.monotonic()
+                    results, more = serpapi_search(term, start, api_key, timeout=args.timeout)
+                    budget.record()
+                    # Save the whole result list first, so nothing is lost if the crawl stops or fails.
+                    cache[key] = {"results": results, "more": more}
+                    save_search_cache(args.search_cache, cache)
+                    log_search_results(args.search_log, term, start, results)
+                    print(f"  page {page + 1}: {len(results)} result(s); searches used {budget.used}/{budget.limit}")
                 for result in results:
                     handle_result(result, args, fetcher, entries, scribd, not_kept, crawled_hosts)
                 if not results or not more:
