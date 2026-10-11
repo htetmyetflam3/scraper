@@ -45,6 +45,7 @@ from crawler import (
 )
 from entry_list import read_entries, save_entries
 from sitecrawl import crawl_site, host_key
+from siteguard import DEFAULT_SITE_PAGE_LIMIT, excluded_site_reason, large_site_reason
 
 HERE = Path(__file__).resolve().parent
 SCAN_DIR = HERE.parent / "scan"  # all text output of this crawler goes here
@@ -66,6 +67,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--scribd-list", type=Path, default=SCAN_DIR / "site_scribd_links.txt")
     parser.add_argument("--max-pages", type=int, default=10,
                         help="pages read per site while looking for a download link (default 10)")
+    parser.add_argument("--max-site-pages", type=int, default=DEFAULT_SITE_PAGE_LIMIT,
+                        help="skip sites whose sitemap lists more than this many URLs; 0 disables this size check")
     parser.add_argument("--max-depth", type=int, default=10, help="link levels below the start page (default 10)")
     parser.add_argument("--delay", type=float, default=1.0, help="seconds between page requests (default 1)")
     parser.add_argument("--jitter", type=float, default=0.5, help="extra random seconds (default 0.5)")
@@ -283,16 +286,30 @@ def save_lists(args, entries, scribd) -> None:
 
 
 def discover_site(url: str, fetcher, args, scribd, index: str) -> bool:
-    """Read the site only until one page links a PDF/DOCX. True if it has one (so the site has a download).
+    """Read the site only until one page links a PDF/DOCX. True if it has one.
 
-    The crawl stops at that page. Scribd links found on the way are registered under the search index link.
+    Known unhelpful site classes are rejected before any request. For other
+    sites, an available sitemap is counted before HTML pages are crawled. The
+    crawler stops at the first file; this guard is intentionally not used by
+    dsite_download.py.
     """
+    blocked_reason = excluded_site_reason(url)
+    if blocked_reason:
+        print(f"  Site guard: skipping {host_key(url)}: {blocked_reason}.")
+        return False
+
     found: dict[str, dict] = {}
     scratch_scribd: dict[str, dict] = {}
+    page_cap = args.max_pages
+    if args.max_site_pages > 0:
+        page_cap = min(page_cap, args.max_site_pages)
     stats = crawl_site(
         url, fetcher, entries=found, scribd=scratch_scribd,
-        max_pages=args.max_pages, max_depth=args.max_depth,
+        max_pages=page_cap, max_depth=args.max_depth,
         delay=args.delay, jitter=args.jitter, stop_at_first_file=True,
+        preflight=lambda seed, site_fetcher, robots: large_site_reason(
+            seed, site_fetcher, robots, max_pages=args.max_site_pages,
+        ),
     )
     for link, record in scratch_scribd.items():
         upsert(scribd, link, record["name"], index)
@@ -309,6 +326,10 @@ def handle_result(result, args, fetcher, entries, scribd, probed, term) -> None:
         return
     if BOOK_EXTENSION.search(urllib.parse.urlsplit(url).path.lower()):
         upsert(entries, url, title, index)  # the search is Burmese: no name filter
+        return
+    blocked_reason = excluded_site_reason(url)
+    if blocked_reason:
+        print(f"  Site guard: skipping {host_key(url)}: {blocked_reason}.")
         return
     if not is_site_seed(url):
         return

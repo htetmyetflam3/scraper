@@ -7,7 +7,8 @@ import pytest
 from crawler import BOOK_EXTENSION, Blocked, is_site_seed
 import dsite
 from dsite import main
-from sitecrawl import crawl_site, host_key, page_links
+from sitecrawl import crawl_page_url, crawl_site, host_key, page_links
+from siteguard import estimate_sitemap_pages
 
 
 class FakeFetcher:
@@ -98,6 +99,32 @@ def test_depth_limit_is_respected():
     assert not entries
 
 
+def test_share_button_and_tracking_variants_are_not_crawled():
+    fetcher = FakeFetcher({
+        SITE: '<a href="policy-terms/?share=telegram">Share</a>'
+             '<a href="library/?utm_source=telegram">Library</a>',
+        SITE + "library/": "<p>ordinary page</p>",
+    })
+    run(fetcher)
+    assert fetcher.fetched == [SITE, SITE + "library/"]
+    assert crawl_page_url(SITE + "policy-terms/?share=jetpack-whatsapp") is None
+    assert crawl_page_url(SITE + "library/?utm_source=newsletter") == SITE + "library/"
+
+
+def test_a_redirected_external_share_page_is_not_parsed_or_followed():
+    class RedirectingFetcher(FakeFetcher):
+        def fetch(self, url):
+            if url == SITE + "jump.html":
+                self.fetched.append(url)
+                return '<a href="leak.pdf">bad</a>', "https://telegram.me/share/url"
+            return super().fetch(url)
+
+    fetcher = RedirectingFetcher({SITE: '<a href="jump.html">share</a>'})
+    _, entries, _ = run(fetcher)
+    assert fetcher.fetched == [SITE, SITE + "jump.html"]
+    assert not entries, "content returned from an off-site redirect is never used"
+
+
 def test_a_blocked_site_is_abandoned_at_once():
     fetcher = FakeFetcher({SITE: '<a href="a.html">a</a>', SITE + "a.html": "<p>x</p>"}, blocked=[SITE])
     stats, entries, _ = run(fetcher)
@@ -117,6 +144,9 @@ def test_host_key_ignores_www():
 def test_search_results_become_sites_only_when_they_are_ordinary_pages():
     assert is_site_seed("https://books.example.org/shelf/index.html")
     assert not is_site_seed("https://www.mojeek.com/search?q=x")
+    assert not is_site_seed("https://www.google.com/search?q=x")
+    assert not is_site_seed("https://en.wikipedia.org/wiki/Book")
+    assert not is_site_seed("https://www.youtube.com/watch?v=x")
     assert not is_site_seed("https://www.scribd.com/document/1/x")
     assert not is_site_seed("https://files.example.org/book.pdf")
 
@@ -141,6 +171,43 @@ def _args(tmp_path, *extra):
     return [f"--entry-list={tmp_path/'e.txt'}", f"--scribd-list={tmp_path/'s.txt'}",
             "--delay=0", "--jitter=0", "--search-terms=Myanmar PDF", f"--usage-file={tmp_path/'usage.json'}",
             f"--search-log={tmp_path/'search.txt'}", f"--search-cache={tmp_path/'cache.json'}", *extra]
+
+
+def test_dsite_skips_wikipedia_youtube_and_search_engines_before_fetching():
+    args = dsite.parse_args([])
+    for url in (
+        "https://en.wikipedia.org/wiki/Book",
+        "https://www.youtube.com/watch?v=abc",
+        "https://www.google.com/search?q=Myanmar+PDF",
+    ):
+        fetcher = FakeFetcher({})
+        assert not dsite.discover_site(url, fetcher, args, {}, url)
+        assert fetcher.fetched == [], "excluded sites are skipped before robots.txt or page requests"
+
+
+def test_sitemap_page_count_follows_index_without_visiting_html_pages():
+    index = SITE + "sitemap_index.xml"
+    child = SITE + "sitemap-books.xml"
+    fetcher = FakeFetcher({
+        index: f"<sitemapindex><sitemap><loc>{child}</loc></sitemap></sitemapindex>",
+        child: "<urlset><url><loc>" + SITE + "a</loc></url><url><loc>" + SITE + "b</loc></url></urlset>",
+    })
+    estimate = estimate_sitemap_pages(SITE, fetcher, [index], stop_after=20_000)
+    assert estimate is not None and estimate.pages == 2 and estimate.complete
+    assert fetcher.fetched == [index, child]
+
+
+def test_dsite_skips_a_site_whose_sitemap_exceeds_3k_urls(capsys):
+    sitemap = SITE + "sitemap.xml"
+    urls = "".join(f"<url><loc>{SITE}page-{index}</loc></url>" for index in range(3_001))
+    fetcher = FakeFetcher(
+        {SITE: '<a href="book.pdf">book</a>', sitemap: f"<urlset>{urls}</urlset>"},
+        robots="\n".join(("User-agent: *", f"Sitemap: {sitemap}")),
+    )
+    args = dsite.parse_args(["--delay=0", "--jitter=0"])
+    assert not dsite.discover_site(SITE, fetcher, args, {}, SITE)
+    assert fetcher.fetched == [sitemap], "the crawler counts the sitemap but never requests site HTML"
+    assert "3,001 URLs" in capsys.readouterr().out
 
 
 def test_default_search_terms_are_the_four_approved_keywords():

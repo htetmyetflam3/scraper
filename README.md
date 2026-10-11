@@ -109,6 +109,16 @@ uv run dsite_download.py my_links.txt        # or from any list you give it
   read until the first PDF or DOCX link. Then the crawl of that site stops, and the site's **main link** (scheme + host + `/`) is written to
   `scan/site_entry_list.txt`. A site with no hit is capped at `--max-pages`
   (default 10).
+- **Crawler-only site guard.** Wikipedia/Wikimedia, YouTube, and common search
+  engine domains (including regional Google result pages) are skipped before
+  any site page is requested. For other sites, `dsite.py` counts URLs from a
+  sitemap named in `robots.txt` or a conventional sitemap path; if it can prove
+  there are more than 3,000 entries, it skips that site. Change the threshold
+  with `--max-site-pages` (`0` disables only the sitemap-size check). There is
+  no universal exact page-count API: if a sitemap is missing/incomplete, size is
+  unknown. `--max-pages` still caps requests, and an enabled size limit also
+  caps that crawl at `--max-site-pages`. The guard does not apply to
+  `dsite_download.py`.
 - A result that is a PDF or DOCX file itself goes to the same entry list as a file URL.
 - A Scribd result goes to `scan/site_scribd_links.txt`. Its key is the Scribd
   document URL, and its Source is the **search engine index link**
@@ -128,8 +138,10 @@ uv run dsite_download.py my_links.txt        # or from any list you give it
 - Reads the list given on the command line (default `scan/site_entry_list.txt`).
   A list you write by hand works: one `http(s)` URL per line, with or without the
   header, UTF-8 or UTF-16. A file URL is downloaded; a site URL is crawled.
-- The downloader and the crawler are separate scripts. The downloader does not
-  import the crawler, and it never writes the list.
+- The downloader and the crawler are separate entrypoints. The downloader
+  shares low-level page-fetch/link-parsing code but does not run `dsite.py` or
+  search, and it never writes the entry list. It also does not use the crawler's
+  Wikipedia/search-engine/YouTube or sitemap-size guard.
 - Each file is handled one at a time, in this order:
   **download -> decrypt (unlock) -> linearize -> save to disk.** PDFs are unlocked
   and linearized by `linearize.linearize()` (from `linearize.py`). DOCX files are
@@ -139,6 +151,12 @@ uv run dsite_download.py my_links.txt        # or from any list you give it
 - A **site row** (a main link) is crawled: no page limit by default (`--max-pages 0`; a positive number sets one), depth 10
   (`--max-depth`). Each file is handled **as soon as the crawler finds it**, before
   the crawl moves to the next link.
+- WordPress share-button variants such as `?share=telegram` and
+  `?share=jetpack-whatsapp` are not page targets; tracking parameters are
+  removed, and a same-site URL that redirects off-site is stopped before the
+  external host is requested. This avoids the Telegram/WhatsApp redirect loop.
+  The Wikipedia/search-engine/YouTube and 3k sitemap guard above remains
+  crawler-only and is not applied to downloader entry-list rows.
 - Files already in `download.py`'s history are skipped, so a file is never
   downloaded twice, even across runs.
 - Pages are read again on a rerun. There is no page-level resume; only the
@@ -337,10 +355,15 @@ backoff + jitter), shows progress with `tqdm`, and skips URLs already in
 
 The useful part: **it rejects files that only pretend to be PDFs.** Plenty of
 "PDF" links answer `200 OK` with an HTML login or error page, which is worse
-than a failure because it looks like a success. Every download is checked — a
-PDF must start with `%PDF`, a DOCX must be a zip — and optionally opened with
-`pikepdf` (`--verify-pdf`). Failures are listed at the end and stay downloadable
-on the next run.
+than a failure because it looks like a success. A PDF header is accepted within
+the first 1 KiB (some legacy files have a short preamble); if the header is
+missing, `pikepdf` must be able to open the file. `dsite_download.py` then
+linearizes/rewrites readable legacy PDFs. DOCX files must have the ZIP signature,
+and `--verify-pdf` asks `pikepdf` to open every PDF. If a MediaFire share page
+returns HTML with a usable Download button, the downloader follows its same-site
+or MediaFire file link and validates the actual response. HTML with no usable
+file link (for example, an expired-link or verification page) is still rejected.
+Failures are listed at the end and stay downloadable on the next run.
 
 `uv run download.py --help` for concurrency, timeout, delay and retry
 options. Tests: `uv run pytest` (no network needed).

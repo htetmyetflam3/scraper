@@ -15,7 +15,7 @@ from collections import deque
 
 from bs4 import BeautifulSoup
 
-from crawler import BOOK_EXTENSION, Blocked, RateLimited, is_scribd_document_url, upsert
+from crawler import BOOK_EXTENSION, Blocked, OffsiteRedirect, RateLimited, is_scribd_document_url, upsert
 
 
 # Page URLs with these extensions are never fetched as HTML.
@@ -41,6 +41,34 @@ def same_site(url: str, seed_host: str) -> bool:
 def without_fragment(url: str) -> str:
     parts = urllib.parse.urlsplit(url)
     return urllib.parse.urlunsplit((parts.scheme, parts.netloc, parts.path or "/", parts.query, ""))
+
+
+SKIP_CRAWL_QUERY_KEYS = frozenset(
+    {"share", "shared", "sharing", "share_source", "replytocom", "amp", "output", "print"}
+)
+TRACKING_QUERY_KEYS = frozenset({"fbclid", "gclid", "dclid", "msclkid", "yclid"})
+
+
+def crawl_page_url(url: str) -> str | None:
+    """Canonicalize crawl links and drop WordPress/share/print-only variants.
+
+    WordPress Jetpack share buttons use URLs such as ``?share=telegram`` which
+    redirect off-site and are not content pages. Removing common tracking keys
+    also prevents the same page being queued repeatedly under campaign URLs.
+    """
+    url = without_fragment(url)
+    parts = urllib.parse.urlsplit(url)
+    query = urllib.parse.parse_qsl(parts.query, keep_blank_values=True)
+    if any(key.lower() in SKIP_CRAWL_QUERY_KEYS for key, _ in query):
+        return None
+    kept = [
+        (key, value)
+        for key, value in query
+        if key.lower() not in TRACKING_QUERY_KEYS and not key.lower().startswith("utm_")
+    ]
+    if len(kept) == len(query):
+        return url
+    return urllib.parse.urlunsplit(parts._replace(query=urllib.parse.urlencode(kept, doseq=True)))
 
 
 def is_html_candidate(url: str) -> bool:
@@ -100,9 +128,23 @@ class RobotsRules:
     def __init__(self, fetcher, host: str, scheme: str = "https") -> None:
         self.parser = urllib.robotparser.RobotFileParser()
         self.parser.allow_all = False
+        self.sitemaps: list[str] = []
+        origin = f"{scheme}://{host}/"
+        robots_url = urllib.parse.urljoin(origin, "robots.txt")
         try:
-            text, _ = fetcher.fetch(f"{scheme}://{host}/robots.txt")
-            self.parser.parse(text.splitlines())
+            fetch_robots = getattr(fetcher, "fetch_robots", None)
+            if callable(fetch_robots):
+                text, _ = fetch_robots(robots_url, allowed_site=origin)
+            else:
+                text, _ = fetcher.fetch(robots_url)
+            lines = text.splitlines()
+            self.parser.parse(lines)
+            for line in lines:
+                line = line.lstrip("\ufeff").strip()
+                if line.lower().startswith("sitemap:"):
+                    sitemap = line.split(":", 1)[1].strip()
+                    if sitemap:
+                        self.sitemaps.append(urllib.parse.urljoin(origin, sitemap))
         except Blocked:
             raise  # the site refuses us outright: the caller skips it
         except Exception:
@@ -126,11 +168,16 @@ def crawl_site(
     log=print,
     save=None,
     stop_at_first_file=False,
+    preflight=None,
 ) -> dict[str, int]:
-    seed = without_fragment(seed)
+    seed = crawl_page_url(seed)
+    stats = {"pages": 0, "pdf": 0, "scribd": 0}
+    if seed is None:
+        log("  skipping a share, print, or comment-only URL")
+        return stats
+
     seed_host = host_key(seed)
     scheme = urllib.parse.urlsplit(seed).scheme
-    stats = {"pages": 0, "pdf": 0, "scribd": 0}
 
     log(f"  reading robots.txt for {seed_host}")
     try:
@@ -138,6 +185,16 @@ def crawl_site(
     except Blocked as error:
         log(f"  robots.txt refused: {error}. Skipping this site.")
         return stats
+
+    if preflight:
+        try:
+            reason = preflight(seed, fetcher, robots)
+        except Exception as error:  # an unavailable sitemap must not block a small/unknown site
+            log(f"  Site-size preflight unavailable ({error}); continuing with the page cap.")
+            reason = None
+        if reason:
+            log(f"  Site guard: skipping {seed_host}: {reason}.")
+            return stats
 
     queue: deque[tuple[str, int]] = deque([(seed, 0)])
     visited: set[str] = {seed}
@@ -150,12 +207,22 @@ def crawl_site(
             sleep(delay + random.uniform(0, jitter))
         log(f"  requesting {page_url}")
         try:
-            html, final_url = fetcher.fetch(page_url)
+            fetch_same_site = getattr(fetcher, "fetch_same_site", None)
+            if callable(fetch_same_site):
+                html, final_url = fetch_same_site(page_url, seed)
+            else:
+                html, final_url = fetcher.fetch(page_url)
+        except OffsiteRedirect as error:
+            log(f"  Skipping off-site redirect: {error}")
+            continue
         except (Blocked, RateLimited) as error:
             log(f"  Stopping this site: {error}")
             break
         except Exception as error:  # a broken page must not stop the site
             log(f"  Failed {page_url}: {error}")
+            continue
+        if not same_site(final_url, seed_host):
+            log(f"  Skipping {page_url}: it resolved outside this site to {final_url}")
             continue
         stats["pages"] += 1
         limit = "no limit" if max_pages == float("inf") else max_pages
@@ -169,6 +236,10 @@ def crawl_site(
                 upsert(scribd, url, label, final_url)
                 stats["scribd"] += 1
                 continue
+            crawl_url = crawl_page_url(url)
+            if crawl_url is None:
+                continue
+            url = crawl_url
             path = urllib.parse.urlsplit(url).path
             if BOOK_EXTENSION.search(path.lower()):
                 # Every PDF/DOCX link is kept. The search is already Burmese, so no name filter.
@@ -180,9 +251,15 @@ def crawl_site(
                 if is_new and save:  # per file: the downloader works on it before the next link
                     save()
                 continue
-            if same_site(url, seed_host) and depth < max_depth and url not in visited and is_html_candidate(url):
-                visited.add(url)
-                queue.append((url, depth + 1))
+            if (
+                crawl_url
+                and same_site(crawl_url, seed_host)
+                and depth < max_depth
+                and crawl_url not in visited
+                and is_html_candidate(crawl_url)
+            ):
+                visited.add(crawl_url)
+                queue.append((crawl_url, depth + 1))
         if stop_at_first_file and stats["pdf"]:
             log(f"  Download link found on {final_url}; stopping this site.")
             break

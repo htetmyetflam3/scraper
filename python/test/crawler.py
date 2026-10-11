@@ -16,11 +16,13 @@ from crawler import (  # noqa: E402
     Blocked,
     ChromiumFetcher,
     HttpFetcher,
+    OffsiteRedirect,
     RateLimited,
     find_chromium,
     build_queries,
     classify_page,
     is_scribd_document_url,
+    is_site_seed,
     make_fetcher,
     matches_book_candidate,
     parse_args,
@@ -53,6 +55,19 @@ def test_scribd_document_urls():
         "https://example.com/document/12345/Title",
     ):
         assert not is_scribd_document_url(url), url
+
+
+def test_large_or_non_content_hosts_are_not_site_seeds():
+    for url in (
+        "https://en.wikipedia.org/wiki/Book",
+        "https://upload.wikimedia.org/a.pdf",
+        "https://www.youtube.com/watch?v=abc",
+        "https://youtu.be/abc",
+        "https://www.google.com/search?q=burmese+pdf",
+        "https://www.bing.com/search?q=burmese+pdf",
+    ):
+        assert not is_site_seed(url), url
+    assert is_site_seed("https://books.example.org/library/")
 
 
 def test_book_candidate_matching():
@@ -135,6 +150,31 @@ def test_http_fetcher_raises_blocked(monkeypatch):
     with pytest.raises(Blocked):
         fetcher.fetch("https://www.mojeek.com/search?q=test")
 
+
+def test_same_site_fetch_does_not_follow_a_share_redirect_offsite(monkeypatch):
+    class RedirectResponse:
+        status_code = 302
+        url = "https://books.example.org/policy-terms/?share=telegram"
+        headers = {"Location": "https://telegram.me/share/url?url=..."}
+
+        def close(self):
+            pass
+
+    calls = []
+    fetcher = HttpFetcher(retries=1)
+
+    def get(url, **kwargs):
+        calls.append((url, kwargs))
+        return RedirectResponse()
+
+    monkeypatch.setattr(fetcher.session, "get", get)
+    with pytest.raises(OffsiteRedirect):
+        fetcher.fetch_same_site(
+            "https://books.example.org/policy-terms/?share=telegram",
+            "https://books.example.org/",
+        )
+    assert len(calls) == 1, "Telegram is never requested"
+    assert calls[0][1]["allow_redirects"] is False
 
 
 # --------------------------------------------------------------------------- #
