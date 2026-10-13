@@ -11,3 +11,8 @@ previous changes logs are wiped.
 - Same-path/different-query links (`/?p=124`, `/books/?file=9`) now qualify as children, so query-navigated sites work; path-deepening children are still preferred and unlimited.
 - Query hops capped at 5 per chain: a real file-hosting site shows a download within a few, endless `?page=N` pagination gives up the site instead of hanging.
 - Fixed first-segment lock to distinguish "no lock yet" from "locked to root path" for query seeds.
+
+## 2026-10-13 — Split SerpApi fetch from Scrawler crawl
+- New `python/bin/fetch_results.py`: runs the four keyword searches once and saves every raw result link (`url`, `title`, `keyword`, `page`) to `python/search_results.json`; owns the API key, keywords and paging.
+- `Scrawler.py` no longer calls the search API: `find_entry(results_file=...)` reads the saved JSON, so crawl testing burns zero quota; missing file errors point at `fetch_results.py`. Hand-written `{url}`-only files also work for targeted tests.
+- Added `/python/search_results.json` to `.gitignore` (refreshed each fetch; stays local).
