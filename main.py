@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import asyncio
 import sys
 from pathlib import Path
 
@@ -11,6 +12,7 @@ sys.path.insert(0, str(BIN_DIR))
 
 from Dcrawler import download_entries  # noqa: E402
 from fetch_results import fetch_results  # noqa: E402
+from phatmal import login_and_verify  # noqa: E402
 from Scrawler import find_entry  # noqa: E402
 from scribd import download_scribd, read_links_file  # noqa: E402
 from serpapi import SerpApiError  # noqa: E402
@@ -67,6 +69,14 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Run search, then entry crawl, then download, in order.",
     )
+    parser.add_argument(
+        "--phatmal-check",
+        action="store_true",
+        help=(
+            "Log in to the phatmal API with the PHATMAL_* .env credentials "
+            "and verify the session works."
+        ),
+    )
     return parser
 
 
@@ -84,6 +94,7 @@ def main(argv: list[str] | None = None) -> int:
             and not args.entry
             and args.download is None
             and args.scribd is None
+            and not args.phatmal_check
         ):
             parser.print_usage(sys.stderr)
             return 2
@@ -106,6 +117,9 @@ def main(argv: list[str] | None = None) -> int:
                 links = [args.scribd]
             summary = download_scribd(links)
             if links and not summary.downloaded:
+                return 1
+        if args.phatmal_check:
+            if not asyncio.run(login_and_verify()):
                 return 1
     except (SerpApiError, OSError, ValueError) as error:
         print(f"error: {error}", file=sys.stderr)

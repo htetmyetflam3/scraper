@@ -1,5 +1,10 @@
 previous changes logs are wiped.
 
+## 2026-10-13 — Phatmal API driver v1: login + session verify + --phatmal-check
+- New `python/bin/phatmal.py`: the Expo SPA serves an empty shell, so this drives `https://api.phatmal.com/api` directly. `api_login` POSTs `PHATMAL_EMAIL`/`PHATMAL_PASSWORD` with the `x-api-key` header (from `PHATMAL_API_KEY`), tolerant-extracts the Bearer JWT from any common response shape, and `api_me` proves the session via `GET /api/auth/me`. App-like headers (Accept/Referer/mobile UA) on every call; secrets never logged, misses log key names for diagnosis.
+- `main.py` gains `--phatmal-check` (exit 0/1) so the login can be tested from the real environment.
+- Verified: 22/22 new tests (`/tmp/test_phatmal_auth.py`, MockTransport). Note: the /tmp regression suites were wiped by a sandbox reset, so old suites could not be re-run; this turn's change surface is additive (new module + default-off flag + import).
+
 ## 2026-10-13 — Per-site login via .env (site_login.py, form-based sites)
 - New shared `python/bin/site_login.py`: reads `LOGIN_EMAIL`/`LOGIN_PASSWORD` (generic default) or `LOGIN_<HOST>_EMAIL`/`_PASSWORD` (host-specific, dots/dashes to `_`, uppercased) from the environment or repo-root `.env` (same quoting rules as the SERPAPI parser); optional per-host `_URL`/`_USER_FIELD`/`_PASS_FIELD` overrides.
 - Auto-login finds the best username+password form (single-password login preferred over register, email/autocomplete/name hints for the user field), preserves hidden CSRF tokens + checked boxes, allows off-site SSO actions, and verifies via login-form-gone/logout-marker on a re-fetched seed. Fail-open: any failure logs and the crawl continues without the session; silent when a host has no credentials.
