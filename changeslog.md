@@ -1,5 +1,12 @@
 previous changes logs are wiped.
 
+## 2026-10-13 — Phatmal full crawler: library sweep + S3 EPUB downloads + --phatmal
+- Contract captured from the live API: `GET /ebooks?page&limit` (236 books, `hasMore` pages), `GET /ebooks/{slug}`, per-book `files[{url,type,size}]` with `fileUrl`/`fileType` fallback; files are EPUBs on S3 (`phatmal-production…amazonaws.com`).
+- `phatmal.py` now crawls the whole library (or one slug/URL): login → verify → paginate → prefer epub over pdf per book → headerless S3 GET (auth headers would be rejected) → content-sniff (new tolerant `is_epub`, plus pdf/docx) → save as `Title - Author.epub` with unique-name guard into `python/pdfs/`.
+- `scan/phatmal.txt` remembers `slug|filename` (append-only, pipeline convention): re-runs skip books whose file still exists and re-fetch missing ones; drafts and file-less books log `[skip]`; non-book bytes `[rejected]`.
+- `main.py` gains `--phatmal [SLUG_OR_URL]` (bare = whole library; exit 1 only when nothing saved and something failed).
+- Verified: 31/31 new tests (`/tmp/test_phatmal_crawl.py`); auth 22/22 + probe 24/24 still green.
+
 ## 2026-10-13 — Phatmal probe: endpoint sweep + shape logging + --phatmal-probe
 - `phatmal.py` gains content discovery: `probe_content` logs in, verifies `/auth/me`, then sweeps 6 detail-path guesses + 4 list paths with the real session, printing each hit's JSON SHAPE (keys/previews, secrets redacted, strings truncated) instead of full bodies.
 - `slug_from_input` accepts bare slugs or full `/ebook/<slug>` URLs (validated charset); `describe_shape` caps depth/keys/length for pastable logs.

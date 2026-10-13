@@ -12,13 +12,19 @@ sys.path.insert(0, str(BIN_DIR))
 
 from Dcrawler import download_entries  # noqa: E402
 from fetch_results import fetch_results  # noqa: E402
-from phatmal import login_and_verify, probe_content, slug_from_input  # noqa: E402
+from phatmal import (  # noqa: E402
+    login_and_verify,
+    probe_content,
+    run_phatmal,
+    slug_from_input,
+)
 from Scrawler import find_entry  # noqa: E402
 from scribd import download_scribd, read_links_file  # noqa: E402
 from serpapi import SerpApiError  # noqa: E402
 
 USE_ENTRY_FILE: object = object()
 USE_SCRIBD_FILE: object = object()
+USE_PHATMAL_LIBRARY: object = object()
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -86,6 +92,18 @@ def build_parser() -> argparse.ArgumentParser:
             "for a slug or /ebook/<slug> URL, printing each answer's shape."
         ),
     )
+    parser.add_argument(
+        "--phatmal",
+        nargs="?",
+        const=USE_PHATMAL_LIBRARY,
+        default=None,
+        metavar="SLUG_OR_URL",
+        help=(
+            "Download phatmal ebooks with the PHATMAL_* .env credentials: "
+            "bare flag crawls the whole library, or pass a slug or "
+            "/ebook/<slug> URL for one book."
+        ),
+    )
     return parser
 
 
@@ -105,6 +123,7 @@ def main(argv: list[str] | None = None) -> int:
             and args.scribd is None
             and not args.phatmal_check
             and args.phatmal_probe is None
+            and args.phatmal is None
         ):
             parser.print_usage(sys.stderr)
             return 2
@@ -140,6 +159,16 @@ def main(argv: list[str] | None = None) -> int:
                 )
                 return 2
             if not asyncio.run(probe_content(slug)):
+                return 1
+        if args.phatmal is not None:
+            target = None if args.phatmal is USE_PHATMAL_LIBRARY else args.phatmal
+            if target is not None and not slug_from_input(target):
+                print(
+                    "error: --phatmal needs a slug or /ebook/<slug> URL",
+                    file=sys.stderr,
+                )
+                return 2
+            if not asyncio.run(run_phatmal(target)):
                 return 1
     except (SerpApiError, OSError, ValueError) as error:
         print(f"error: {error}", file=sys.stderr)

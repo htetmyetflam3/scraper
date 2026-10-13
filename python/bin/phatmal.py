@@ -9,10 +9,16 @@ credentials returns a Bearer JWT, which authorizes every later API call.
 from __future__ import annotations
 
 import asyncio
+import io
 import os
+import re
+import zipfile
+from pathlib import Path
 
 import httpx
 
+from mediafire import is_docx
+from pdf_support import is_pdf
 from site_login import load_dotenv_values
 
 API_BASE = "https://api.phatmal.com/api"
@@ -302,6 +308,299 @@ async def probe_content(slug: str) -> bool:
         return True
     print("[phatmal] probe found nothing; paste this log for the next step")
     return False
+
+
+# --- library crawl ---------------------------------------------------------------
+# Contract (captured 2026-10-13 from the live API via console recon):
+#   GET /ebooks?page=N&limit=M -> {success, count, pagination, data: [book]}
+#   GET /ebooks/{slug}          -> {success, data: book}
+#   book.files: [{url, type, size}]; book.fileUrl + book.fileType ("epub"…).
+# Files live on S3 and must be fetched WITHOUT auth headers (S3 rejects an
+# unknown Authorization header instead of ignoring it).
+
+REPO_ROOT = Path(__file__).resolve().parent.parent  # python/
+SCAN_DIR = REPO_ROOT.parent / "scan"
+OUTPUT_DIR = REPO_ROOT / "pdfs"
+PHATMAL_FILE = SCAN_DIR / "phatmal.txt"
+PAGE_LIMIT = 100
+FILE_TIMEOUT = 120.0
+
+_FILENAME_BAD = re.compile(r'[\\/:*?"<>|\x00-\x1f]')
+
+
+def is_epub(data: bytes) -> bool:
+    """Tolerant EPUB check: a ZIP with mimetype + META-INF/container.xml."""
+    if len(data) < 4 or data[:2] != b"PK":
+        return False
+    try:
+        with zipfile.ZipFile(io.BytesIO(data)) as archive:
+            names = set(archive.namelist())
+            if "mimetype" not in names or "META-INF/container.xml" not in names:
+                return False
+            return archive.read("mimetype").strip() == b"application/epub+zip"
+    except Exception:
+        return False
+
+
+def sniff_extension(data: bytes) -> str | None:
+    """File extension by content sniffing: epub, pdf, docx, or None."""
+    if is_epub(data):
+        return "epub"
+    if is_pdf(data):
+        return "pdf"
+    if is_docx(data):
+        return "docx"
+    return None
+
+
+def pick_book_file(book: dict) -> tuple[str, str] | None:
+    """(file URL, type label): files[] first (epub > pdf > first entry),
+    else the legacy fileUrl + fileType pair."""
+    files = book.get("files")
+    if isinstance(files, list):
+        usable = [
+            entry
+            for entry in files
+            if isinstance(entry, dict)
+            and isinstance(entry.get("url"), str)
+            and entry["url"].strip()
+        ]
+        for want in ("epub", "pdf"):
+            for entry in usable:
+                if str(entry.get("type") or "").lower() == want:
+                    return entry["url"].strip(), want
+        if usable:
+            return usable[0]["url"].strip(), str(usable[0].get("type") or "")
+    url = book.get("fileUrl")
+    if isinstance(url, str) and url.strip():
+        return url.strip(), str(book.get("fileType") or "")
+    return None
+
+
+def _book_filename(book: dict, extension: str) -> str:
+    title = str(book.get("title") or "").strip()
+    authors = book.get("authors") or []
+    author = str(authors[0]).strip() if authors else ""
+    if title and author:
+        base = f"{title} - {author}"
+    elif title:
+        base = title
+    else:
+        base = str(book.get("slug") or book.get("_id") or "book")
+    base = _FILENAME_BAD.sub("", base).strip().strip(".")
+    if not base:
+        base = str(book.get("slug") or "book")
+    return base[:120] + "." + extension
+
+
+def _reserve_unique_path(output_dir: Path, filename: str) -> Path:
+    candidate = output_dir / filename
+    if not candidate.exists():
+        return candidate
+    stem, suffix = candidate.stem, candidate.suffix
+    index = 2
+    while (candidate := output_dir / f"{stem} ({index}){suffix}").exists():
+        index += 1
+    return candidate
+
+
+def _load_known(path: Path | None = None) -> dict[str, str]:
+    """Saved books as slug -> filename (scan/phatmal.txt, append-only)."""
+    try:
+        lines = (path or PHATMAL_FILE).read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return {}
+    known: dict[str, str] = {}
+    for line in lines:
+        text = line.strip()
+        if not text or text.startswith("#") or "|" not in text:
+            continue
+        slug, filename = text.split("|", 1)
+        if slug.strip() and filename.strip():
+            known[slug.strip()] = filename.strip()
+    return known
+
+
+def _remember_book(slug: str, filename: str, path: Path | None = None) -> None:
+    target = path or PHATMAL_FILE
+    try:
+        target.parent.mkdir(parents=True, exist_ok=True)
+        with target.open("a", encoding="utf-8") as handle:
+            handle.write(f"{slug}|{filename}\n")
+    except OSError as error:
+        print(f"[phatmal] cannot record {slug}: {error}")
+
+
+async def _fetch_book_list(
+    client: httpx.AsyncClient, api_key: str, token: str
+) -> list[dict]:
+    books: list[dict] = []
+    page = 1
+    while True:
+        status, payload = await api_get_json(
+            client, api_key, token, f"ebooks?page={page}&limit={PAGE_LIMIT}"
+        )
+        if status != 200 or not isinstance(payload, dict):
+            print(f"[phatmal] list page {page} failed (HTTP {status}); stopping")
+            break
+        data = payload.get("data")
+        if not isinstance(data, list) or not data:
+            break
+        books.extend(item for item in data if isinstance(item, dict))
+        paging = payload.get("pagination")
+        if not isinstance(paging, dict) or paging.get("hasMore") is not True:
+            break
+        page += 1
+        pages = paging.get("pages")
+        if isinstance(pages, int) and page > pages:
+            break
+        if page > 500:  # runaway guard; the library is ~236 books
+            print("[phatmal] list pages exceeded 500; stopping")
+            break
+    return books
+
+
+async def _fetch_book_detail(
+    client: httpx.AsyncClient, api_key: str, token: str, slug: str
+) -> dict | None:
+    status, payload = await api_get_json(client, api_key, token, f"ebooks/{slug}")
+    if status == 200 and isinstance(payload, dict):
+        data = payload.get("data")
+        if isinstance(data, dict):
+            return data
+    return None
+
+
+async def _download_file(client: httpx.AsyncClient, url: str) -> bytes | None:
+    """Plain GET with no auth headers (S3 rejects unknown Authorization)."""
+    try:
+        response = await client.get(
+            url, headers={"User-Agent": USER_AGENT}, timeout=FILE_TIMEOUT
+        )
+        response.raise_for_status()
+        return response.content
+    except (httpx.HTTPError, ValueError) as error:
+        print(f"[phatmal] file fetch failed: {error}")
+        return None
+
+
+async def download_book(
+    client: httpx.AsyncClient,
+    api_key: str,
+    token: str,
+    book: dict,
+    output_dir: Path,
+    known: dict[str, str],
+) -> str:
+    """Save one book; returns saved | known | skipped | failed (logs incl)."""
+    slug = str(book.get("slug") or "")
+    title = str(book.get("title") or slug or "?")
+    status = book.get("status")
+    if status is not None and status != "published":
+        print(f"[phatmal] [skip] {title}: status {status!r}")
+        return "skipped"
+    if slug and slug in known and (output_dir / known[slug]).exists():
+        print(f"[phatmal] [known] {title}")
+        return "known"
+    picked = pick_book_file(book)
+    if picked is None and slug:
+        detail = await _fetch_book_detail(client, api_key, token, slug)
+        if detail is not None:
+            book = detail
+            picked = pick_book_file(book)
+    if picked is None:
+        print(f"[phatmal] [skip] {title}: no file link in API data")
+        return "skipped"
+    url, _kind = picked
+    print(f"[phatmal] [download] {title}", flush=True)
+    data = await _download_file(client, url)
+    if data is None:
+        return "failed"
+    extension = sniff_extension(data)
+    if extension is None:
+        print(
+            f"[phatmal] [rejected] {title}: "
+            f"not an EPUB/PDF/DOCX ({len(data)} bytes)"
+        )
+        return "failed"
+    output_dir.mkdir(parents=True, exist_ok=True)
+    path = _reserve_unique_path(output_dir, _book_filename(book, extension))
+    try:
+        path.write_bytes(data)
+    except OSError as error:
+        print(f"[phatmal] [failed] {title}: {error}")
+        return "failed"
+    print(f"[phatmal] [saved] {path.name} ({len(data) // 1024} KB)")
+    if slug:
+        known[slug] = path.name
+        _remember_book(slug, path.name)
+    return "saved"
+
+
+async def crawl_library(output_dir: Path | None = None) -> dict[str, int]:
+    stats = {"total": 0, "saved": 0, "known": 0, "skipped": 0, "failed": 0}
+    config = load_api_config()
+    if config is None:
+        return stats
+    email, password, api_key = config
+    out = output_dir or OUTPUT_DIR
+    async with httpx.AsyncClient(follow_redirects=True) as client:
+        token = await api_login(client, email, password, api_key)
+        if token is None:
+            return stats
+        if await api_me(client, api_key, token) is None:
+            return stats
+        books = await _fetch_book_list(client, api_key, token)
+        stats["total"] = len(books)
+        known = _load_known()
+        for book in books:
+            outcome = await download_book(client, api_key, token, book, out, known)
+            stats[outcome] += 1
+    print(
+        f"[phatmal] done: {stats['saved']} saved, {stats['known']} known, "
+        f"{stats['skipped']} skipped, {stats['failed']} failed "
+        f"of {stats['total']}"
+    )
+    return stats
+
+
+async def download_single(
+    slug_or_url: str, output_dir: Path | None = None
+) -> bool:
+    slug = slug_from_input(slug_or_url)
+    if not slug:
+        print("error: need a slug or /ebook/<slug> URL")
+        return False
+    config = load_api_config()
+    if config is None:
+        return False
+    email, password, api_key = config
+    out = output_dir or OUTPUT_DIR
+    async with httpx.AsyncClient(follow_redirects=True) as client:
+        token = await api_login(client, email, password, api_key)
+        if token is None:
+            return False
+        if await api_me(client, api_key, token) is None:
+            return False
+        book = await _fetch_book_detail(client, api_key, token, slug)
+        if book is None:
+            print(f"[phatmal] no book found for {slug!r}")
+            return False
+        outcome = await download_book(client, api_key, token, book, out, _load_known())
+        return outcome in {"saved", "known"}
+
+
+async def run_phatmal(
+    target: str | None, output_dir: Path | None = None
+) -> bool:
+    """None crawls the whole library; else one slug/URL. False only when
+    nothing was saved and something failed (or the list came back empty)."""
+    if target is None:
+        stats = await crawl_library(output_dir)
+        return stats["saved"] > 0 or (
+            stats["failed"] == 0 and stats["total"] > 0
+        )
+    return await download_single(target, output_dir)
 
 
 if __name__ == "__main__":
