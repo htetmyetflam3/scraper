@@ -34,3 +34,6 @@ previous changes logs are wiped.
 - Scrawler now writes scribd result URLs (deduped) to `scan/scribd.txt` instead of mixing them into `entry.txt`.
 - Root + python `pyproject.toml` gain the exporter deps: selenium, pypdf, trio, trio-websocket, typing_extensions, urllib3 pin, websocket-client. System requirement: Google Chrome installed.
 - `main.py --scribd` downloads from the links file; `--scribd "URL"` downloads one document; exit 1 when links were attempted but none succeeded. `--main` still runs search/entry/download only.
+
+## 2026-10-13 — API key reads repo-root .env
+- `fetch_results.py` looked for `.env` under `python/`; it now reads the repo-root `.env` next to `main.py` (env var still wins). Only reader, one-line fix.

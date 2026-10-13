@@ -30,7 +30,7 @@ def _read_api_key(explicit_key: str | None) -> str:
     if environment_key:
         return environment_key
 
-    env_file = REPO_ROOT / ".env"
+    env_file = REPO_ROOT.parent / ".env"  # repo root, next to main.py
     try:
         lines = env_file.read_text(encoding="utf-8").splitlines()
     except FileNotFoundError:
