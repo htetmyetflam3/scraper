@@ -1781,26 +1781,30 @@ def _scan_output_hashes(output_dir: Path) -> tuple[set[str], int, int]:
 def _load_downloaded_memory(
     output_dir: Path, path: Path | None = None
 ) -> tuple[set[str], set[str], int, int]:
-    """(disk hashes, trusted URL identities, files on disk, disk bytes).
+    """(known hashes, remembered URL identities, files on disk, disk bytes).
 
-    A remembered URL is trusted only while its bytes still exist on disk,
-    so deleting a file re-arms its download instead of skipping forever.
+    History is permanent: once a download is recorded it is never fetched
+    again, even after the file is moved off disk to free space (to force a
+    re-download, delete its line from the memory file). The disk scan only
+    adds pre-existing/hand-placed files to the known hashes.
     """
     disk_hashes, file_count, byte_count = _scan_output_hashes(output_dir)
+    known = set(disk_hashes)
+    trusted: set[str] = set()
     try:
         lines = (path or DOWNLOADED_FILE).read_text(encoding="utf-8").splitlines()
     except OSError:
-        return disk_hashes, set(), file_count, byte_count
-    trusted: set[str] = set()
+        return known, trusted, file_count, byte_count
     for line in lines:
         text = line.strip()
         if not text or text.startswith("#"):
             continue
         digest, _, identity = text.partition(" ")
         identity = " ".join(identity.split())
-        if len(digest) == 64 and identity and digest in disk_hashes:
+        if len(digest) == 64 and identity:
+            known.add(digest)
             trusted.add(identity)
-    return disk_hashes, trusted, file_count, byte_count
+    return known, trusted, file_count, byte_count
 
 
 def _remember_downloaded(key: str, digest: str, path: Path | None = None) -> None:
@@ -1894,7 +1898,7 @@ async def _download_entries_async(
                 summary.downloaded.append(candidate.url)
                 print(
                     f"[downloaded] {candidate.url}: "
-                    "identical file already on disk; skipping"
+                    "already downloaded on a previous run; skipping"
                 )
                 _remember_downloaded(memory_key, digest)
                 return

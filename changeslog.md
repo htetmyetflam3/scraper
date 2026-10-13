@@ -1,5 +1,12 @@
 previous changes logs are wiped.
 
+## 2026-10-13 — Downloaded-history is permanent (rotate files off disk freely)
+- `_load_downloaded_memory` no longer intersects history with disk state: once a download is recorded in `scan/downloaded.txt` (URL identity + sha256) it is never fetched again, even after the file is moved to an external drive to free space. The startup disk scan now only adds pre-existing/hand-placed files to the known hashes.
+- Rationale: 10k books x 10-20 MB far exceeds local spare space, so files must rotate off disk; "deletion re-arms the download" would have re-downloaded the archive. To force a re-download, delete its line from `scan/downloaded.txt`.
+- Post-fetch skip message reworded to "already downloaded on a previous run" (the file may live on the archive drive, not on disk).
+- No disk guard added per user request; no other behavior changed (URL-memory still skips pre-fetch with zero network, hash still backstops same-bytes arrivals).
+- Verified: 23/23 (`/tmp/test_d_downloaded.py` rewritten after a `/tmp` wipe: trust-without-disk, moved-away zero-network skip, archived-bytes dedupe with no disk write, plus all prior checks).
+
 ## 2026-10-13 — Single-site runs uncapped (no 3000 limit, no size skip)
 - `_crawl_site` takes `max_pages` (default 3000); the caller passes `None` when the run holds exactly one site — a URL arg or a 1-line entry file — so one specified site grinds to its last page. Multi-site file runs stay capped per site per run.
 - Uncapped mode also disables the sitemap-size skip (`large_site_reason` gets 0, its built-in off switch) and logs `[nocap] <site>: single-site run, no page limit`.
