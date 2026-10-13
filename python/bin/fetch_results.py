@@ -10,7 +10,9 @@ import httpx
 from serpapi import SerpApiError, serpapi_search
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-OUTPUT_FILE = REPO_ROOT / "search_results.json"
+SCAN_DIR = REPO_ROOT.parent / "scan"
+OUTPUT_FILE = SCAN_DIR / "search_results.json"
+LEGACY_OUTPUT_FILE = REPO_ROOT / "search_results.json"
 DEFAULT_KEYWORDS = (
     "myanmar books download",
     "myanmar ebooks download",
@@ -56,20 +58,76 @@ def _read_api_key(explicit_key: str | None) -> str:
     )
 
 
+def _load_saved(output_file: Path) -> list[dict]:
+    """Previously saved results, or [] when no usable file exists yet."""
+    if not output_file.exists() and output_file == OUTPUT_FILE:
+        legacy = LEGACY_OUTPUT_FILE
+        if legacy.exists():
+            print(
+                f"[migrate] reading existing results from {legacy}; "
+                f"will save merged output to {output_file}",
+                flush=True,
+            )
+            output_file = legacy
+    if not output_file.exists():
+        return []
+    try:
+        loaded = json.loads(output_file.read_text(encoding="utf-8"))
+    except ValueError as error:
+        raise ValueError(
+            f"Cannot parse {output_file} as JSON: {error}. "
+            "Fix or delete it; refusing to overwrite."
+        ) from error
+    if not isinstance(loaded, list):
+        raise ValueError(
+            f"Cannot parse {output_file}: expected a JSON list. "
+            "Fix or delete it; refusing to overwrite."
+        )
+    return [item for item in loaded if isinstance(item, dict)]
+
+
 def fetch_results(
     api_key: str | None = None,
     output_file: str | Path = OUTPUT_FILE,
+    keywords: list[str] | tuple[str, ...] | None = None,
 ) -> list[dict]:
     """Run the keyword searches and save every returned link as JSON.
 
-    Each keyword uses at most two SerpApi pages. Nothing is filtered or
-    deduplicated: the file keeps ``url``, ``title``, ``keyword`` and
-    ``page`` per result so the crawl stage (and hand-testing) sees the
-    raw search output. Extra keys in hand-written files are ignored.
+    Each keyword uses at most two SerpApi pages. Keywords already
+    recorded in the output file are skipped, never re-fetched, so adding
+    new keywords costs only their own API calls; new results are appended
+    to the saved ones. Nothing is filtered or deduplicated: the file keeps
+    ``url``, ``title``, ``keyword`` and ``page`` per result so the crawl
+    stage (and hand-testing) sees the raw search output. Extra keys in
+    hand-written files are ignored.
     """
     key = _read_api_key(api_key)
+    out = Path(output_file)
+    existing = _load_saved(out)
+    saved_keywords = {
+        str(item.get("keyword", "")).strip()
+        for item in existing
+        if str(item.get("keyword", "")).strip()
+    }
+    run_keywords = [
+        keyword
+        for keyword in (DEFAULT_KEYWORDS if keywords is None else keywords)
+        if keyword.strip()
+    ]
     collected: list[dict] = []
-    for keyword in DEFAULT_KEYWORDS:
+    for keyword in run_keywords:
+        if keyword.strip() in saved_keywords:
+            kept = sum(
+                1
+                for item in existing
+                if str(item.get("keyword", "")).strip() == keyword.strip()
+            )
+            print(
+                f"[skip] {keyword!r} already in {out} "
+                f"({kept} saved result(s)); no API call",
+                flush=True,
+            )
+            continue
         for page_number in range(SEARCH_PAGES_PER_KEYWORD):
             print(
                 f"[search] {keyword!r}, page {page_number + 1}/"
@@ -101,16 +159,22 @@ def fetch_results(
             if not has_next_page:
                 break
 
-    Path(output_file).write_text(
-        json.dumps(collected, indent=2, ensure_ascii=False) + "\n",
+    merged = existing + collected
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(
+        json.dumps(merged, indent=2, ensure_ascii=False) + "\n",
         encoding="utf-8",
     )
-    return collected
+    print(
+        f"[done] {len(collected)} new, {len(merged)} total in {out}",
+        flush=True,
+    )
+    return merged
 
 
 if __name__ == "__main__":
     try:
         saved = fetch_results()
-    except (SerpApiError, OSError) as error:
+    except (SerpApiError, OSError, ValueError) as error:
         raise SystemExit(str(error)) from error
-    print(f"Wrote {len(saved)} result(s) to {OUTPUT_FILE}")
+    print(f"Saved {len(saved)} total result(s) in {OUTPUT_FILE}")

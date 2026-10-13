@@ -23,8 +23,15 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--search",
-        action="store_true",
-        help="Call SerpApi once and write search_results.json.",
+        nargs="*",
+        default=None,
+        metavar="KEYWORD",
+        help=(
+            "Call SerpApi and append to search_results.json: bare flag "
+            "uses the default keywords, or pass keyword(s) to fetch only "
+            "those (e.g. --search \"pdfများ\"). Already-saved keywords "
+            "are skipped without API calls."
+        ),
     )
     parser.add_argument(
         "--entry",
@@ -59,11 +66,14 @@ def main(argv: list[str] | None = None) -> int:
             find_entry()
             download_entries()
             return 0
-        if not (args.search or args.entry or args.download):
+        if args.search is None and not args.entry and args.download is None:
             parser.print_usage(sys.stderr)
             return 2
-        if args.search:
-            fetch_results()
+        if args.search is not None:
+            if args.search:
+                fetch_results(keywords=args.search)
+            else:
+                fetch_results()
         if args.entry:
             find_entry()
         if args.download is not None:

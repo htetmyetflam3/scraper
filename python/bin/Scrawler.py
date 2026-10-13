@@ -13,8 +13,9 @@ from domain_guard import excluded_site_reason
 from download_links import FILE_EXTENSION, extract_file_links, guard_download_url
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
+SCAN_DIR = REPO_ROOT.parent / "scan"
 OUTPUT_FILE = REPO_ROOT / "entry.txt"
-SEARCH_RESULTS_FILE = REPO_ROOT / "search_results.json"
+SEARCH_RESULTS_FILE = SCAN_DIR / "search_results.json"
 REQUEST_TIMEOUT = 15.0
 # Same-path query hops (e.g. ?p=1 -> ?p=2, ?page=1 -> ?page=2) are lateral,
 # not tree depth: a real file-hosting site shows a download within a few,

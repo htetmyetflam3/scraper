@@ -20,3 +20,9 @@ previous changes logs are wiped.
 ## 2026-10-13 — main.py pipeline executor
 - Root `main.py` is now the single entry point (`uv run main.py ...`): `--search` fetches SerpApi results only, `--entry` crawls saved results into `entry.txt`, `--download` downloads from `entry.txt` or from a given site URL, `--main` runs all three in order; flags also combine.
 - Rebased onto owner's `move toml` + `add main.py` commits; root `pyproject.toml` already carries all six runtime deps so no change was needed there.
+
+## 2026-10-13 — Wise fetch: skip saved keywords, JSON under scan/
+- `search_results.json` moved to `scan/` (both writer and Scrawler updated); obsolete ignore rule removed since `/scan/` already covers it.
+- `fetch_results()` now reads the existing JSON first and skips keywords already recorded — new keywords append without re-burning quota on old ones. Corrupt files error out instead of being overwritten.
+- One-time migration: if only the old `python/search_results.json` exists, it is used as the base and merged output goes to `scan/`.
+- `main.py --search` takes optional keyword(s): `--search "pdfများ"` fetches just that keyword (2 pages), bare `--search` uses defaults; multiple keywords allowed in one call.
