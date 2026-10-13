@@ -39,6 +39,7 @@ from site_size_guard import FALLBACK_SITEMAP_PATHS, large_site_reason
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCAN_DIR = REPO_ROOT.parent / "scan"
 ENTRY_FILE = SCAN_DIR / "entry.txt"
+BLOCKED_FILE = SCAN_DIR / "blocked.txt"
 OUTPUT_DIR = REPO_ROOT / "pdfs"
 MAX_SITE_PAGES = 3_000
 REQUEST_TIMEOUT = 30.0
@@ -103,6 +104,7 @@ class DownloadSummary:
     unresolved: list[str] = field(default_factory=list)
     duplicates: list[str] = field(default_factory=list)
     skipped: list[str] = field(default_factory=list)
+    no_download: list[str] = field(default_factory=list)
 
 
 def _hostname(url: str) -> str | None:
@@ -178,6 +180,42 @@ def _is_provider_share_url(url: str, provider: str) -> bool:
     return False
 
 
+# Site-internal search endpoints. Every search page links more searches with
+# fresh queries, forming a near-infinite space the visited-set can never
+# close, so these URLs are never scheduled as crawl pages. Files and
+# file-host links are unaffected.
+SEARCH_PATH_SEGMENTS = frozenset({"search"})
+SEARCH_QUERY_KEYS = frozenset(
+    {
+        "s",  # WordPress
+        "q",  # Blogger /search?q=, site search boxes
+        "query",
+        "search",
+        "search_query",
+        "searchword",  # Joomla
+        "keyword",
+        "keywords",
+    }
+)
+
+
+def _is_site_search_url(url: str) -> bool:
+    """True for site-internal search-result pages (``?s=``, ``/search?q=``)."""
+    try:
+        parts = urllib.parse.urlsplit(url)
+        first = urllib.parse.unquote(parts.path).strip("/").split("/", 1)[0].lower()
+    except ValueError:
+        return False
+    if first in SEARCH_PATH_SEGMENTS:
+        return True
+    try:
+        query = urllib.parse.parse_qsl(parts.query, keep_blank_values=True)
+    except ValueError:
+        # Absurd field counts are loop-junk by definition: skip them too.
+        return True
+    return any(key.lower() in SEARCH_QUERY_KEYS for key, _ in query)
+
+
 def _normalized_page_url(url: str, site_key: str) -> str | None:
     try:
         parts = urllib.parse.urlsplit(url)
@@ -195,6 +233,8 @@ def _normalized_page_url(url: str, site_key: str) -> str | None:
     if cleaned is None or excluded_site_reason(cleaned) is not None:
         return None
     if _site_key(cleaned) != site_key:
+        return None
+    if _is_site_search_url(cleaned):
         return None
     return cleaned
 
@@ -399,6 +439,7 @@ def _add_page_downloads(
     page_html: str,
     page_url: str,
     site_key: str,
+    known_pages: set[str] | None = None,
 ) -> None:
     for url, label in extract_file_links(page_html, page_url):
         if NON_DOWNLOAD_MARKER.search(label):
@@ -419,6 +460,11 @@ def _add_page_downloads(
         _add_candidate(candidates, url, label, provider=provider)
 
     for url, label in _extract_extensionless_controls(page_html, page_url, site_key):
+        # Targets already scheduled as pages are covered by the page visit
+        # itself (same file/payload handling); candidating them again only
+        # re-fetches the page and mislabels it as a failed download.
+        if known_pages is not None and url in known_pages:
+            continue
         _add_candidate(candidates, url, label)
 
 
@@ -758,7 +804,9 @@ async def _crawl_site(
             return
 
         page_html = response.text
-        _add_page_downloads(candidates, page_html, str(response.url), site_key)
+        _add_page_downloads(
+            candidates, page_html, str(response.url), site_key, scheduled
+        )
         next_pages = _sitemap_urls_from_page(page_html, str(response.url), site_key)
         for next_url in next_pages:
             schedule(next_url, depth + 1)
@@ -1162,9 +1210,32 @@ def _payload_from_response(
     return response.content, document_type, dict(response.headers), str(response.url)
 
 
+#: Returned by :func:`_resolve_candidate` when the fetched page offers no
+#: download at all: no file link, file-host link, or download control. This
+#: is *not* a failed download, just a plain page that should not be retried.
+_NO_DOWNLOAD = object()
+
+
+def _has_download_affordance(
+    page_html: str, page_url: str, candidate_url: str
+) -> bool:
+    """True when the page shows any file link, file-host link, or control."""
+    if extract_file_links(page_html, page_url):
+        return True
+    if _extract_provider_links(page_html, page_url):
+        return True
+    site_key = _site_key(candidate_url)
+    return site_key is not None and bool(
+        _extract_extensionless_controls(page_html, page_url, site_key)
+    )
+
+
 async def _resolve_candidate(
     client: httpx.AsyncClient, candidate: DownloadCandidate
 ) -> tuple[bytes, str, dict[str, str], str] | None:
+    """Resolve to ``(bytes, ext, headers, url)``; ``_NO_DOWNLOAD`` for plain
+    pages without any download; ``None`` when the download genuinely failed
+    (expired, private, confirmation-blocked, network error)."""
     if candidate.payload is not None:
         document_type = _decode_document_type(candidate.payload)
         if document_type:
@@ -1218,6 +1289,12 @@ async def _resolve_candidate(
                     if payload is not None:
                         return payload
                 if candidate.provider is None:
+                    if not _is_document_path(
+                        candidate.url
+                    ) and not _has_download_affordance(
+                        response.text, str(response.url), candidate.url
+                    ):
+                        return _NO_DOWNLOAD
                     for nested_url, nested_provider, label in _extract_provider_links(
                         response.text, str(response.url)
                     ):
@@ -1284,6 +1361,30 @@ def _candidate_from_entry(
     sites.setdefault(key, []).append(clean_url)
 
 
+def _load_blocked_urls(path: Path | None = None) -> set[str]:
+    """Candidate URLs recorded as download-less; skipped without fetching."""
+    try:
+        lines = (path or BLOCKED_FILE).read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return set()
+    return {
+        line.strip()
+        for line in lines
+        if line.strip() and not line.strip().startswith("#")
+    }
+
+
+def _remember_blocked(url: str, path: Path | None = None) -> None:
+    """Append a download-less candidate URL for future runs to skip."""
+    target = path or BLOCKED_FILE
+    try:
+        target.parent.mkdir(parents=True, exist_ok=True)
+        with target.open("a", encoding="utf-8") as handle:
+            handle.write(url.strip() + "\n")
+    except OSError as error:
+        print(f"[blocked-warn] cannot record {url}: {error}")
+
+
 async def _download_entries_async(
     entry_source: str | Path, output_dir: Path
 ) -> DownloadSummary:
@@ -1315,6 +1416,7 @@ async def _download_entries_async(
 
     processed_candidates: set[str] = set()
     seen_hashes: set[str] = set()
+    blocked_urls = _load_blocked_urls()
     async with httpx.AsyncClient(
         follow_redirects=False,
         headers={"Accept": "text/html,application/xhtml+xml,application/pdf,*/*;q=0.8"},
@@ -1331,6 +1433,17 @@ async def _download_entries_async(
                     "provider did not return a valid PDF/DOCX "
                     "(possibly expired, private, or confirmation-blocked)"
                 )
+            if payload is _NO_DOWNLOAD:
+                summary.no_download.append(candidate.url)
+                print(
+                    f"[no-download] {candidate.url}: "
+                    "page has no download button or file link"
+                )
+                blocked_key = candidate.url.strip()
+                if blocked_key not in blocked_urls:
+                    blocked_urls.add(blocked_key)
+                    _remember_blocked(blocked_key)
+                return
             if payload is None:
                 summary.unresolved.append(candidate.url)
                 print(f"[unresolved] {candidate.url}: {reason}")
@@ -1366,6 +1479,13 @@ async def _download_entries_async(
                 if key in processed_candidates:
                     continue
                 processed_candidates.add(key)
+                if candidate.url.strip() in blocked_urls:
+                    summary.skipped.append(candidate.url)
+                    print(
+                        f"[blocked] {candidate.url}: "
+                        "had no download on a previous run; skipping"
+                    )
+                    continue
                 summary.candidates += 1
                 print(f"[download] {candidate.url}", flush=True)
                 await download_one(candidate)
@@ -1399,5 +1519,7 @@ if __name__ == "__main__":
         f"Finished: {report.sites} site(s), {report.pages:,} page URL(s), "
         f"{report.candidates} candidate(s), {len(report.saved)} saved, "
         f"{len(report.duplicates)} duplicate(s), "
+        f"{len(report.skipped)} blocked-skipped, "
+        f"{len(report.no_download)} page(s) without download, "
         f"{len(report.unresolved)} unresolved."
     )

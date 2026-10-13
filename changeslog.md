@@ -1,5 +1,13 @@
 previous changes logs are wiped.
 
+## 2026-10-13 — Dcrawler search-loop skip + honest no-download verdict + blocked memory
+- Site-search URLs (`?s=`, `?q=`, `/search/...`, Joomla `searchword`, `keyword(s)`, …) are never scheduled as crawl pages: every search page links more fresh-query searches, an infinite space the visited-set can never close. Post links (`?p=`), pagination (`?page=`) and files are unaffected.
+- Download controls pointing at already-scheduled pages are no longer re-candidated: the page visit itself handles their files, so this kills the re-fetch plus the bogus "failed download" verdict (e.g. blogspot self-links).
+- `_resolve_candidate` now returns a `_NO_DOWNLOAD` sentinel for plain pages with no file link, file-host link or download control (recover attempt still runs first; dead `.pdf` links and pages with buttons stay `[unresolved]`, providers never get the sentinel). `[no-download]` log replaces the misleading "provider did not return a valid PDF/DOCX" warning for such pages.
+- Download-less URLs are remembered in `scan/blocked.txt` (git-ignored runtime memory): later runs skip them pre-resolution with `[blocked]` and zero network. Genuine failures are never recorded, so they keep retrying.
+- `Finished:` line now also reports `blocked-skipped` and `page(s) without download` counts.
+- Verified: 30/30 new mocked tests (`/tmp/test_d_search_blocked.py`); regressions 17/17 BFS+dedupe, 14/14 archive, 21/21 app, 7/7 append, 3/3 envloc.
+
 ## 2026-10-13 — Scrawler single-branch document-tree crawl + S/D rename
 - Renamed crawl modules to match S=search / D=download: `search.py` -> `Scrawler.py` (search-result crawler), old `Scrawler.py` (file saver) -> `Dcrawler.py`, old `Dcrawler.py` (static link guards) -> `download_links.py`; fixed `Dcrawler.py` usage string.
 - `Scrawler.py` now walks one guided branch per domain: from the site root down the search-result path ancestors, then deeper prefix children only (siblings like `/latest/`, `/author/` never visited).
