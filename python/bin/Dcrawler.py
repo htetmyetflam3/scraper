@@ -36,7 +36,8 @@ from pdf_support import is_pdf, linearize, looks_like_html
 from site_size_guard import FALLBACK_SITEMAP_PATHS, large_site_reason
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-ENTRY_FILE = REPO_ROOT / "entry.txt"
+SCAN_DIR = REPO_ROOT.parent / "scan"
+ENTRY_FILE = SCAN_DIR / "entry.txt"
 OUTPUT_DIR = REPO_ROOT / "pdfs"
 MAX_SITE_PAGES = 3_000
 REQUEST_TIMEOUT = 30.0

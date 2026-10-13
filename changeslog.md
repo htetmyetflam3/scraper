@@ -37,3 +37,6 @@ previous changes logs are wiped.
 
 ## 2026-10-13 — API key reads repo-root .env
 - `fetch_results.py` looked for `.env` under `python/`; it now reads the repo-root `.env` next to `main.py` (env var still wins). Only reader, one-line fix.
+
+## 2026-10-13 — entry.txt moved under scan/
+- Scrawler writes and Dcrawler reads `scan/entry.txt` (was `python/entry.txt`); stale empty `python/entry.txt` removed so exactly one exists. Help texts and logs updated to the new path.

@@ -38,7 +38,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--entry",
         action="store_true",
-        help="Crawl saved results for download links and write entry.txt.",
+        help="Crawl saved results for download links and write scan/entry.txt.",
     )
     parser.add_argument(
         "--download",
@@ -47,7 +47,7 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         metavar="SITE_URL",
         help=(
-            "Download files using site links from entry.txt, "
+            "Download files using site links from scan/entry.txt, "
             'or from SITE_URL when given (e.g. --download "https://example.com").'
         ),
     )

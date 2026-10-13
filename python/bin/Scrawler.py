@@ -15,7 +15,7 @@ from scribd import SCRIBD_LINKS_FILE
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCAN_DIR = REPO_ROOT.parent / "scan"
-OUTPUT_FILE = REPO_ROOT / "entry.txt"
+OUTPUT_FILE = SCAN_DIR / "entry.txt"
 SEARCH_RESULTS_FILE = SCAN_DIR / "search_results.json"
 REQUEST_TIMEOUT = 15.0
 # Same-path query hops (e.g. ?p=1 -> ?p=2, ?page=1 -> ?page=2) are lateral,
@@ -442,7 +442,7 @@ def _crawl_site(client: httpx.Client, seed_url: str, visited: set[str]) -> bool:
 
 
 def find_entry(results_file: str | Path = SEARCH_RESULTS_FILE) -> list[str]:
-    """Crawl saved search-result links and write discovered site roots to entry.txt.
+    """Crawl saved search-result links and write discovered site roots to scan/entry.txt.
 
     Reads the JSON list previously saved by fetch_results.py (each item
     needs only a ``url`` key). No search API is called here, so crawl
@@ -538,7 +538,7 @@ def find_entry(results_file: str | Path = SEARCH_RESULTS_FILE) -> list[str]:
             if found_download:
                 successful_sites.add(site_key)
                 add_line(_site_root(seed))
-                print(f"[site-found] {site_key}: added to entry.txt", flush=True)
+                print(f"[site-found] {site_key}: added to scan/entry.txt", flush=True)
             else:
                 failed_sites.add(site_key)
 
