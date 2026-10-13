@@ -40,3 +40,7 @@ previous changes logs are wiped.
 
 ## 2026-10-13 — entry.txt moved under scan/
 - Scrawler writes and Dcrawler reads `scan/entry.txt` (was `python/entry.txt`); stale empty `python/entry.txt` removed so exactly one exists. Help texts and logs updated to the new path.
+
+## 2026-10-13 — Append to entry.txt / scribd.txt instead of wiping
+- `find_entry` now preloads existing `scan/entry.txt` and `scan/scribd.txt` (comments and blanks preserved) and appends only new roots/links, deduplicated; re-runs log `already in` plus `[done] X new, Y total` lines.
+- `search_results.json` already appended (`existing + collected`, verified by test) — no change; if a wipe was seen there it came from a stale checkout before the wise-fetch update.

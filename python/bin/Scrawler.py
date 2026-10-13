@@ -441,14 +441,36 @@ def _crawl_site(client: httpx.Client, seed_url: str, visited: set[str]) -> bool:
             return True
 
 
+def _load_existing_lines(path: Path) -> tuple[list[str], set[str]]:
+    """Raw lines plus dedupe set of a previous output file (empty if none).
+
+    Blank lines and ``#`` comments are preserved in the raw lines but
+    excluded from the dedupe set, matching how Dcrawler reads entry.txt.
+    """
+    try:
+        lines = path.read_text(encoding="utf-8").splitlines()
+    except FileNotFoundError:
+        return [], set()
+    while lines and not lines[-1].strip():
+        lines.pop()
+    seen = {
+        line.strip()
+        for line in lines
+        if line.strip() and not line.strip().startswith("#")
+    }
+    return lines, seen
+
+
 def find_entry(results_file: str | Path = SEARCH_RESULTS_FILE) -> list[str]:
-    """Crawl saved search-result links and write discovered site roots to scan/entry.txt.
+    """Crawl saved search-result links and append discovered site roots to scan/entry.txt.
 
     Reads the JSON list previously saved by fetch_results.py (each item
     needs only a ``url`` key). No search API is called here, so crawl
-    testing never burns API quota. Scribd result URLs go unchanged into a
-    separate scribd links file and are never fetched. Every other domain
-    is tried once: the
+    testing never burns API quota. Previous runs are preserved: existing
+    entry.txt and scribd.txt lines are kept (comments and blanks included)
+    and only new roots/links are appended. Scribd result URLs go unchanged
+    into the separate scribd links file and are never fetched. Every other
+    domain is tried once: the
     first result's path selects one top-level branch, the crawl walks from
     the site root down that guided branch as deep as prefix children exist
     (plus at most MAX_QUERY_PAGES same-path query hops such as ?p=124),
@@ -476,15 +498,17 @@ def find_entry(results_file: str | Path = SEARCH_RESULTS_FILE) -> list[str]:
         flush=True,
     )
 
-    output_lines: list[str] = []
-    written_lines: set[str] = set()
-    scribd_lines: list[str] = []
-    written_scribd: set[str] = set()
+    output_lines, written_lines = _load_existing_lines(OUTPUT_FILE)
+    scribd_lines, written_scribd = _load_existing_lines(SCRIBD_LINKS_FILE)
+    new_sites = 0
+    new_scribd = 0
 
-    def add_line(value: str) -> None:
+    def add_line(value: str) -> bool:
         if value not in written_lines:
             output_lines.append(value)
             written_lines.add(value)
+            return True
+        return False
 
     site_visits: dict[str, set[str]] = {}
     successful_sites: set[str] = set()
@@ -502,6 +526,7 @@ def find_entry(results_file: str | Path = SEARCH_RESULTS_FILE) -> list[str]:
                 if raw_url not in written_scribd:
                     written_scribd.add(raw_url)
                     scribd_lines.append(raw_url)
+                    new_scribd += 1
                 print(
                     f"[scribd] kept result {result_number}/{len(search_results)}",
                     flush=True,
@@ -537,11 +562,21 @@ def find_entry(results_file: str | Path = SEARCH_RESULTS_FILE) -> list[str]:
                     )
             if found_download:
                 successful_sites.add(site_key)
-                add_line(_site_root(seed))
-                print(f"[site-found] {site_key}: added to scan/entry.txt", flush=True)
+                if add_line(_site_root(seed)):
+                    new_sites += 1
+                    print(
+                        f"[site-found] {site_key}: added to scan/entry.txt",
+                        flush=True,
+                    )
+                else:
+                    print(
+                        f"[site-found] {site_key}: already in scan/entry.txt",
+                        flush=True,
+                    )
             else:
                 failed_sites.add(site_key)
 
+    OUTPUT_FILE.parent.mkdir(parents=True, exist_ok=True)
     OUTPUT_FILE.write_text(
         "\n".join(output_lines) + ("\n" if output_lines else ""),
         encoding="utf-8",
@@ -552,7 +587,13 @@ def find_entry(results_file: str | Path = SEARCH_RESULTS_FILE) -> list[str]:
         encoding="utf-8",
     )
     print(
-        f"[scribd] wrote {len(scribd_lines)} link(s) to {SCRIBD_LINKS_FILE}",
+        f"[done] {new_sites} new site(s), "
+        f"{len(written_lines)} total in {OUTPUT_FILE}",
+        flush=True,
+    )
+    print(
+        f"[scribd] {new_scribd} new, "
+        f"{len(written_scribd)} total in {SCRIBD_LINKS_FILE}",
         flush=True,
     )
     return output_lines
@@ -563,4 +604,4 @@ if __name__ == "__main__":
         entries = find_entry()
     except (OSError, ValueError) as error:
         raise SystemExit(str(error)) from error
-    print(f"Wrote {len(entries)} links to {OUTPUT_FILE}")
+    print(f"Saved {len(entries)} total line(s) in {OUTPUT_FILE}")
