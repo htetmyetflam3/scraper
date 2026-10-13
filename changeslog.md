@@ -1,5 +1,13 @@
 previous changes logs are wiped.
 
+## 2026-10-13 — Per-site login via .env (site_login.py, form-based sites)
+- New shared `python/bin/site_login.py`: reads `LOGIN_EMAIL`/`LOGIN_PASSWORD` (generic default) or `LOGIN_<HOST>_EMAIL`/`_PASSWORD` (host-specific, dots/dashes to `_`, uppercased) from the environment or repo-root `.env` (same quoting rules as the SERPAPI parser); optional per-host `_URL`/`_USER_FIELD`/`_PASS_FIELD` overrides.
+- Auto-login finds the best username+password form (single-password login preferred over register, email/autocomplete/name hints for the user field), preserves hidden CSRF tokens + checked boxes, allows off-site SSO actions, and verifies via login-form-gone/logout-marker on a re-fetched seed. Fail-open: any failure logs and the crawl continues without the session; silent when a host has no credentials.
+- Wired once-per-host into both crawlers on their shared clients (cookies persist for the run): `ensure_logged_in_sync` before Scrawler's site crawl, `ensure_logged_in_async` before Dcrawler's.
+- New tracked `.env.example` template (`.gitignore` gains a `!.env.example` exception; real `.env` stays ignored).
+- Note: JS-rendered SPA sites (e.g. Expo web apps serving an empty shell) carry no static form, so this covers classic form logins; SPA/API driving is the pending follow-up.
+- Verified: 34/34 new tests (`/tmp/test_site_login.py`); regressions 189/189 green.
+
 ## 2026-10-13 — Dcrawler POST download forms + POST-returns-URL flow (mbookshelf)
 - New `_extract_download_forms`: same-site download forms become candidates carrying (action, method, fields), replicating the page's own `$.post(action, $(form).serialize())` — hidden inputs, selects, textareas, checked boxes; CSRF tokens included in the POST. GET forms fold fields into the URL; file actions become direct GETs; `formaction`/`formmethod` submitter overrides become variants.
 - `_resolve_candidate` submits form candidates with POST on the same cookie session (Laravel `_token` flow works), and follows bare-URL response bodies with a bounded second GET — the mbookshelf `/download-book` answers with a file-URL string, not the PDF. JSON-quoted and relative URLs handled; HTML/JSON blobs/binary rejected.

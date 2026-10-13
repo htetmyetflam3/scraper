@@ -34,6 +34,7 @@ from mediafire import (
     recover_file_response,
 )
 from pdf_support import is_pdf, linearize, looks_like_html
+from site_login import ensure_logged_in_async
 from site_size_guard import FALLBACK_SITEMAP_PATHS, large_site_reason
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -1719,6 +1720,7 @@ async def _download_entries_async(
 
         await process_candidates()
         for seed_urls in sites.values():
+            await ensure_logged_in_async(client, seed_urls[0])
             count = await _crawl_site(client, seed_urls, candidates, process_candidates)
             summary.pages += count
             print(f"[site] {seed_urls[0]}: checked {count:,} page URL(s)")

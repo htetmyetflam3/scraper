@@ -12,6 +12,7 @@ from bs4 import BeautifulSoup
 from domain_guard import excluded_site_reason
 from download_links import FILE_EXTENSION, extract_file_links, guard_download_url
 from scribd import SCRIBD_LINKS_FILE
+from site_login import ensure_logged_in_sync
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCAN_DIR = REPO_ROOT.parent / "scan"
@@ -555,6 +556,7 @@ def find_entry(results_file: str | Path = SEARCH_RESULTS_FILE) -> list[str]:
                 found_download = True
                 print(f"[found] direct file link: {seed}", flush=True)
             else:
+                ensure_logged_in_sync(client, seed)
                 previous_page_count = len(visited)
                 found_download = _crawl_site(client, seed, visited)
                 if not found_download:
