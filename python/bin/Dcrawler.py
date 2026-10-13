@@ -1787,23 +1787,43 @@ def _load_downloaded_memory(
     again, even after the file is moved off disk to free space (to force a
     re-download, delete its line from the memory file). The disk scan only
     adds pre-existing/hand-placed files to the known hashes.
+
+    Bootstrap: disk files whose hash is not recorded yet are appended as
+    hash-only lines (sorted, flushed at once) before loading, so archiving
+    the disk right after a run never orphans finished files. URL identities
+    for bootstrapped files self-heal on their first skip.
     """
     disk_hashes, file_count, byte_count = _scan_output_hashes(output_dir)
     known = set(disk_hashes)
     trusted: set[str] = set()
+    target = path or DOWNLOADED_FILE
     try:
-        lines = (path or DOWNLOADED_FILE).read_text(encoding="utf-8").splitlines()
+        lines = target.read_text(encoding="utf-8").splitlines()
     except OSError:
-        return known, trusted, file_count, byte_count
+        lines = []
+    remembered: set[str] = set()
     for line in lines:
         text = line.strip()
         if not text or text.startswith("#"):
             continue
         digest, _, identity = text.partition(" ")
         identity = " ".join(identity.split())
-        if len(digest) == 64 and identity:
-            known.add(digest)
+        if len(digest) != 64:
+            continue
+        known.add(digest)
+        remembered.add(digest)
+        if identity:
             trusted.add(identity)
+    missing = sorted(disk_hashes - remembered)
+    if missing:
+        try:
+            target.parent.mkdir(parents=True, exist_ok=True)
+            with target.open("a", encoding="utf-8") as handle:
+                for digest in missing:
+                    handle.write(digest + "\n")
+            print(f"[history] listed {len(missing)} file(s) from disk")
+        except OSError as error:
+            print(f"[downloaded-warn] cannot list disk files: {error}")
     return known, trusted, file_count, byte_count
 
 

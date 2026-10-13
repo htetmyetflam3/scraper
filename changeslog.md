@@ -1,5 +1,11 @@
 previous changes logs are wiped.
 
+## 2026-10-13 — History bootstrap from disk on startup
+- `_load_downloaded_memory` now appends hash-only lines (sorted, flushed at once) for on-disk files missing from `scan/downloaded.txt`, then loads — so pre-history downloads are listed automatically and archiving the disk right after a run never orphans them. Announces `[history] listed N file(s) from disk`; idempotent and append-only (existing lines untouched).
+- Bare files yield hashes, not URL identities, so bootstrapped lines skip by hash on first meeting and self-heal the URL identity then (later runs pre-skip with zero network). In-memory index stays hash sets (O(1)); only the file is kept sorted for humans.
+- Workflow: run once WITH files on disk (bootstrap lists them), THEN move to drive — files already gone cannot be listed.
+- Verified: 9/9 new (`/tmp/test_d_bootstrap.py`: sorted/flushed bootstrap, idempotence, append-only, hash-only parsing, malformed ignored, e2e self-heal + post-archive pre-skip); 23/23 downloaded suite still green.
+
 ## 2026-10-13 — Downloaded-history is permanent (rotate files off disk freely)
 - `_load_downloaded_memory` no longer intersects history with disk state: once a download is recorded in `scan/downloaded.txt` (URL identity + sha256) it is never fetched again, even after the file is moved to an external drive to free space. The startup disk scan now only adds pre-existing/hand-placed files to the known hashes.
 - Rationale: 10k books x 10-20 MB far exceeds local spare space, so files must rotate off disk; "deletion re-arms the download" would have re-downloaded the archive. To force a re-download, delete its line from `scan/downloaded.txt`.
