@@ -30,6 +30,24 @@ VIDEO_DOMAINS = frozenset({"youtube.com", "youtu.be", "youtube-nocookie.com"})
 
 ARCHIVE_DOMAINS = frozenset({"archive.org"})
 
+# App/software download sites: wrongly indexed by the search engine for
+# book queries because of their metatags, but they host no documents.
+APP_DOMAINS = frozenset(
+    {
+        "apple.com",
+        "appstore.com",
+        "softonic.com",
+        "apkpure.com",
+        "uptodown.com",
+        "apkmirror.com",
+        "aptoide.com",
+        "f-droid.org",
+        "filehippo.com",
+        "softpedia.com",
+        "apps.microsoft.com",
+    }
+)
+
 TELEGRAM_DOMAINS = frozenset({"t.me", "telegram.me", "telegram.org", "telegram.dog"})
 
 GITHUB_DOMAINS = frozenset(
@@ -166,6 +184,8 @@ def excluded_site_reason(url: str) -> str | None:
         return "YouTube/video-hosting pages are excluded"
     if any(_matches_domain(host, domain) for domain in ARCHIVE_DOMAINS):
         return "Internet Archive pages are excluded"
+    if any(_matches_domain(host, domain) for domain in APP_DOMAINS):
+        return "app/software download sites are excluded"
     if any(_matches_domain(host, domain) for domain in TELEGRAM_DOMAINS):
         return "Telegram messaging pages are excluded"
     if any(_matches_domain(host, domain) for domain in GITHUB_DOMAINS):

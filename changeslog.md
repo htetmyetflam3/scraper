@@ -48,3 +48,6 @@ previous changes logs are wiped.
 ## 2026-10-13 — Exclude archive.org (shared guard) + Scrawler ignores excluded file links
 - `domain_guard.py` gains `ARCHIVE_DOMAINS` (`archive.org`, all subdomains incl. `*.us.archive.org` download hosts): archive.org was never guarded, nothing was lost. Both crawlers honor it — Dcrawler skips its pages and files via its existing 7 guard call sites, no code change there.
 - Scrawler no longer counts file links on excluded domains (archive.org, wiki, video, telegram, github, search) toward a `[found]` verdict; seeds/children on those domains were already never fetched.
+
+## 2026-10-13 — Exclude app-download sites (shared guard)
+- New `APP_DOMAINS` in `domain_guard.py`, honored by both crawlers: apple.com, appstore.com, softonic.com, apkpure.com, uptodown.com, apkmirror.com, aptoide.com, f-droid.org, filehippo.com, softpedia.com, apps.microsoft.com (subdomains included). play.google.com was already excluded via the google-label rule.
