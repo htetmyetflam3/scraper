@@ -93,6 +93,8 @@ class DownloadCandidate:
     payload: bytes | None = None
     response_url: str | None = None
     headers: dict[str, str] = field(default_factory=dict)
+    method: str = "GET"
+    data: dict[str, str] = field(default_factory=dict)
 
 
 @dataclass
@@ -262,7 +264,46 @@ def _provider_url(url: str, base_url: str | None = None) -> tuple[str, str] | No
     return resolved, provider
 
 
+# Session-rotating CSRF token fields. They must ride along on the POST, but a
+# fresh token every run would make dedupe/blocked identities useless, so the
+# stable form identity below excludes them (the book id etc. still pins it).
+VOLATILE_FORM_FIELDS = frozenset(
+    {
+        "_token",  # Laravel
+        "csrf_token",  # Symfony / Flask-WTF
+        "csrfmiddlewaretoken",  # Django
+        "authenticity_token",  # Rails
+        "__requestverificationtoken",  # ASP.NET (compared lowercased)
+    }
+)
+
+
+def _stable_form_key(method: str, url: str, data: dict[str, str]) -> str:
+    """Dedupe/block identity for form submissions, e.g.
+    ``POST https://site/download-book uid=42655``. Forms posting to one
+    shared action URL (one per book) must NOT collapse to a single key."""
+    kept = sorted(
+        (name, value)
+        for name, value in data.items()
+        if name.lower() not in VOLATILE_FORM_FIELDS
+    )
+    identity = f"{method.upper()} {url}"
+    if kept:
+        identity += " " + urllib.parse.urlencode(kept, doseq=True)
+    return identity
+
+
+def _blocked_identity(candidate: DownloadCandidate) -> str:
+    """What goes into scan/blocked.txt: stable form identity for POSTs, else
+    the bare URL (unchanged behaviour for plain candidates)."""
+    if candidate.method == "POST" or candidate.data:
+        return _stable_form_key(candidate.method, candidate.url, candidate.data)
+    return candidate.url.strip()
+
+
 def _candidate_key(candidate: DownloadCandidate) -> str:
+    if candidate.method == "POST" or candidate.data:
+        return _stable_form_key(candidate.method, candidate.url, candidate.data)
     if candidate.provider == "mega":
         return candidate.url
     if candidate.provider:
@@ -302,6 +343,8 @@ def _add_candidate(
     payload: bytes | None = None,
     response_url: str | None = None,
     headers: dict[str, str] | None = None,
+    method: str = "GET",
+    data: dict[str, str] | None = None,
 ) -> bool:
     candidate = DownloadCandidate(
         url=url,
@@ -310,6 +353,8 @@ def _add_candidate(
         payload=payload,
         response_url=response_url,
         headers=headers or {},
+        method=method,
+        data=dict(data or {}),
     )
     key = _candidate_key(candidate)
     existing = candidates.get(key)
@@ -434,6 +479,113 @@ def _extract_extensionless_controls(
     return list(found.items())
 
 
+#: ``<input>`` types that never carry a submittable download-form value.
+_FORM_SKIP_TYPES = frozenset({"submit", "button", "image", "reset", "file"})
+
+
+def _extract_download_forms(
+    page_html: str, page_url: str, site_key: str
+) -> list[tuple[str, str, str, dict[str, str]]]:
+    """Find same-site download forms as ``(action URL, method, label, data)``.
+
+    Replicates what the page's own ``$.post(action, $(form).serialize())``
+    sends: every named, enabled, successful control (hidden inputs, text,
+    selects, textareas, checked boxes) except buttons and file inputs.
+    CSRF tokens stay in the data (the POST needs them); only the dedupe
+    identity excludes them. GET forms fold their fields into the action URL;
+    anything that is not GET is submitted as POST.
+    """
+    soup = BeautifulSoup(page_html, "html.parser")
+    found: dict[str, tuple[str, str, str, dict[str, str]]] = {}
+    for form in soup.find_all("form"):
+        values: list[str | list[str]] = [
+            form.get_text(" ", strip=True),
+            form.get("title", ""),
+            form.get("aria-label", ""),
+            form.get("id", ""),
+            form.get("class", []),
+        ]
+        label = " ".join(
+            " ".join(str(part) for part in value)
+            if isinstance(value, list)
+            else str(value)
+            for value in values
+        )
+        if not DOWNLOAD_MARKER.search(label) or NON_DOWNLOAD_MARKER.search(label):
+            continue
+
+        base_action = form.get("action") or page_url
+        base_method = (form.get("method") or "GET").strip().upper() or "GET"
+        variants = [(base_action, base_method)]
+        for submitter in form.find_all(["button", "input"]):
+            subtype = (submitter.get("type") or "").lower()
+            if submitter.name == "input" and subtype not in {"submit", "image"}:
+                continue
+            if submitter.name == "button" and subtype not in {"", "submit"}:
+                continue
+            override = submitter.get("formaction")
+            if isinstance(override, str) and override.strip():
+                override_method = submitter.get("formmethod")
+                if isinstance(override_method, str) and override_method.strip():
+                    variants.append((override, override_method.strip().upper()))
+                else:
+                    variants.append((override, base_method))
+
+        data: dict[str, str] = {}
+        for field in form.find_all(["input", "select", "textarea"]):
+            name = field.get("name")
+            if not isinstance(name, str) or not name or field.has_attr("disabled"):
+                continue
+            if field.name == "input":
+                field_type = (field.get("type") or "text").lower()
+                if field_type in _FORM_SKIP_TYPES:
+                    continue
+                if field_type in {"checkbox", "radio"} and not field.has_attr("checked"):
+                    continue
+                value = field.get("value", "")
+                data[name] = value if isinstance(value, str) else str(value)
+            elif field.name == "textarea":
+                data[name] = field.get_text()
+            else:  # select: selected options, else the first for single-select
+                options = field.find_all("option")
+                selected = [opt for opt in options if opt.has_attr("selected")]
+                if not selected and not field.has_attr("multiple") and options:
+                    selected = options[:1]
+                for option in selected:  # multi-select collapses to last (dict)
+                    if option.has_attr("value"):
+                        picked = option["value"]
+                        data[name] = picked if isinstance(picked, str) else str(picked)
+                    else:
+                        data[name] = option.get_text(strip=True)
+
+        label = _meaningful_label(label)
+        for raw_action, raw_method in variants:
+            absolute = urllib.parse.urljoin(page_url, raw_action)
+            if raw_method == "GET" and data:
+                parts = urllib.parse.urlsplit(absolute)
+                query = urllib.parse.parse_qsl(parts.query, keep_blank_values=True)
+                query.extend(sorted(data.items()))
+                absolute = urllib.parse.urlunsplit(
+                    parts._replace(
+                        query=urllib.parse.urlencode(query, doseq=True), fragment=""
+                    )
+                )
+            target = _normalized_page_url(absolute, site_key)
+            if target is None:
+                continue
+            if _is_document_path(target):
+                # A file target is fetched directly, never submitted to.
+                key = _stable_form_key("GET", target, {})
+                found.setdefault(key, (target, "GET", label, {}))
+                continue
+            method = "GET" if raw_method == "GET" else "POST"
+            fields = {} if method == "GET" else dict(data)
+            key = _stable_form_key(method, target, fields)
+            found.setdefault(key, (target, method, label, fields))
+
+    return list(found.values())
+
+
 def _add_page_downloads(
     candidates: dict[str, DownloadCandidate],
     page_html: str,
@@ -459,11 +611,23 @@ def _add_page_downloads(
     for url, provider, label in _extract_provider_links(page_html, page_url):
         _add_candidate(candidates, url, label, provider=provider)
 
+    post_actions: set[str] = set()
+    for url, method, label, data in _extract_download_forms(
+        page_html, page_url, site_key
+    ):
+        _add_candidate(candidates, url, label, method=method, data=data)
+        if method == "POST":
+            post_actions.add(url)
+
     for url, label in _extract_extensionless_controls(page_html, page_url, site_key):
         # Targets already scheduled as pages are covered by the page visit
         # itself (same file/payload handling); candidating them again only
         # re-fetches the page and mislabels it as a failed download.
         if known_pages is not None and url in known_pages:
+            continue
+        # A form action is submitted to, never GET: the form candidate owns
+        # it, so a duplicate GET would only earn a doomed 405/419 verdict.
+        if url in post_actions:
             continue
         _add_candidate(candidates, url, label)
 
@@ -1210,6 +1374,45 @@ def _payload_from_response(
     return response.content, document_type, dict(response.headers), str(response.url)
 
 
+def _posted_response_url(response: httpx.Response, base_url: str) -> str | None:
+    """Follow-a-link responses: some endpoints (form download handlers) answer
+    with a bare URL instead of the file, and the page JS navigates to it."""
+    if len(response.content) > 8192:  # a URL never exceeds this
+        return None
+    text = response.content.decode("utf-8-sig", "replace").strip()
+    if len(text) >= 2 and text.startswith('"') and text.endswith('"'):
+        try:
+            parsed = json.loads(text)
+        except ValueError:
+            return None
+        if not isinstance(parsed, str):
+            return None
+        text = parsed.strip()
+    if (
+        not text
+        or len(text) > 2048
+        or any(
+            char.isspace() or ord(char) < 0x20 or ord(char) == 0x7F for char in text
+        )
+        or any(char in "<>\"\\^`{|}" for char in text)
+    ):
+        return None
+    absolute = urllib.parse.urljoin(base_url, text)
+    try:
+        parts = urllib.parse.urlsplit(absolute)
+        if (
+            parts.scheme.lower() not in ("http", "https")
+            or not parts.netloc
+            or parts.username is not None
+            or parts.password is not None
+        ):
+            return None
+        parts.port
+    except ValueError:
+        return None
+    return guard_download_url(absolute) or absolute
+
+
 #: Returned by :func:`_resolve_candidate` when the fetched page offers no
 #: download at all: no file link, file-host link, or download control. This
 #: is *not* a failed download, just a plain page that should not be retried.
@@ -1219,15 +1422,17 @@ _NO_DOWNLOAD = object()
 def _has_download_affordance(
     page_html: str, page_url: str, candidate_url: str
 ) -> bool:
-    """True when the page shows any file link, file-host link, or control."""
+    """True when the page shows any file link, file-host link, form, control."""
     if extract_file_links(page_html, page_url):
         return True
     if _extract_provider_links(page_html, page_url):
         return True
     site_key = _site_key(candidate_url)
-    return site_key is not None and bool(
-        _extract_extensionless_controls(page_html, page_url, site_key)
-    )
+    if site_key is None:
+        return False
+    if _extract_download_forms(page_html, page_url, site_key):
+        return True
+    return bool(_extract_extensionless_controls(page_html, page_url, site_key))
 
 
 async def _resolve_candidate(
@@ -1251,8 +1456,11 @@ async def _resolve_candidate(
 
     seen: set[str] = set()
     attempts = _provider_attempt_urls(candidate)
-    for attempt_url in attempts:
-        pending = [(attempt_url, "GET", {}, 0)]
+    for attempt_index, attempt_url in enumerate(attempts):
+        if attempt_index == 0 and candidate.method == "POST":
+            pending = [(attempt_url, candidate.method, dict(candidate.data), 0)]
+        else:
+            pending = [(attempt_url, "GET", {}, 0)]
         while pending:
             url, method, data, depth = pending.pop(0)
             if url in seen or len(seen) >= MAX_PROVIDER_STEPS:
@@ -1277,6 +1485,18 @@ async def _resolve_candidate(
             payload = _payload_from_response(response, candidate)
             if payload is not None:
                 return payload
+
+            if depth < 2:
+                posted_url = _posted_response_url(response, url)
+                # Same pattern as provider targets below: queue without
+                # pre-adding to seen (the loop-top seen.add would skip it).
+                if (
+                    posted_url is not None
+                    and posted_url not in seen
+                    and len(seen) < MAX_PROVIDER_STEPS
+                ):
+                    pending.append((posted_url, "GET", {}, depth + 1))
+                    continue
 
             if not is_html_response(response) or depth >= 2:
                 continue
@@ -1439,7 +1659,7 @@ async def _download_entries_async(
                     f"[no-download] {candidate.url}: "
                     "page has no download button or file link"
                 )
-                blocked_key = candidate.url.strip()
+                blocked_key = _blocked_identity(candidate)
                 if blocked_key not in blocked_urls:
                     blocked_urls.add(blocked_key)
                     _remember_blocked(blocked_key)
@@ -1479,7 +1699,7 @@ async def _download_entries_async(
                 if key in processed_candidates:
                     continue
                 processed_candidates.add(key)
-                if candidate.url.strip() in blocked_urls:
+                if _blocked_identity(candidate) in blocked_urls:
                     summary.skipped.append(candidate.url)
                     print(
                         f"[blocked] {candidate.url}: "
@@ -1487,7 +1707,14 @@ async def _download_entries_async(
                     )
                     continue
                 summary.candidates += 1
-                print(f"[download] {candidate.url}", flush=True)
+                if candidate.method == "POST":
+                    print(
+                        f"[download] POST {candidate.url} "
+                        f"({len(candidate.data)} fields)",
+                        flush=True,
+                    )
+                else:
+                    print(f"[download] {candidate.url}", flush=True)
                 await download_one(candidate)
 
         await process_candidates()

@@ -1,5 +1,13 @@
 previous changes logs are wiped.
 
+## 2026-10-13 — Dcrawler POST download forms + POST-returns-URL flow (mbookshelf)
+- New `_extract_download_forms`: same-site download forms become candidates carrying (action, method, fields), replicating the page's own `$.post(action, $(form).serialize())` — hidden inputs, selects, textareas, checked boxes; CSRF tokens included in the POST. GET forms fold fields into the URL; file actions become direct GETs; `formaction`/`formmethod` submitter overrides become variants.
+- `_resolve_candidate` submits form candidates with POST on the same cookie session (Laravel `_token` flow works), and follows bare-URL response bodies with a bounded second GET — the mbookshelf `/download-book` answers with a file-URL string, not the PDF. JSON-quoted and relative URLs handled; HTML/JSON blobs/binary rejected.
+- Shared action URLs no longer collapse: candidate keys and `scan/blocked.txt` use a stable `POST <action> uid=…` identity minus session-rotating CSRF fields, so each book is its own candidate and stays skippable across runs despite fresh tokens.
+- A form action is submitted to, never GET: duplicate GET control-candidates for POST actions are suppressed (no more doomed 419/405 `[unresolved]` noise). `[download]` logs POSTs as `POST <url> (N fields)`.
+- Verified Scrawler needs no change: its control scan already sees the `download-book` action (`[found]`), so the site reaches Dcrawler; the iOS `naingdroidapps://` link is ignored everywhere (non-http scheme).
+- Verified: 38/38 new mocked tests (`/tmp/test_d_form_download.py`, incl. end-to-end POST→URL→save and token-proof blocked skip); regressions 151/151 green.
+
 ## 2026-10-13 — Dcrawler search-loop skip + honest no-download verdict + blocked memory
 - Site-search URLs (`?s=`, `?q=`, `/search/...`, Joomla `searchword`, `keyword(s)`, …) are never scheduled as crawl pages: every search page links more fresh-query searches, an infinite space the visited-set can never close. Post links (`?p=`), pagination (`?page=`) and files are unaffected.
 - Download controls pointing at already-scheduled pages are no longer re-candidated: the page visit itself handles their files, so this kills the re-fetch plus the bogus "failed download" verdict (e.g. blogspot self-links).
