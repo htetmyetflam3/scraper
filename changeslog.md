@@ -6,3 +6,8 @@ previous changes logs are wiped.
 - Removed the 10-page-per-site limit; the chain runs as deep as prefix children exist, guarded by strictly-longer-path + visited checks.
 - Leaf with no PDF/DOCX link or download button gives up the whole domain (`failed_sites`) and moves to the next site; `entry.txt` gains the site root only on a find.
 - Added same-site extensionless download-button detection alongside `extract_file_links`.
+
+## 2026-10-13 — Scrawler query-child support (MAX_QUERY_PAGES=5)
+- Same-path/different-query links (`/?p=124`, `/books/?file=9`) now qualify as children, so query-navigated sites work; path-deepening children are still preferred and unlimited.
+- Query hops capped at 5 per chain: a real file-hosting site shows a download within a few, endless `?page=N` pagination gives up the site instead of hanging.
+- Fixed first-segment lock to distinguish "no lock yet" from "locked to root path" for query seeds.

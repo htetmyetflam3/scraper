@@ -24,6 +24,10 @@ DEFAULT_KEYWORDS = (
 SEARCH_PAGES_PER_KEYWORD = 2
 RESULTS_PER_PAGE = 10
 REQUEST_TIMEOUT = 15.0
+# Same-path query hops (e.g. ?p=1 -> ?p=2, ?page=1 -> ?page=2) are lateral,
+# not tree depth: a real file-hosting site shows a download within a few,
+# so stop after 5 instead of paginating forever. Path-deepening stays unlimited.
+MAX_QUERY_PAGES = 5
 SCRIBD_DOMAIN = "scribd.com"
 HTML_CONTENT_TYPES = frozenset({"text/html", "application/xhtml+xml"})
 
@@ -142,6 +146,27 @@ def _is_prefix_child(current_url: str, candidate_url: str) -> bool:
     )
 
 
+def _is_query_child(current_url: str, candidate_url: str) -> bool:
+    """True when the candidate is the same page path with a different query.
+
+    This covers query-navigated sites such as WordPress plain permalinks
+    (``/?p=123`` -> ``/?p=124``). Both URLs arrive through
+    ``_normalized_page_url``, so tracking keys are already stripped and
+    share/print variants already rejected: tracking-only differences
+    collapse to identical queries and are excluded here.
+    """
+    try:
+        current = urllib.parse.urlsplit(current_url)
+        candidate = urllib.parse.urlsplit(candidate_url)
+    except ValueError:
+        return False
+    if urllib.parse.unquote(
+        current.path or "/"
+    ) != urllib.parse.unquote(candidate.path or "/"):
+        return False
+    return bool(candidate.query) and current.query != candidate.query
+
+
 def _guide_chain(site_root: str, seed: str) -> list[str]:
     """Root plus each ancestor of the search-result path, ending at the seed.
 
@@ -200,7 +225,12 @@ def _child_candidates(
     site_key: str,
     visited: set[str],
 ) -> list[str]:
-    """Same-site anchors that extend the current path, in page order."""
+    """Same-site child anchors: path-deepening first, then query children.
+
+    Each group keeps page order. Path children win because they expand the
+    document tree; query children (``?p=124``, ``?page=2``) are lateral and
+    only followed when no deeper path exists on the page.
+    """
     soup = BeautifulSoup(page_html, "html.parser")
     base_tag = soup.find("base", href=True)
     base_url = (
@@ -208,13 +238,19 @@ def _child_candidates(
         if base_tag
         else page_final_url
     )
-    children: list[str] = []
+    path_children: list[str] = []
+    query_children: list[str] = []
     for anchor in soup.find_all("a", href=True):
         href = anchor.get("href", "")
         if not isinstance(href, str):
             continue
         target = _normalized_page_url(urllib.parse.urljoin(base_url, href), site_key)
-        if target is None or target in visited or target in children:
+        if (
+            target is None
+            or target in visited
+            or target in path_children
+            or target in query_children
+        ):
             continue
         try:
             if FILE_EXTENSION.search(urllib.parse.urlsplit(target).path):
@@ -222,8 +258,10 @@ def _child_candidates(
         except ValueError:
             continue
         if _is_prefix_child(current_url, target):
-            children.append(target)
-    return children
+            path_children.append(target)
+        elif _is_query_child(current_url, target):
+            query_children.append(target)
+    return path_children + query_children
 
 
 def _extract_download_controls(
@@ -300,9 +338,9 @@ def _crawl_site(client: httpx.Client, seed_url: str, visited: set[str]) -> bool:
     then ``example.com/category/``, then ``example.com/category/books/``,
     then keeps expanding to deeper prefix children. Sibling branches such
     as ``example.com/latest/`` or ``example.com/author/`` are never
-    visited. There is no page budget; the chain runs as deep as prefix
-    children exist. A leaf (no deeper child) without a PDF/DOCX link or
-    download button gives up the whole site.
+    visited. Path depth is unlimited; same-path query hops (``?p=124``)
+    are capped at ``MAX_QUERY_PAGES``. A leaf (no deeper child) without
+    a PDF/DOCX link or download button gives up the whole site.
     """
     seed = _normalized_page_url(seed_url)
     if seed is None:
@@ -316,12 +354,13 @@ def _crawl_site(client: httpx.Client, seed_url: str, visited: set[str]) -> bool:
     if site_key is None:
         return False
     root = _site_root(seed)
-    locked_first = _decoded_first_segment(seed)
+    locked_first: str | None = _decoded_first_segment(seed) or None
 
     current_url: str | None = None
     current_html = ""
     current_final = ""
     depth = 0
+    query_hops = 0
 
     def check_downloads(page_html: str, final_url: str) -> bool:
         file_links = extract_file_links(page_html, final_url)
@@ -360,14 +399,9 @@ def _crawl_site(client: httpx.Client, seed_url: str, visited: set[str]) -> bool:
         children = _child_candidates(
             current_html, current_final, current_url, site_key, visited
         )
-        if locked_first:
-            children = [
-                child
-                for child in children
-                if _decoded_first_segment(child) == locked_first
-            ]
-        elif children:
+        if locked_first is None and children:
             locked_first = _decoded_first_segment(children[0])
+        if locked_first is not None:
             children = [
                 child
                 for child in children
@@ -387,6 +421,15 @@ def _crawl_site(client: httpx.Client, seed_url: str, visited: set[str]) -> bool:
                 flush=True,
             )
         next_url = children[0]
+        if not _is_prefix_child(current_url, next_url):
+            query_hops += 1
+            if query_hops > MAX_QUERY_PAGES:
+                print(
+                    f"[leaf] {site_key}: query budget ({MAX_QUERY_PAGES}) "
+                    f"exhausted under {current_url}; giving up site",
+                    flush=True,
+                )
+                return False
         if _is_direct_download(next_url):
             print(f"[found] direct file link: {next_url}", flush=True)
             return True
@@ -445,7 +488,8 @@ def find_entry(api_key: str | None = None) -> list[str]:
     Each keyword uses at most two SerpApi pages. Scribd result URLs are written
     unchanged and are never fetched. Every other domain is tried once: the
     first result's path selects one top-level branch, the crawl walks from
-    the site root down that guided branch as deep as prefix children exist,
+    the site root down that guided branch as deep as prefix children exist
+    (plus at most MAX_QUERY_PAGES same-path query hops such as ?p=124),
     and a leaf without a PDF/DOCX link or download button gives up the
     whole domain. A site's root URL is written only when such a download
     control is found.
