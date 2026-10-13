@@ -41,6 +41,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 SCAN_DIR = REPO_ROOT.parent / "scan"
 ENTRY_FILE = SCAN_DIR / "entry.txt"
 BLOCKED_FILE = SCAN_DIR / "blocked.txt"
+DOWNLOADED_FILE = SCAN_DIR / "downloaded.txt"
 OUTPUT_DIR = REPO_ROOT / "pdfs"
 MAX_SITE_PAGES = 3_000
 REQUEST_TIMEOUT = 30.0
@@ -108,6 +109,7 @@ class DownloadSummary:
     duplicates: list[str] = field(default_factory=list)
     skipped: list[str] = field(default_factory=list)
     no_download: list[str] = field(default_factory=list)
+    downloaded: list[str] = field(default_factory=list)
 
 
 def _hostname(url: str) -> str | None:
@@ -1606,6 +1608,78 @@ def _remember_blocked(url: str, path: Path | None = None) -> None:
         print(f"[blocked-warn] cannot record {url}: {error}")
 
 
+def _memory_identity(candidate: DownloadCandidate) -> str:
+    """Stable cross-run identity for the downloaded-memory: the canonical
+    candidate key with whitespace collapsed (form data can hold newlines)."""
+    return " ".join(_candidate_key(candidate).split())
+
+
+def _scan_output_hashes(output_dir: Path) -> tuple[set[str], int, int]:
+    """sha256 of every real file in the output dir -> (hashes, files, bytes).
+
+    Dotfiles (`.download-*.tmp` leftovers) and subdirectories are ignored.
+    """
+    hashes: set[str] = set()
+    file_count = 0
+    byte_count = 0
+    try:
+        entries = list(output_dir.iterdir())
+    except OSError:
+        return hashes, file_count, byte_count
+    for entry in entries:
+        if entry.name.startswith("."):
+            continue
+        try:
+            if not entry.is_file():
+                continue
+            digest = hashlib.sha256()
+            with entry.open("rb") as handle:
+                for chunk in iter(lambda: handle.read(65536), b""):
+                    digest.update(chunk)
+            hashes.add(digest.hexdigest())
+            file_count += 1
+            byte_count += entry.stat().st_size
+        except OSError:
+            continue
+    return hashes, file_count, byte_count
+
+
+def _load_downloaded_memory(
+    output_dir: Path, path: Path | None = None
+) -> tuple[set[str], set[str], int, int]:
+    """(disk hashes, trusted URL identities, files on disk, disk bytes).
+
+    A remembered URL is trusted only while its bytes still exist on disk,
+    so deleting a file re-arms its download instead of skipping forever.
+    """
+    disk_hashes, file_count, byte_count = _scan_output_hashes(output_dir)
+    try:
+        lines = (path or DOWNLOADED_FILE).read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return disk_hashes, set(), file_count, byte_count
+    trusted: set[str] = set()
+    for line in lines:
+        text = line.strip()
+        if not text or text.startswith("#"):
+            continue
+        digest, _, identity = text.partition(" ")
+        identity = " ".join(identity.split())
+        if len(digest) == 64 and identity and digest in disk_hashes:
+            trusted.add(identity)
+    return disk_hashes, trusted, file_count, byte_count
+
+
+def _remember_downloaded(key: str, digest: str, path: Path | None = None) -> None:
+    """Append a hash + identity line so future runs skip this download."""
+    target = path or DOWNLOADED_FILE
+    try:
+        target.parent.mkdir(parents=True, exist_ok=True)
+        with target.open("a", encoding="utf-8") as handle:
+            handle.write(f"{digest} {key}\n")
+    except OSError as error:
+        print(f"[downloaded-warn] cannot record {key}: {error}")
+
+
 async def _download_entries_async(
     entry_source: str | Path, output_dir: Path
 ) -> DownloadSummary:
@@ -1638,6 +1712,13 @@ async def _download_entries_async(
     processed_candidates: set[str] = set()
     seen_hashes: set[str] = set()
     blocked_urls = _load_blocked_urls()
+    known_hashes, downloaded_urls, disk_files, disk_bytes = _load_downloaded_memory(
+        output_dir
+    )
+    print(
+        f"[known] {disk_files} file(s) ({disk_bytes / 1048576:.1f} MB) on disk, "
+        f"{len(downloaded_urls)} remembered download(s)"
+    )
     async with httpx.AsyncClient(
         follow_redirects=False,
         headers={"Accept": "text/html,application/xhtml+xml,application/pdf,*/*;q=0.8"},
@@ -1671,12 +1752,22 @@ async def _download_entries_async(
                 return
             data, extension, headers, final_url = payload
             digest = hashlib.sha256(data).hexdigest()
+            memory_key = _memory_identity(candidate)
+            if digest in known_hashes:
+                summary.downloaded.append(candidate.url)
+                print(
+                    f"[downloaded] {candidate.url}: "
+                    "identical file already on disk; skipping"
+                )
+                _remember_downloaded(memory_key, digest)
+                return
             if digest in seen_hashes:
                 summary.duplicates.append(candidate.url)
                 print(
                     f"[duplicate] {candidate.url}: "
                     "identical bytes already saved; skipping"
                 )
+                _remember_downloaded(memory_key, digest)
                 return
             seen_hashes.add(digest)
             path, detail = await asyncio.to_thread(
@@ -1694,6 +1785,7 @@ async def _download_entries_async(
                 return
             summary.saved.append(path)
             print(f"[saved] {path.name} ({detail})")
+            _remember_downloaded(memory_key, digest)
 
         async def process_candidates() -> None:
             for key, candidate in list(candidates.items()):
@@ -1705,6 +1797,13 @@ async def _download_entries_async(
                     print(
                         f"[blocked] {candidate.url}: "
                         "had no download on a previous run; skipping"
+                    )
+                    continue
+                if _memory_identity(candidate) in downloaded_urls:
+                    summary.downloaded.append(candidate.url)
+                    print(
+                        f"[downloaded] {candidate.url}: "
+                        "saved on a previous run; skipping"
                     )
                     continue
                 summary.candidates += 1
@@ -1748,6 +1847,7 @@ if __name__ == "__main__":
         f"Finished: {report.sites} site(s), {report.pages:,} page URL(s), "
         f"{report.candidates} candidate(s), {len(report.saved)} saved, "
         f"{len(report.duplicates)} duplicate(s), "
+        f"{len(report.downloaded)} already-downloaded, "
         f"{len(report.skipped)} blocked-skipped, "
         f"{len(report.no_download)} page(s) without download, "
         f"{len(report.unresolved)} unresolved."

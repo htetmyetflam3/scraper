@@ -1,5 +1,13 @@
 previous changes logs are wiped.
 
+## 2026-10-13 — Dcrawler cross-run downloaded-memory (no re-downloads)
+- New `scan/downloaded.txt` memory (`{sha256} {identity}` lines, git-ignored): every save/duplicate/hash-hit records the bytes' hash plus the canonical candidate identity (form-safe: whitespace-collapsed, CSRF-proof).
+- Pre-fetch skip: remembered identities are skipped with `[downloaded] … saved on a previous run` and zero network; skips don't count as candidates.
+- Disk-hash backstop: each run sha256-scans `python/pdfs/` (dotfiles/subdirs ignored) and skips same-bytes arrivals with `[downloaded] … identical file already on disk` — covers rotated CDN URLs and hand-placed files, never writes `(2)` dupes.
+- Disk is ground truth: a remembered URL is trusted only while its hash still exists, so deleting a file re-arms its download; failures/rejections are never recorded.
+- `Finished:` gains an `already-downloaded` count; startup logs `[known] N file(s) (M MB) on disk, K remembered download(s)`.
+- Verified: 22/22 new tests (`/tmp/test_d_downloaded.py`: identity/trust/disk-scan units plus multi-run e2e incl. rotation, deletion, manual adds, in-run `[duplicate]` preserved).
+
 ## 2026-10-13 — Blacklist apkpure.net; Scrawler logs skipped domains
 - The APKPure mirror `apkpure.net` (not just `apkpure.com`) sailed through the guard, got crawled, matched "Download APK" buttons, and polluted `scan/entry.txt`. Added to `APP_DOMAINS`, so both crawlers refuse it everywhere the shared `excluded_site_reason` applies.
 - Scrawler's `find_entry` used to drop excluded seeds silently; it now logs `[skip-domain] <url>`, matching Dcrawler's vocabulary, so blacklist hits are visible in the crawl log.
