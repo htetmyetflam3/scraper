@@ -540,6 +540,8 @@ def find_entry(results_file: str | Path = SEARCH_RESULTS_FILE) -> list[str]:
 
             seed = _normalized_page_url(raw_url)
             if seed is None:
+                if excluded_site_reason(raw_url) is not None:
+                    print(f"[skip-domain] {raw_url}", flush=True)
                 continue
             site_key = _site_key(seed)
             if site_key is None:

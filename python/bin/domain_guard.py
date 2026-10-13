@@ -38,6 +38,7 @@ APP_DOMAINS = frozenset(
         "appstore.com",
         "softonic.com",
         "apkpure.com",
+        "apkpure.net",
         "uptodown.com",
         "apkmirror.com",
         "aptoide.com",

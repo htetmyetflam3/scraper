@@ -1,5 +1,10 @@
 previous changes logs are wiped.
 
+## 2026-10-13 — Blacklist apkpure.net; Scrawler logs skipped domains
+- The APKPure mirror `apkpure.net` (not just `apkpure.com`) sailed through the guard, got crawled, matched "Download APK" buttons, and polluted `scan/entry.txt`. Added to `APP_DOMAINS`, so both crawlers refuse it everywhere the shared `excluded_site_reason` applies.
+- Scrawler's `find_entry` used to drop excluded seeds silently; it now logs `[skip-domain] <url>`, matching Dcrawler's vocabulary, so blacklist hits are visible in the crawl log.
+- Verified: 15/15 new tests (`/tmp/test_apkpure_net.py`: net/com variants, subdomains, case, lookalike non-matches, Scrawler never-crawls/never-enters, Dcrawler entry gate).
+
 ## 2026-10-13 — Phatmal full crawler: library sweep + S3 EPUB downloads + --phatmal
 - Contract captured from the live API: `GET /ebooks?page&limit` (236 books, `hasMore` pages), `GET /ebooks/{slug}`, per-book `files[{url,type,size}]` with `fileUrl`/`fileType` fallback; files are EPUBs on S3 (`phatmal-production…amazonaws.com`).
 - `phatmal.py` now crawls the whole library (or one slug/URL): login → verify → paginate → prefer epub over pdf per book → headerless S3 GET (auth headers would be rejected) → content-sniff (new tolerant `is_epub`, plus pdf/docx) → save as `Title - Author.epub` with unique-name guard into `python/pdfs/`.
