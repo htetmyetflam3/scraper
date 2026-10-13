@@ -357,7 +357,11 @@ def _crawl_site(client: httpx.Client, seed_url: str, visited: set[str]) -> bool:
     query_hops = 0
 
     def check_downloads(page_html: str, final_url: str) -> bool:
-        file_links = extract_file_links(page_html, final_url)
+        file_links = [
+            (url, label)
+            for url, label in extract_file_links(page_html, final_url)
+            if excluded_site_reason(url) is None
+        ]
         if file_links:
             print(
                 f"[found] {len(file_links)} PDF/DOCX link(s) on {final_url}",

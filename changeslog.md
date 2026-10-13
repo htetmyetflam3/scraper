@@ -44,3 +44,7 @@ previous changes logs are wiped.
 ## 2026-10-13 — Append to entry.txt / scribd.txt instead of wiping
 - `find_entry` now preloads existing `scan/entry.txt` and `scan/scribd.txt` (comments and blanks preserved) and appends only new roots/links, deduplicated; re-runs log `already in` plus `[done] X new, Y total` lines.
 - `search_results.json` already appended (`existing + collected`, verified by test) — no change; if a wipe was seen there it came from a stale checkout before the wise-fetch update.
+
+## 2026-10-13 — Exclude archive.org (shared guard) + Scrawler ignores excluded file links
+- `domain_guard.py` gains `ARCHIVE_DOMAINS` (`archive.org`, all subdomains incl. `*.us.archive.org` download hosts): archive.org was never guarded, nothing was lost. Both crawlers honor it — Dcrawler skips its pages and files via its existing 7 guard call sites, no code change there.
+- Scrawler no longer counts file links on excluded domains (archive.org, wiki, video, telegram, github, search) toward a `[found]` verdict; seeds/children on those domains were already never fetched.
