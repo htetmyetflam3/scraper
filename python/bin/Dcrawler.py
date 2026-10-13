@@ -1104,6 +1104,7 @@ async def _crawl_site(
             continue
         discovered.clear()
         children: list[str] | None = None
+        had_candidates = len(candidates)
         try:
             children = await visit_page(page_url)
         except (httpx.HTTPError, ValueError, TypeError) as error:
@@ -1114,6 +1115,15 @@ async def _crawl_site(
         if children is not None:
             fresh_fetched += 1
             journal.append(page_url, children)
+            if (
+                not children
+                and depths.get(page_url, 0) == 0
+                and len(candidates) == had_candidates
+            ):
+                print(
+                    f"[seed-empty] {page_url}: entry page gave no links or "
+                    "downloads; check the seed URL"
+                )
             if replayed and not live_announced:
                 live_announced = True
                 print(
@@ -1878,7 +1888,8 @@ async def _download_entries_async(
     )
     print(
         f"[known] {disk_files} file(s) ({disk_bytes / 1048576:.1f} MB) on disk, "
-        f"{len(downloaded_urls)} remembered download(s)"
+        f"{len(downloaded_urls)} remembered URL(s), "
+        f"{len(known_hashes)} known file-hash(es)"
     )
     async with httpx.AsyncClient(
         follow_redirects=False,

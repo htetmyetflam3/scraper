@@ -1,5 +1,11 @@
 previous changes logs are wiped.
 
+## 2026-10-13 — [seed-empty] warning + [known] hash count (dead-seed UX)
+- `_crawl_site` prints `[seed-empty] <url>: entry page gave no links or downloads; check the seed URL` when a depth-0 page yields zero children and zero candidates — a dead/soft-404 seed now explains itself instead of ending the run in silence. Errored pages keep their `[page-error]` and never trigger it.
+- `[known]` now shows both counts (`N remembered URL(s), M known file-hash(es)`) so hash-only bootstrapped history no longer reads as "0 remembered".
+- No crawl-logic change: queueing/expansion untouched; both edits are logging/display only.
+- Verified: 6/6 new (`/tmp/test_d_seedwarn.py`: empty/soft-404 seeds warn, linked/download/errored seeds quiet); 23/23 + 9/9 suites still green.
+
 ## 2026-10-13 — dedup_pdfs standalone utility (name-based (N) cleanup)
 - New `python/bin/dedup_pdfs.py` (stdlib only, executable, runnable from anywhere, defaults to the repo's `pdfs/`): deletes `name (N).ext` files whose plain `name.ext` exists in the same directory.
 - Safety rules: dry run by default (`--delete` to act); only a trailing ` (digits)` immediately before the extension counts (middle numbers, non-digit parens untouched); numbers >= 1000 skipped as edition years; plain sibling must exist (orphans kept); symlinks skipped; stem matched case-sensitively, extension case-insensitively; per-file log + summary counts.
