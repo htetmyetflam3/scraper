@@ -26,3 +26,11 @@ previous changes logs are wiped.
 - `fetch_results()` now reads the existing JSON first and skips keywords already recorded — new keywords append without re-burning quota on old ones. Corrupt files error out instead of being overwritten.
 - One-time migration: if only the old `python/search_results.json` exists, it is used as the base and merged output goes to `scan/`.
 - `main.py --search` takes optional keyword(s): `--search "pdfများ"` fetches just that keyword (2 pages), bare `--search` uses defaults; multiple keywords allowed in one call.
+
+## 2026-10-13 — Scribd stage: vendored exporter, links file, --scribd
+- Reviewed owner's `modified gitignore` commit (adds `python/scribdl/setup.py` only): purely additive, touches none of my logic, so nothing reverted; fast-forwarded.
+- Replaced all old scribdl scripts (`scribdl.py`, `__init__.py`, both legacy `setup.py`) with themrsami/scribd-downloader @0396d95, vendored byte-identical as `python/scribdl/scribd-downloader.py` (+ upstream README); driven via subprocess through stdin, never modified.
+- New `python/bin/scribd.py` driver (stdlib-only): reads `scan/scribd.txt`, exports each URL to `python/pdfs/` one process per doc, skips non-scribd URLs without spawning, continues past failures.
+- Scrawler now writes scribd result URLs (deduped) to `scan/scribd.txt` instead of mixing them into `entry.txt`.
+- Root + python `pyproject.toml` gain the exporter deps: selenium, pypdf, trio, trio-websocket, typing_extensions, urllib3 pin, websocket-client. System requirement: Google Chrome installed.
+- `main.py --scribd` downloads from the links file; `--scribd "URL"` downloads one document; exit 1 when links were attempted but none succeeded. `--main` still runs search/entry/download only.

@@ -12,9 +12,11 @@ sys.path.insert(0, str(BIN_DIR))
 from Dcrawler import download_entries  # noqa: E402
 from fetch_results import fetch_results  # noqa: E402
 from Scrawler import find_entry  # noqa: E402
+from scribd import download_scribd, read_links_file  # noqa: E402
 from serpapi import SerpApiError  # noqa: E402
 
 USE_ENTRY_FILE: object = object()
+USE_SCRIBD_FILE: object = object()
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -50,6 +52,17 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
     parser.add_argument(
+        "--scribd",
+        nargs="?",
+        const=USE_SCRIBD_FILE,
+        default=None,
+        metavar="SCRIBD_URL",
+        help=(
+            "Download scribd documents from the scribd links file, "
+            "or the given document URL when passed."
+        ),
+    )
+    parser.add_argument(
         "--main",
         action="store_true",
         help="Run search, then entry crawl, then download, in order.",
@@ -66,7 +79,12 @@ def main(argv: list[str] | None = None) -> int:
             find_entry()
             download_entries()
             return 0
-        if args.search is None and not args.entry and args.download is None:
+        if (
+            args.search is None
+            and not args.entry
+            and args.download is None
+            and args.scribd is None
+        ):
             parser.print_usage(sys.stderr)
             return 2
         if args.search is not None:
@@ -81,6 +99,14 @@ def main(argv: list[str] | None = None) -> int:
                 download_entries()
             else:
                 download_entries(args.download)
+        if args.scribd is not None:
+            if args.scribd is USE_SCRIBD_FILE:
+                links = read_links_file()
+            else:
+                links = [args.scribd]
+            summary = download_scribd(links)
+            if links and not summary.downloaded:
+                return 1
     except (SerpApiError, OSError, ValueError) as error:
         print(f"error: {error}", file=sys.stderr)
         return 1

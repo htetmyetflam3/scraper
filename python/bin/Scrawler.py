@@ -11,6 +11,7 @@ import httpx
 from bs4 import BeautifulSoup
 from domain_guard import excluded_site_reason
 from download_links import FILE_EXTENSION, extract_file_links, guard_download_url
+from scribd import SCRIBD_LINKS_FILE
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCAN_DIR = REPO_ROOT.parent / "scan"
@@ -445,8 +446,9 @@ def find_entry(results_file: str | Path = SEARCH_RESULTS_FILE) -> list[str]:
 
     Reads the JSON list previously saved by fetch_results.py (each item
     needs only a ``url`` key). No search API is called here, so crawl
-    testing never burns API quota. Scribd result URLs are written
-    unchanged and are never fetched. Every other domain is tried once: the
+    testing never burns API quota. Scribd result URLs go unchanged into a
+    separate scribd links file and are never fetched. Every other domain
+    is tried once: the
     first result's path selects one top-level branch, the crawl walks from
     the site root down that guided branch as deep as prefix children exist
     (plus at most MAX_QUERY_PAGES same-path query hops such as ?p=124),
@@ -476,6 +478,8 @@ def find_entry(results_file: str | Path = SEARCH_RESULTS_FILE) -> list[str]:
 
     output_lines: list[str] = []
     written_lines: set[str] = set()
+    scribd_lines: list[str] = []
+    written_scribd: set[str] = set()
 
     def add_line(value: str) -> None:
         if value not in written_lines:
@@ -495,7 +499,9 @@ def find_entry(results_file: str | Path = SEARCH_RESULTS_FILE) -> list[str]:
             if not isinstance(raw_url, str) or not raw_url:
                 continue
             if _is_scribd_url(raw_url):
-                add_line(raw_url)
+                if raw_url not in written_scribd:
+                    written_scribd.add(raw_url)
+                    scribd_lines.append(raw_url)
                 print(
                     f"[scribd] kept result {result_number}/{len(search_results)}",
                     flush=True,
@@ -539,6 +545,15 @@ def find_entry(results_file: str | Path = SEARCH_RESULTS_FILE) -> list[str]:
     OUTPUT_FILE.write_text(
         "\n".join(output_lines) + ("\n" if output_lines else ""),
         encoding="utf-8",
+    )
+    SCRIBD_LINKS_FILE.parent.mkdir(parents=True, exist_ok=True)
+    SCRIBD_LINKS_FILE.write_text(
+        "\n".join(scribd_lines) + ("\n" if scribd_lines else ""),
+        encoding="utf-8",
+    )
+    print(
+        f"[scribd] wrote {len(scribd_lines)} link(s) to {SCRIBD_LINKS_FILE}",
+        flush=True,
     )
     return output_lines
 
