@@ -12,7 +12,7 @@ sys.path.insert(0, str(BIN_DIR))
 
 from Dcrawler import download_entries  # noqa: E402
 from fetch_results import fetch_results  # noqa: E402
-from phatmal import login_and_verify  # noqa: E402
+from phatmal import login_and_verify, probe_content, slug_from_input  # noqa: E402
 from Scrawler import find_entry  # noqa: E402
 from scribd import download_scribd, read_links_file  # noqa: E402
 from serpapi import SerpApiError  # noqa: E402
@@ -77,6 +77,15 @@ def build_parser() -> argparse.ArgumentParser:
             "and verify the session works."
         ),
     )
+    parser.add_argument(
+        "--phatmal-probe",
+        default=None,
+        metavar="SLUG_OR_URL",
+        help=(
+            "Log in to the phatmal API and probe the likely book endpoints "
+            "for a slug or /ebook/<slug> URL, printing each answer's shape."
+        ),
+    )
     return parser
 
 
@@ -95,6 +104,7 @@ def main(argv: list[str] | None = None) -> int:
             and args.download is None
             and args.scribd is None
             and not args.phatmal_check
+            and args.phatmal_probe is None
         ):
             parser.print_usage(sys.stderr)
             return 2
@@ -120,6 +130,16 @@ def main(argv: list[str] | None = None) -> int:
                 return 1
         if args.phatmal_check:
             if not asyncio.run(login_and_verify()):
+                return 1
+        if args.phatmal_probe is not None:
+            slug = slug_from_input(args.phatmal_probe)
+            if not slug:
+                print(
+                    "error: --phatmal-probe needs a slug or /ebook/<slug> URL",
+                    file=sys.stderr,
+                )
+                return 2
+            if not asyncio.run(probe_content(slug)):
                 return 1
     except (SerpApiError, OSError, ValueError) as error:
         print(f"error: {error}", file=sys.stderr)

@@ -176,5 +176,133 @@ async def login_and_verify() -> bool:
         return await api_me(client, api_key, token) is not None
 
 
+# --- content probing -----------------------------------------------------------
+# The book-list/detail endpoints are still unknown (mobile network capture
+# is impractical), so --phatmal-probe tries the likely REST paths with the
+# real session and prints each answer's SHAPE (keys, not values). One run
+# reveals the contract; then the real crawl gets built on top.
+
+DETAIL_PATH_TEMPLATES = (
+    "ebooks/{slug}",
+    "ebook/{slug}",
+    "books/{slug}",
+    "book/{slug}",
+    "library/{slug}",
+    "novels/{slug}",
+)
+LIST_PATHS = ("ebooks", "books", "library", "ebooks/list")
+
+_SECRET_KEY_HINTS = (
+    "token",
+    "password",
+    "secret",
+    "passwd",
+    "pwd",
+    "authorization",
+    "cookie",
+    "session",
+)
+
+
+def slug_from_input(value: str) -> str:
+    """Book slug from a bare slug or a full /ebook/<slug> URL."""
+    text = value.strip()
+    if "://" in text:
+        text = text.split("?", 1)[0].split("#", 1)[0].rstrip("/").rsplit("/", 1)[-1]
+    text = text.strip().strip("/")
+    if not text or not all(char.isalnum() or char in "-_.~%" for char in text):
+        return ""
+    return text
+
+
+def describe_shape(value: object, _depth: int = 0) -> str:
+    """Compact structure summary: keys and scalar previews, secrets redacted."""
+    if _depth > 3:
+        return "…"
+    if value is None:
+        return "null"
+    if value is True:
+        return "true"
+    if value is False:
+        return "false"
+    if isinstance(value, (int, float)):
+        return str(value)
+    if isinstance(value, str):
+        if len(value) <= 48:
+            return repr(value)
+        return f"{value[:44]!r}…[{len(value)}]"
+    if isinstance(value, list):
+        if not value:
+            return "[]"
+        head = describe_shape(value[0], _depth + 1)
+        return f"[{head} x{len(value)}]" if len(value) > 1 else f"[{head}]"
+    if isinstance(value, dict):
+        if not value:
+            return "{}"
+        parts = []
+        for key in list(value)[:8]:
+            name = str(key)
+            if any(hint in name.lower() for hint in _SECRET_KEY_HINTS):
+                parts.append(f"{name}: <redacted>")
+            else:
+                parts.append(f"{name}: {describe_shape(value[key], _depth + 1)}")
+        if len(value) > 8:
+            parts.append(f"+{len(value) - 8} more")
+        return "{" + ", ".join(parts) + "}"
+    return type(value).__name__
+
+
+async def api_get_json(
+    client: httpx.AsyncClient, api_key: str, token: str, path: str
+) -> tuple[int, object | None]:
+    """Authorized GET; returns (status, parsed JSON or None)."""
+    try:
+        response = await client.get(
+            f"{API_BASE}/{path.lstrip('/')}",
+            headers=_api_headers(api_key, token),
+            timeout=REQUEST_TIMEOUT,
+        )
+    except (httpx.HTTPError, ValueError) as error:
+        print(f"[phatmal] GET {path} failed: {error}")
+        return -1, None
+    if response.status_code != 200:
+        return response.status_code, None
+    try:
+        return 200, response.json()
+    except ValueError:
+        print(f"[phatmal] GET {path} answered non-JSON")
+        return 200, None
+
+
+async def probe_content(slug: str) -> bool:
+    """Try the likely content endpoints with a fresh session; log shapes."""
+    config = load_api_config()
+    if config is None:
+        return False
+    email, password, api_key = config
+    async with httpx.AsyncClient(follow_redirects=True) as client:
+        token = await api_login(client, email, password, api_key)
+        if token is None:
+            return False
+        me = await api_me(client, api_key, token)
+        if me is None:
+            return False
+        print(f"[phatmal] me shape: {describe_shape(me)[:800]}")
+        hits: list[str] = []
+        probes = [t.format(slug=slug) for t in DETAIL_PATH_TEMPLATES] + list(LIST_PATHS)
+        for path in probes:
+            status, payload = await api_get_json(client, api_key, token, path)
+            if status == 200 and payload is not None:
+                hits.append(path)
+                print(f"[phatmal] HIT {path}: {describe_shape(payload)[:1500]}")
+            else:
+                print(f"[phatmal] miss {path} (HTTP {status})")
+    if hits:
+        print(f"[phatmal] probe found {len(hits)} endpoint(s): {', '.join(hits)}")
+        return True
+    print("[phatmal] probe found nothing; paste this log for the next step")
+    return False
+
+
 if __name__ == "__main__":
     raise SystemExit(0 if asyncio.run(login_and_verify()) else 1)

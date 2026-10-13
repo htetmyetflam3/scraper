@@ -1,5 +1,11 @@
 previous changes logs are wiped.
 
+## 2026-10-13 — Phatmal probe: endpoint sweep + shape logging + --phatmal-probe
+- `phatmal.py` gains content discovery: `probe_content` logs in, verifies `/auth/me`, then sweeps 6 detail-path guesses + 4 list paths with the real session, printing each hit's JSON SHAPE (keys/previews, secrets redacted, strings truncated) instead of full bodies.
+- `slug_from_input` accepts bare slugs or full `/ebook/<slug>` URLs (validated charset); `describe_shape` caps depth/keys/length for pastable logs.
+- `main.py` gains `--phatmal-probe SLUG_OR_URL` (exit 0 on any hit); `.env.example` documents `PHATMAL_*`.
+- Verified: 24/24 new tests (`/tmp/test_phatmal_probe.py`); auth suite still 22/22.
+
 ## 2026-10-13 — Phatmal API driver v1: login + session verify + --phatmal-check
 - New `python/bin/phatmal.py`: the Expo SPA serves an empty shell, so this drives `https://api.phatmal.com/api` directly. `api_login` POSTs `PHATMAL_EMAIL`/`PHATMAL_PASSWORD` with the `x-api-key` header (from `PHATMAL_API_KEY`), tolerant-extracts the Bearer JWT from any common response shape, and `api_me` proves the session via `GET /api/auth/me`. App-like headers (Accept/Referer/mobile UA) on every call; secrets never logged, misses log key names for diagnosis.
 - `main.py` gains `--phatmal-check` (exit 0/1) so the login can be tested from the real environment.
