@@ -16,6 +16,7 @@ import tempfile
 import time
 import urllib.parse
 import xml.etree.ElementTree as ET
+from collections import deque
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from email.message import Message
@@ -100,6 +101,7 @@ class DownloadSummary:
     candidates: int = 0
     saved: list[Path] = field(default_factory=list)
     unresolved: list[str] = field(default_factory=list)
+    duplicates: list[str] = field(default_factory=list)
     skipped: list[str] = field(default_factory=list)
 
 
@@ -630,7 +632,12 @@ async def _crawl_site(
     candidates: dict[str, DownloadCandidate],
     process_candidates: Callable[[], Awaitable[None]],
 ) -> int:
-    """Crawl one site depth-first, downloading each page's files before continuing."""
+    """Crawl one site breadth-first, expanding every sibling branch to its leaves.
+
+    Starts at the site root(s) plus sitemap entry points, visits each level
+    before descending, and fetches every scheduled URL exactly once, up to
+    MAX_SITE_PAGES. Each page's files are downloaded before continuing.
+    """
     site_key = _site_key(seed_urls[0])
     if site_key is None:
         return 0
@@ -654,10 +661,13 @@ async def _crawl_site(
             if cleaned:
                 _add_candidate(candidates, cleaned)
 
-    stack: list[str] = []
+    queue: deque[str] = deque()
     scheduled: set[str] = set()
+    depths: dict[str, int] = {}
+    cap_logged = False
 
-    def schedule(raw_url: str) -> None:
+    def schedule(raw_url: str, depth: int = 0) -> None:
+        nonlocal cap_logged
         provider_url = _provider_url(raw_url)
         if provider_url:
             url, provider = provider_url
@@ -672,19 +682,30 @@ async def _crawl_site(
                 if cleaned:
                     _add_candidate(candidates, cleaned)
             return
-        if normalized in scheduled or len(scheduled) >= MAX_SITE_PAGES:
+        if normalized in scheduled:
+            return
+        if len(scheduled) >= MAX_SITE_PAGES:
+            if not cap_logged:
+                cap_logged = True
+                print(
+                    f"[cap] {site_key}: {MAX_SITE_PAGES:,}-URL limit reached; "
+                    "remaining branches skipped",
+                    flush=True,
+                )
             return
         scheduled.add(normalized)
-        stack.append(normalized)
+        depths[normalized] = depth
+        queue.append(normalized)
 
-    for sitemap_page in reversed(sitemap_pages):
-        schedule(sitemap_page)
-    for seed in reversed(seed_urls):
-        schedule(seed)
+    for seed in seed_urls:
+        schedule(seed, 0)
+    for sitemap_page in sitemap_pages:
+        schedule(sitemap_page, 0)
     await process_candidates()
 
     async def visit_page(page_url: str) -> None:
-        print(f"[page] {page_url}", flush=True)
+        depth = depths.get(page_url, 0)
+        print(f"[page] depth={depth} {page_url}", flush=True)
         response = await client.get(
             page_url,
             follow_redirects=False,
@@ -704,7 +725,7 @@ async def _crawl_site(
                     if cleaned:
                         _add_candidate(candidates, cleaned)
                 else:
-                    schedule(target)
+                    schedule(target, depth)
             return
 
         if response.status_code != 200:
@@ -739,11 +760,11 @@ async def _crawl_site(
         page_html = response.text
         _add_page_downloads(candidates, page_html, str(response.url), site_key)
         next_pages = _sitemap_urls_from_page(page_html, str(response.url), site_key)
-        for next_url in reversed(next_pages):
-            schedule(next_url)
+        for next_url in next_pages:
+            schedule(next_url, depth + 1)
 
-    while stack:
-        page_url = stack.pop()
+    while queue:
+        page_url = queue.popleft()
         try:
             await visit_page(page_url)
         except (httpx.HTTPError, ValueError, TypeError) as error:
@@ -1293,6 +1314,7 @@ async def _download_entries_async(
         return summary
 
     processed_candidates: set[str] = set()
+    seen_hashes: set[str] = set()
     async with httpx.AsyncClient(
         follow_redirects=False,
         headers={"Accept": "text/html,application/xhtml+xml,application/pdf,*/*;q=0.8"},
@@ -1314,6 +1336,15 @@ async def _download_entries_async(
                 print(f"[unresolved] {candidate.url}: {reason}")
                 return
             data, extension, headers, final_url = payload
+            digest = hashlib.sha256(data).hexdigest()
+            if digest in seen_hashes:
+                summary.duplicates.append(candidate.url)
+                print(
+                    f"[duplicate] {candidate.url}: "
+                    "identical bytes already saved; skipping"
+                )
+                return
+            seen_hashes.add(digest)
             path, detail = await asyncio.to_thread(
                 _save_payload,
                 data,
@@ -1367,5 +1398,6 @@ if __name__ == "__main__":
     print(
         f"Finished: {report.sites} site(s), {report.pages:,} page URL(s), "
         f"{report.candidates} candidate(s), {len(report.saved)} saved, "
+        f"{len(report.duplicates)} duplicate(s), "
         f"{len(report.unresolved)} unresolved."
     )

@@ -35,6 +35,11 @@ previous changes logs are wiped.
 - Root + python `pyproject.toml` gain the exporter deps: selenium, pypdf, trio, trio-websocket, typing_extensions, urllib3 pin, websocket-client. System requirement: Google Chrome installed.
 - `main.py --scribd` downloads from the links file; `--scribd "URL"` downloads one document; exit 1 when links were attempted but none succeeded. `--main` still runs search/entry/download only.
 
+## 2026-10-13 — Dcrawler root-expanding BFS + duplicate guards
+- `_crawl_site` restructured from stack-DFS to breadth-first root expansion: seeds first, then every sibling branch level by level to its leaves, each URL fetched exactly once, 3000-URL cap with a one-time `[cap]` log, `[page] depth=N` progress lines. Sitemap pre-scan/guard and per-page downloads unchanged.
+- Identical file bytes now saved once per run (sha256 dedupe in `download_one`): repeats log `[duplicate]` and count in the `Finished:` line instead of writing `name (2).pdf`.
+- `guard_download_url` canonicalizes scheme/host (lowercase + IDNA; path case, userinfo, port preserved), so `http`/`https` and `WWW`/`www` variants share one identity across all three pipeline stages.
+
 ## 2026-10-13 — API key reads repo-root .env
 - `fetch_results.py` looked for `.env` under `python/`; it now reads the repo-root `.env` next to `main.py` (env var still wins). Only reader, one-line fix.
 

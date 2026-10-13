@@ -26,15 +26,21 @@ TRACKING_QUERY_KEYS = frozenset({"fbclid", "gclid", "dclid", "msclkid", "yclid"}
 def guard_download_url(url: str) -> str | None:
     """Reject share/comment/print variants and strip fragments and tracking keys.
 
-    Passing this guard does not prove that a response contains a file. The
-    file-link extractor checks the path; PDF bytes are checked separately.
+    Scheme and host are lowercased (IDNA-encoded) so textual variants of one
+    URL share a single identity; path case, userinfo, port and kept queries
+    are preserved. Passing this guard does not prove that a response
+    contains a file. The file-link extractor checks the path; PDF bytes are
+    checked separately.
     """
     try:
         parts = urllib.parse.urlsplit(url)
         if parts.scheme.lower() not in ("http", "https") or not parts.netloc:
             return None
-        parts.port  # reject malformed ports before a link reaches an HTTP client
+        host = (parts.hostname or "").lower()
+        port = parts.port  # reject malformed ports before a link reaches an HTTP client
     except ValueError:
+        return None
+    if not host:
         return None
     query = urllib.parse.parse_qsl(parts.query, keep_blank_values=True)
     if any(key.lower() in NON_DOWNLOAD_QUERY_KEYS for key, _ in query):
@@ -49,8 +55,19 @@ def guard_download_url(url: str) -> str | None:
         if len(kept) == len(query)
         else urllib.parse.urlencode(kept, doseq=True)
     )
+    try:
+        idna_host = host.encode("idna").decode("ascii")
+    except UnicodeError:
+        idna_host = host
+    if ":" in idna_host and not idna_host.startswith("["):
+        idna_host = f"[{idna_host}]"
+    netloc = idna_host
+    if "@" in parts.netloc:
+        netloc = parts.netloc.rsplit("@", 1)[0] + "@" + netloc
+    if port is not None:
+        netloc = f"{netloc}:{port}"
     return urllib.parse.urlunsplit(
-        parts._replace(path=parts.path or "/", query=cleaned_query, fragment="")
+        (parts.scheme.lower(), netloc, parts.path or "/", cleaned_query, "")
     )
 
 
