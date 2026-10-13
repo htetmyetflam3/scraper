@@ -1,5 +1,10 @@
 previous changes logs are wiped.
 
+## 2026-10-13 — Single-site runs uncapped (no 3000 limit, no size skip)
+- `_crawl_site` takes `max_pages` (default 3000); the caller passes `None` when the run holds exactly one site — a URL arg or a 1-line entry file — so one specified site grinds to its last page. Multi-site file runs stay capped per site per run.
+- Uncapped mode also disables the sitemap-size skip (`large_site_reason` gets 0, its built-in off switch) and logs `[nocap] <site>: single-site run, no page limit`.
+- Verified: 11/11 new tests (`/tmp/test_d_nocap.py`: uncapped 8-chain vs 3000-exact default proven with a 3005-chain, gate on/off, forwarder, caller URL/1-line/multi-line); full Dcrawler regression re-green 21/21 + 22/22 + 15/15 (test fakes updated for the new kwarg).
+
 ## 2026-10-13 — Dcrawler pause/resume crawl journal
 - New per-site journal `scan/crawl-<site>.jsonl` (git-ignored): every finished page appends `{"u": url, "c": [discovered children]}`, flushed per line, so Ctrl+C / git-pull kills lose at most the page in flight.
 - Reruns replay journaled pages with zero network (`[resume] … replaying them`, then `[resume] … continuing live from <url>`) and continue where the last run stopped; Ctrl+C now prints `[paused] … rerun to resume` (exit 130) instead of a traceback.

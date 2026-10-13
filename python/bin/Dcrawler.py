@@ -739,8 +739,13 @@ def _robots_sitemaps(client: httpx.Client, seed_url: str, site_key: str) -> list
     return []
 
 
-def _sitemap_scan(seed_url: str) -> tuple[str | None, list[str], list[str]]:
-    """Use the retained sitemap guard and return same-site pages/provider files."""
+def _sitemap_scan(
+    seed_url: str, max_pages: int | None = MAX_SITE_PAGES
+) -> tuple[str | None, list[str], list[str]]:
+    """Use the retained sitemap guard and return same-site pages/provider files.
+
+    max_pages=None disables the large-site skip (single-site runs).
+    """
     site_key = _site_key(seed_url)
     if site_key is None:
         return None, [], []
@@ -795,7 +800,7 @@ def _sitemap_scan(seed_url: str) -> tuple[str | None, list[str], list[str]]:
             seed_url,
             fetch_sitemap,
             declared_sitemaps=sitemap_candidates,
-            max_pages=MAX_SITE_PAGES,
+            max_pages=max_pages if max_pages is not None else 0,
             allow_url=lambda url: _site_key(url) == site_key,
         )
 
@@ -924,21 +929,25 @@ async def _crawl_site(
     seed_urls: list[str],
     candidates: dict[str, DownloadCandidate],
     process_candidates: Callable[[], Awaitable[None]],
+    max_pages: int | None = MAX_SITE_PAGES,
 ) -> int:
     """Crawl one site breadth-first, expanding every sibling branch to its leaves.
 
     Starts at the site root(s) plus sitemap entry points, visits each level
-    before descending, and fetches up to MAX_SITE_PAGES fresh URLs per run.
-    Finished pages are journaled, so reruns replay past them without network
-    and continue where the previous run stopped. Each page's files are
-    downloaded before continuing.
+    before descending, and fetches up to max_pages fresh URLs per run.
+    max_pages=None removes the limit and the sitemap-size skip (single-site
+    runs). Finished pages are journaled, so reruns replay past them without
+    network and continue where the previous run stopped. Each page's files
+    are downloaded before continuing.
     """
     site_key = _site_key(seed_urls[0])
     if site_key is None:
         return 0
+    if max_pages is None:
+        print(f"[nocap] {site_key}: single-site run, no page limit")
     try:
         sitemap_reason, sitemap_pages, sitemap_downloads = await asyncio.to_thread(
-            _sitemap_scan, seed_urls[0]
+            _sitemap_scan, seed_urls[0], max_pages=max_pages
         )
     except Exception as error:
         sitemap_reason, sitemap_pages, sitemap_downloads = None, [], []
@@ -995,11 +1004,15 @@ async def _crawl_site(
         # journal and the next run can continue them instead of losing them.
         discovered.append(normalized)
         journaled = normalized in done
-        if not journaled and fresh_scheduled >= MAX_SITE_PAGES:
+        if (
+            not journaled
+            and max_pages is not None
+            and fresh_scheduled >= max_pages
+        ):
             if not cap_logged:
                 cap_logged = True
                 print(
-                    f"[cap] {site_key}: {MAX_SITE_PAGES:,}-URL limit reached "
+                    f"[cap] {site_key}: {max_pages:,}-URL limit reached "
                     "this run; rerun to continue",
                     flush=True,
                 )
@@ -1942,9 +1955,16 @@ async def _download_entries_async(
                 await download_one(candidate)
 
         await process_candidates()
+        single_site = len(sites) == 1
         for seed_urls in sites.values():
             await ensure_logged_in_async(client, seed_urls[0])
-            count = await _crawl_site(client, seed_urls, candidates, process_candidates)
+            count = await _crawl_site(
+                client,
+                seed_urls,
+                candidates,
+                process_candidates,
+                max_pages=None if single_site else MAX_SITE_PAGES,
+            )
             summary.pages += count
             print(f"[site] {seed_urls[0]}: checked {count:,} page URL(s)")
             await process_candidates()
