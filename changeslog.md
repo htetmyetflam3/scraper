@@ -1,5 +1,10 @@
 previous changes logs are wiped.
 
+## 2026-10-13 — dedup_pdfs standalone utility (name-based (N) cleanup)
+- New `python/bin/dedup_pdfs.py` (stdlib only, executable, runnable from anywhere, defaults to the repo's `pdfs/`): deletes `name (N).ext` files whose plain `name.ext` exists in the same directory.
+- Safety rules: dry run by default (`--delete` to act); only a trailing ` (digits)` immediately before the extension counts (middle numbers, non-digit parens untouched); numbers >= 1000 skipped as edition years; plain sibling must exist (orphans kept); symlinks skipped; stem matched case-sensitively, extension case-insensitively; per-file log + summary counts.
+- Verified: 14/14 (`/tmp/test_dedup_names.py`: dry/delete, ext case, middle numbers, year guard, chains, orphans, stem case, same-dir recursion, missing dir).
+
 ## 2026-10-13 — History bootstrap from disk on startup
 - `_load_downloaded_memory` now appends hash-only lines (sorted, flushed at once) for on-disk files missing from `scan/downloaded.txt`, then loads — so pre-history downloads are listed automatically and archiving the disk right after a run never orphans them. Announces `[history] listed N file(s) from disk`; idempotent and append-only (existing lines untouched).
 - Bare files yield hashes, not URL identities, so bootstrapped lines skip by hash on first meeting and self-heal the URL identity then (later runs pre-skip with zero network). In-memory index stays hash sets (O(1)); only the file is kept sorted for humans.
