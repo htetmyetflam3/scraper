@@ -1,5 +1,13 @@
 previous changes logs are wiped.
 
+## 2026-10-13 — Dcrawler pause/resume crawl journal
+- New per-site journal `scan/crawl-<site>.jsonl` (git-ignored): every finished page appends `{"u": url, "c": [discovered children]}`, flushed per line, so Ctrl+C / git-pull kills lose at most the page in flight.
+- Reruns replay journaled pages with zero network (`[resume] … replaying them`, then `[resume] … continuing live from <url>`) and continue where the last run stopped; Ctrl+C now prints `[paused] … rerun to resume` (exit 130) instead of a traceback.
+- The 3000-URL cap is now a per-run fresh-page budget (`[cap] … this run; rerun to continue`): big sites grind forward a further 3000 pages each run instead of re-crawling the same head forever. Cap-cut branches are journaled as discovered (not lost).
+- Retry rules: non-200 pages and page-errors are never journaled (retried next run); redirects/doc-pages journal normally; corrupt journal lines are skipped.
+- New `--fresh` (`main.py --download --fresh`, `--main --fresh`, `Dcrawler.py --fresh [src]`): wipes journals to revisit every page — saved files are still skipped via `scan/downloaded.txt`, never re-downloaded.
+- Verified: 21/21 new tests (`/tmp/test_d_resume.py`: journal round-trip/corruption/clear units plus real-`_crawl_site` two-run e2e: pure replay, cap-continue with zero refetch overlap, 500-retry, doc-page, redirect chain).
+
 ## 2026-10-13 — Dcrawler cross-run downloaded-memory (no re-downloads)
 - New `scan/downloaded.txt` memory (`{sha256} {identity}` lines, git-ignored): every save/duplicate/hash-hit records the bytes' hash plus the canonical candidate identity (form-safe: whitespace-collapsed, CSRF-proof).
 - Pre-fetch skip: remembered identities are skipped with `[downloaded] … saved on a previous run` and zero network; skips don't count as candidates.

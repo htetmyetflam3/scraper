@@ -839,6 +839,86 @@ def _sitemap_urls_from_page(page_html: str, page_url: str, site_key: str) -> lis
     return list(dict.fromkeys(found))
 
 
+def _journal_path(site_key: str) -> Path:
+    """Per-site crawl journal: finished pages + their children, as JSONL."""
+    safe = re.sub(r"[^A-Za-z0-9]+", "_", site_key).strip("_") or "site"
+    return SCAN_DIR / f"crawl-{safe}.jsonl"
+
+
+def _load_journal(site_key: str) -> tuple[set[str], dict[str, list[str]]]:
+    """(finished page URLs, page -> children). Corrupt lines are skipped so a
+    kill mid-write never breaks the next run."""
+    done: set[str] = set()
+    children: dict[str, list[str]] = {}
+    try:
+        lines = _journal_path(site_key).read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return done, children
+    for line in lines:
+        try:
+            record = json.loads(line)
+        except ValueError:
+            continue
+        if not isinstance(record, dict):
+            continue
+        url = record.get("u")
+        links = record.get("c")
+        if not isinstance(url, str) or not isinstance(links, list):
+            continue
+        clean = [link for link in links if isinstance(link, str)]
+        done.add(url)
+        children[url] = clean
+    return done, children
+
+
+class _CrawlJournal:
+    """Append-only per-site journal; every line is flushed so Ctrl+C and kills
+    lose at most the page in flight (which is simply retried next run)."""
+
+    def __init__(self, site_key: str) -> None:
+        self.handle = None
+        try:
+            path = _journal_path(site_key)
+            path.parent.mkdir(parents=True, exist_ok=True)
+            self.handle = path.open("a", encoding="utf-8")
+        except OSError as error:
+            print(f"[journal-warn] {site_key}: {error}; continuing without resume")
+
+    def append(self, url: str, children: list[str]) -> None:
+        if self.handle is None:
+            return
+        try:
+            self.handle.write(json.dumps({"u": url, "c": children}) + "\n")
+            self.handle.flush()
+        except OSError as error:
+            print(f"[journal-warn] cannot record {url}: {error}")
+            self.handle = None
+
+    def close(self) -> None:
+        if self.handle is not None:
+            try:
+                self.handle.close()
+            except OSError:
+                pass
+            self.handle = None
+
+
+def _clear_journals() -> int:
+    """Delete every crawl journal for --fresh; returns how many were removed."""
+    removed = 0
+    try:
+        journals = sorted(SCAN_DIR.glob("crawl-*.jsonl"))
+    except OSError:
+        return 0
+    for path in journals:
+        try:
+            path.unlink()
+            removed += 1
+        except OSError as error:
+            print(f"[journal-warn] cannot remove {path.name}: {error}")
+    return removed
+
+
 async def _crawl_site(
     client: httpx.AsyncClient,
     seed_urls: list[str],
@@ -848,8 +928,10 @@ async def _crawl_site(
     """Crawl one site breadth-first, expanding every sibling branch to its leaves.
 
     Starts at the site root(s) plus sitemap entry points, visits each level
-    before descending, and fetches every scheduled URL exactly once, up to
-    MAX_SITE_PAGES. Each page's files are downloaded before continuing.
+    before descending, and fetches up to MAX_SITE_PAGES fresh URLs per run.
+    Finished pages are journaled, so reruns replay past them without network
+    and continue where the previous run stopped. Each page's files are
+    downloaded before continuing.
     """
     site_key = _site_key(seed_urls[0])
     if site_key is None:
@@ -864,6 +946,13 @@ async def _crawl_site(
     if sitemap_reason:
         print(f"[skip-large] {seed_urls[0]}: {sitemap_reason}")
         return 0
+    done, journal_children = _load_journal(site_key)
+    journal = _CrawlJournal(site_key)
+    if done:
+        print(
+            f"[resume] {site_key}: {len(done):,} page(s) finished on earlier "
+            "run(s); replaying them without network"
+        )
 
     for url in sitemap_downloads:
         provider = _provider_kind(url)
@@ -877,10 +966,15 @@ async def _crawl_site(
     queue: deque[str] = deque()
     scheduled: set[str] = set()
     depths: dict[str, int] = {}
+    discovered: list[str] = []
     cap_logged = False
+    fresh_scheduled = 0
+    fresh_fetched = 0
+    replayed = 0
+    live_announced = False
 
     def schedule(raw_url: str, depth: int = 0) -> None:
-        nonlocal cap_logged
+        nonlocal cap_logged, fresh_scheduled
         provider_url = _provider_url(raw_url)
         if provider_url:
             url, provider = provider_url
@@ -897,16 +991,22 @@ async def _crawl_site(
             return
         if normalized in scheduled:
             return
-        if len(scheduled) >= MAX_SITE_PAGES:
+        # Recorded before the cap check so cap-cut branches stay in the
+        # journal and the next run can continue them instead of losing them.
+        discovered.append(normalized)
+        journaled = normalized in done
+        if not journaled and fresh_scheduled >= MAX_SITE_PAGES:
             if not cap_logged:
                 cap_logged = True
                 print(
-                    f"[cap] {site_key}: {MAX_SITE_PAGES:,}-URL limit reached; "
-                    "remaining branches skipped",
+                    f"[cap] {site_key}: {MAX_SITE_PAGES:,}-URL limit reached "
+                    "this run; rerun to continue",
                     flush=True,
                 )
             return
         scheduled.add(normalized)
+        if not journaled:
+            fresh_scheduled += 1
         depths[normalized] = depth
         queue.append(normalized)
 
@@ -916,7 +1016,10 @@ async def _crawl_site(
         schedule(sitemap_page, 0)
     await process_candidates()
 
-    async def visit_page(page_url: str) -> None:
+    async def visit_page(page_url: str) -> list[str] | None:
+        """Fetch one page; returns discovered children, or None when the page
+        must be retried (non-200), so transient failures are never
+        journaled done."""
         depth = depths.get(page_url, 0)
         print(f"[page] depth={depth} {page_url}", flush=True)
         response = await client.get(
@@ -939,10 +1042,10 @@ async def _crawl_site(
                         _add_candidate(candidates, cleaned)
                 else:
                     schedule(target, depth)
-            return
+            return list(discovered)
 
         if response.status_code != 200:
-            return
+            return None
         content_type = response.headers.get("content-type", "").split(";", 1)[0]
         content_type_lower = content_type.strip().lower()
         html_body = content_type_lower in {
@@ -968,7 +1071,7 @@ async def _crawl_site(
                         response_url=str(response.url),
                         headers=dict(response.headers),
                     )
-            return
+            return []
 
         page_html = response.text
         _add_page_downloads(
@@ -977,18 +1080,36 @@ async def _crawl_site(
         next_pages = _sitemap_urls_from_page(page_html, str(response.url), site_key)
         for next_url in next_pages:
             schedule(next_url, depth + 1)
+        return list(discovered)
 
     while queue:
         page_url = queue.popleft()
+        if page_url in done:
+            for child in journal_children.get(page_url, []):
+                schedule(child, depths.get(page_url, 0) + 1)
+            replayed += 1
+            continue
+        discovered.clear()
+        children: list[str] | None = None
         try:
-            await visit_page(page_url)
+            children = await visit_page(page_url)
         except (httpx.HTTPError, ValueError, TypeError) as error:
             print(f"[page-error] {page_url}: {error}")
         except Exception as error:
             print(f"[page-error] {page_url}: {type(error).__name__}: {error}")
         await process_candidates()
+        if children is not None:
+            fresh_fetched += 1
+            journal.append(page_url, children)
+            if replayed and not live_announced:
+                live_announced = True
+                print(
+                    f"[resume] {site_key}: replayed {replayed:,} journaled "
+                    f"page(s); continuing live from {page_url}"
+                )
 
-    return len(scheduled)
+    journal.close()
+    return fresh_fetched
 
 
 def _drive_ids(url: str) -> list[str]:
@@ -1681,9 +1802,12 @@ def _remember_downloaded(key: str, digest: str, path: Path | None = None) -> Non
 
 
 async def _download_entries_async(
-    entry_source: str | Path, output_dir: Path
+    entry_source: str | Path, output_dir: Path, fresh: bool = False
 ) -> DownloadSummary:
     summary = DownloadSummary()
+    if fresh:
+        removed = _clear_journals()
+        print(f"[fresh] removed {removed} crawl journal(s); starting over")
     source = os.fspath(entry_source).strip()
     parts = urllib.parse.urlsplit(source)
     if parts.scheme.lower() in {"http", "https"} and parts.netloc:
@@ -1830,19 +1954,29 @@ async def _download_entries_async(
 def download_entries(
     entry_source: str | Path = ENTRY_FILE,
     output_dir: str | Path = OUTPUT_DIR,
+    fresh: bool = False,
 ) -> DownloadSummary:
-    """Process one site or entry-file sites sequentially, saving each file in turn."""
-    return asyncio.run(_download_entries_async(entry_source, Path(output_dir)))
+    """Process one site or entry-file sites sequentially, saving each file in turn.
+
+    fresh=True wipes the crawl journals so every page is revisited; saved
+    files are still skipped via the downloaded-memory.
+    """
+    return asyncio.run(_download_entries_async(entry_source, Path(output_dir), fresh))
 
 
 if __name__ == "__main__":
     try:
-        source = sys.argv[1] if len(sys.argv) > 1 else ENTRY_FILE
-        if len(sys.argv) > 2:
-            raise ValueError("Usage: Dcrawler.py [site-url-or-entry-file]")
-        report = download_entries(source)
+        args = [arg for arg in sys.argv[1:] if arg != "--fresh"]
+        fresh = len(args) != len(sys.argv[1:])
+        source = args[0] if args else ENTRY_FILE
+        if len(args) > 1:
+            raise ValueError("Usage: Dcrawler.py [--fresh] [site-url-or-entry-file]")
+        report = download_entries(source, fresh=fresh)
     except (OSError, ValueError) as error:
         raise SystemExit(str(error)) from error
+    except KeyboardInterrupt:
+        print("\n[paused] interrupted; progress is journaled - rerun to resume.")
+        raise SystemExit(130) from None
     print(
         f"Finished: {report.sites} site(s), {report.pages:,} page URL(s), "
         f"{report.candidates} candidate(s), {len(report.saved)} saved, "

@@ -60,6 +60,14 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
     parser.add_argument(
+        "--fresh",
+        action="store_true",
+        help=(
+            "With --download/--main: wipe the crawl journals and revisit "
+            "every page (saved files are still skipped, not re-downloaded)."
+        ),
+    )
+    parser.add_argument(
         "--scribd",
         nargs="?",
         const=USE_SCRIBD_FILE,
@@ -114,13 +122,14 @@ def main(argv: list[str] | None = None) -> int:
         if args.main:
             fetch_results()
             find_entry()
-            download_entries()
+            download_entries(fresh=args.fresh)
             return 0
         if (
             args.search is None
             and not args.entry
             and args.download is None
             and args.scribd is None
+            and not args.fresh
             and not args.phatmal_check
             and args.phatmal_probe is None
             and args.phatmal is None
@@ -136,9 +145,9 @@ def main(argv: list[str] | None = None) -> int:
             find_entry()
         if args.download is not None:
             if args.download is USE_ENTRY_FILE:
-                download_entries()
+                download_entries(fresh=args.fresh)
             else:
-                download_entries(args.download)
+                download_entries(args.download, fresh=args.fresh)
         if args.scribd is not None:
             if args.scribd is USE_SCRIBD_FILE:
                 links = read_links_file()
@@ -173,6 +182,9 @@ def main(argv: list[str] | None = None) -> int:
     except (SerpApiError, OSError, ValueError) as error:
         print(f"error: {error}", file=sys.stderr)
         return 1
+    except KeyboardInterrupt:
+        print("\n[paused] interrupted; progress is journaled - rerun to resume.")
+        return 130
     return 0
 
 
