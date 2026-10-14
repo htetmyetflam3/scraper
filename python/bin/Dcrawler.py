@@ -1862,13 +1862,15 @@ async def _download_entries_async(
     keep_local: bool = False,
     download_limit: float = 0.0,
 ) -> DownloadSummary:
-    with limit_downloads(download_limit):
+    with limit_downloads(download_limit, log=lambda message: print(message, flush=True)):
         if download_limit:
             print(
                 f"[download-limit] {download_limit:g} MB/s aggregate response-body cap "
                 f"(1 MB = 1048576 bytes); uploads unchanged @ {_stamp()}",
                 flush=True,
             )
+        else:
+            print(f"[download-limit] unlimited; uploads unlimited @ {_stamp()}", flush=True)
         return await _run_download_entries_async(
             entry_source, output_dir, fresh, remote, keep_local
         )

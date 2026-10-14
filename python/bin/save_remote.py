@@ -649,6 +649,7 @@ def main(argv: list[str] | None = None) -> int:
             f"[remote] {config.user}@{config.host}:{config.port} "
             f"dir={config.directory} @ {_stamp()}"
         )
+        print("[upload-limit] unlimited", flush=True)
         info = probe(config)
         if info:
             print(f"[remote] {info}")
