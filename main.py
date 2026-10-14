@@ -60,6 +60,27 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
     parser.add_argument(
+        "--download-remote",
+        nargs="?",
+        const=USE_ENTRY_FILE,
+        default=None,
+        metavar="SITE_URL",
+        help=(
+            "Like --download, but push every saved file to the SSH host from "
+            "the SSH_* .env settings, verify its sha256, then delete the local "
+            "copy. Interrupted pushes resume on the next run; failures stay on "
+            "disk and are recorded in scan/failed.txt."
+        ),
+    )
+    parser.add_argument(
+        "--keep-local",
+        action="store_true",
+        help=(
+            "With --download-remote: keep the local copy after a verified "
+            "push (nothing is deleted)."
+        ),
+    )
+    parser.add_argument(
         "--fresh",
         action="store_true",
         help=(
@@ -118,6 +139,8 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
+    if args.keep_local and args.download_remote is None:
+        parser.error("--keep-local needs --download-remote")
     try:
         if args.main:
             fetch_results()
@@ -128,6 +151,7 @@ def main(argv: list[str] | None = None) -> int:
             args.search is None
             and not args.entry
             and args.download is None
+            and args.download_remote is None
             and args.scribd is None
             and not args.fresh
             and not args.phatmal_check
@@ -148,6 +172,18 @@ def main(argv: list[str] | None = None) -> int:
                 download_entries(fresh=args.fresh)
             else:
                 download_entries(args.download, fresh=args.fresh)
+        if args.download_remote is not None:
+            if args.download_remote is USE_ENTRY_FILE:
+                download_entries(
+                    fresh=args.fresh, remote=True, keep_local=args.keep_local
+                )
+            else:
+                download_entries(
+                    args.download_remote,
+                    fresh=args.fresh,
+                    remote=True,
+                    keep_local=args.keep_local,
+                )
         if args.scribd is not None:
             if args.scribd is USE_SCRIBD_FILE:
                 links = read_links_file()

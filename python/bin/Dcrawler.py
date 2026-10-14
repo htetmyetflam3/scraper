@@ -12,14 +12,12 @@ import os
 import re
 import struct
 import sys
-import tempfile
 import time
 import urllib.parse
 import xml.etree.ElementTree as ET
 from collections import deque
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
-from email.message import Message
 from pathlib import Path
 
 import httpx
@@ -33,7 +31,18 @@ from mediafire import (
     is_html_response,
     recover_file_response,
 )
-from pdf_support import is_pdf, linearize, looks_like_html
+from pdf_support import is_pdf, looks_like_html
+from save_local import (
+    filename_hint as _filename_hint,
+    reserve_unique_path as _reserve_unique_path,
+    save_payload as _save_payload,
+)
+from save_remote import (
+    drain_backlog as _remote_drain_backlog,
+    load_config as _remote_load_config,
+    probe as _remote_probe,
+    push_file as _remote_push_file,
+)
 from site_login import ensure_logged_in_async
 from site_size_guard import FALLBACK_SITEMAP_PATHS, large_site_reason
 
@@ -112,6 +121,7 @@ class DownloadSummary:
     skipped: list[str] = field(default_factory=list)
     no_download: list[str] = field(default_factory=list)
     downloaded: list[str] = field(default_factory=list)
+    upload_failed: list[str] = field(default_factory=list)
 
 
 def _hostname(url: str) -> str | None:
@@ -1398,100 +1408,9 @@ async def _download_mega(
         return None
 
 
-def _filename_hint(
-    candidate: DownloadCandidate,
-    response_url: str,
-    headers: dict[str, str],
-    extension: str,
-) -> str:
-    if candidate.provider == "mega" and candidate.label:
-        hinted = candidate.label
-    else:
-        disposition = headers.get("content-disposition", "")
-        if disposition:
-            message = Message()
-            message["content-disposition"] = disposition
-            hinted = message.get_filename() or ""
-        else:
-            hinted = ""
-        if not hinted:
-            hinted = urllib.parse.unquote(
-                Path(urllib.parse.urlsplit(response_url).path).name
-            )
-    if not hinted or hinted.lower() in {"file", "download", "view", "uc", ""}:
-        hinted = candidate.label or ""
-    hinted = hinted.replace("\\", "/").rsplit("/", 1)[-1]
-    hinted = re.sub(r"[<>:\"/\\|?*\x00-\x1f]", "_", hinted).strip(" .")
-    if not hinted:
-        host = _hostname(candidate.url) or "book"
-        digest = hashlib.sha256(candidate.url.encode("utf-8")).hexdigest()[:10]
-        hinted = f"{host}-{digest}"
-    suffix = "." + extension
-    if hinted.lower().endswith((".pdf", ".docx")):
-        hinted = hinted[: -len(Path(hinted).suffix)]
-    return hinted[:180].rstrip(" .") + suffix
-
-
-def _reserve_unique_path(directory: Path, filename: str) -> Path:
-    base = Path(filename)
-    index = 1
-    while True:
-        candidate = (
-            directory / base.name
-            if index == 1
-            else directory / f"{base.stem} ({index}){base.suffix}"
-        )
-        try:
-            descriptor = os.open(candidate, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o644)
-        except FileExistsError:
-            index += 1
-            continue
-        os.close(descriptor)
-        return candidate
-
-
-def _save_payload(
-    data: bytes,
-    extension: str,
-    candidate: DownloadCandidate,
-    response_url: str,
-    headers: dict[str, str],
-    output_dir: Path,
-) -> tuple[Path | None, str]:
-    extension = extension.lower()
-    output_dir.mkdir(parents=True, exist_ok=True)
-    filename = _filename_hint(candidate, response_url, headers, extension)
-    fd, temp_name = tempfile.mkstemp(prefix=".download-", suffix=".tmp", dir=output_dir)
-    os.close(fd)
-    temp_path = Path(temp_name)
-    destination: Path | None = None
-    try:
-        temp_path.write_bytes(data)
-        if extension == "pdf":
-            outcome = linearize(temp_path)
-            if outcome.state in {"broken", "failed"}:
-                return None, f"PDF validation/linearization failed: {outcome.detail}"
-            detail = (
-                "unlocked and linearized"
-                if outcome.state == "linearized"
-                else "already linearized"
-            )
-            if outcome.state == "locked":
-                detail = "saved encrypted: requires a user password"
-        else:
-            detail = "saved DOCX"
-        destination = _reserve_unique_path(output_dir, filename)
-        os.replace(temp_path, destination)
-        return destination, detail
-    except OSError as error:
-        if destination is not None:
-            destination.unlink(missing_ok=True)
-        return None, str(error)
-    finally:
-        try:
-            temp_path.unlink(missing_ok=True)
-        except OSError:
-            pass
+# Local saving (filename hints, collision-free names, PDF validation
+# and atomic writes) lives in save_local.py, imported above under the
+# original private names so every call site here stays unchanged.
 
 
 async def _http_response(
@@ -1934,7 +1853,11 @@ def _remember_downloaded(key: str, digest: str, path: Path | None = None) -> Non
 
 
 async def _download_entries_async(
-    entry_source: str | Path, output_dir: Path, fresh: bool = False
+    entry_source: str | Path,
+    output_dir: Path,
+    fresh: bool = False,
+    remote: bool = False,
+    keep_local: bool = False,
 ) -> DownloadSummary:
     summary = DownloadSummary()
     if fresh:
@@ -1972,6 +1895,16 @@ async def _download_entries_async(
     failed_new = 0
     print(f"[start] {source} @ {_stamp()}")
     _timeline("start", source)
+    remote_cfg = None
+    if remote:
+        remote_cfg = _remote_load_config()
+        print(
+            f"[remote] {remote_cfg.user}@{remote_cfg.host}:{remote_cfg.port} "
+            f"dir={remote_cfg.directory} @ {_stamp()}"
+        )
+        remote_info = _remote_probe(remote_cfg)
+        if remote_info:
+            print(f"[remote] {remote_info}")
     known_hashes, downloaded_urls, disk_files, disk_bytes = _load_downloaded_memory(
         output_dir
     )
@@ -1980,6 +1913,19 @@ async def _download_entries_async(
         f"{len(downloaded_urls)} remembered URL(s), "
         f"{len(known_hashes)} known file-hash(es)"
     )
+    if remote_cfg is not None:
+        pushed, push_failed, pushed_bytes = await asyncio.to_thread(
+            _remote_drain_backlog,
+            output_dir,
+            remote_cfg,
+            keep_local=keep_local,
+            timeline=_timeline,
+        )
+        if pushed or push_failed:
+            print(
+                f"[push-backlog] pushed {pushed}, failed {push_failed} "
+                f"({pushed_bytes / 1048576:.1f} MB) @ {_stamp()}"
+            )
     async with httpx.AsyncClient(
         follow_redirects=False,
         headers={"Accept": "text/html,application/xhtml+xml,application/pdf,*/*;q=0.8"},
@@ -2060,6 +2006,21 @@ async def _download_entries_async(
             print(f"[saved] {path.name} ({detail}) @ {_stamp()}")
             _timeline("saved", f"{path.name} {detail}")
             _remember_downloaded(memory_key, digest)
+            if remote_cfg is not None:
+                outcome = await asyncio.to_thread(
+                    _remote_push_file,
+                    path,
+                    remote_cfg,
+                    digest=digest,
+                    keep_local=keep_local,
+                    timeline=_timeline,
+                )
+                if not outcome.ok:
+                    summary.upload_failed.append(candidate.url)
+                    if _remember_failed(
+                        "upload", candidate.url, outcome.detail, failed_keys
+                    ):
+                        failed_new += 1
 
         async def process_candidates() -> None:
             for key, candidate in list(candidates.items()):
@@ -2114,7 +2075,8 @@ async def _download_entries_async(
         "summary",
         f"saved={len(summary.saved)} downloaded={len(summary.downloaded)} "
         f"no_download={len(summary.no_download)} "
-        f"unresolved={len(summary.unresolved)} pages={summary.pages:,}",
+        f"unresolved={len(summary.unresolved)} pages={summary.pages:,} "
+        f"upload_failed={len(summary.upload_failed)}",
     )
     return summary
 
@@ -2123,23 +2085,41 @@ def download_entries(
     entry_source: str | Path = ENTRY_FILE,
     output_dir: str | Path = OUTPUT_DIR,
     fresh: bool = False,
+    remote: bool = False,
+    keep_local: bool = False,
 ) -> DownloadSummary:
     """Process one site or entry-file sites sequentially, saving each file in turn.
 
     fresh=True wipes the crawl journals so every page is revisited; saved
-    files are still skipped via the downloaded-memory.
+    files are still skipped via the downloaded-memory. remote=True pushes
+    each saved file to the SSH host from the SSH_* settings, verifies its
+    sha256, and deletes the local copy unless keep_local=True; interrupted
+    pushes resume on the next run and failures stay on disk.
     """
-    return asyncio.run(_download_entries_async(entry_source, Path(output_dir), fresh))
+    return asyncio.run(
+        _download_entries_async(
+            entry_source, Path(output_dir), fresh, remote, keep_local
+        )
+    )
 
 
 if __name__ == "__main__":
     try:
-        args = [arg for arg in sys.argv[1:] if arg != "--fresh"]
-        fresh = len(args) != len(sys.argv[1:])
+        flags = {"--fresh", "--remote", "--keep-local"}
+        raw = sys.argv[1:]
+        args = [arg for arg in raw if arg not in flags]
         source = args[0] if args else ENTRY_FILE
         if len(args) > 1:
-            raise ValueError("Usage: Dcrawler.py [--fresh] [site-url-or-entry-file]")
-        report = download_entries(source, fresh=fresh)
+            raise ValueError(
+                "Usage: Dcrawler.py [--fresh] [--remote] [--keep-local] "
+                "[site-url-or-entry-file]"
+            )
+        report = download_entries(
+            source,
+            fresh="--fresh" in raw,
+            remote="--remote" in raw,
+            keep_local="--keep-local" in raw,
+        )
     except (OSError, ValueError) as error:
         raise SystemExit(str(error)) from error
     except KeyboardInterrupt:
@@ -2155,5 +2135,11 @@ if __name__ == "__main__":
         f"{len(report.downloaded)} already-downloaded, "
         f"{len(report.skipped)} blocked-skipped, "
         f"{len(report.no_download)} page(s) without download, "
-        f"{len(report.unresolved)} unresolved. @ {_stamp()}"
+        f"{len(report.unresolved)} unresolved"
+        + (
+            f", {len(report.upload_failed)} upload-failed"
+            if report.upload_failed
+            else ""
+        )
+        + f". @ {_stamp()}"
     )
