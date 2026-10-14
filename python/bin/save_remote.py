@@ -48,7 +48,9 @@ UPLOAD_LEDGER = REPO_ROOT / "scan" / "uploaded-host.txt"
 SSH_BIN = "ssh"
 RETRY_ATTEMPTS = 5
 RETRY_DELAY = 20.0
-PROGRESS_STEP = 50 * 1024 * 1024
+PROGRESS_STEP = 5 * 1024 * 1024
+PROGRESS_SECONDS = 5.0
+PROGRESS_FILES = 5
 CONNECT_TIMEOUT = 20
 CONTROL_TIMEOUT = 120
 HASH_TIMEOUT = 600
@@ -84,6 +86,10 @@ class PushOutcome:
 @dataclass
 class UploadedLedger:
     by_digest: dict[str, str] = field(default_factory=dict)
+
+
+def _console_log(message: str) -> None:
+    print(message, flush=True)
 
 
 def _stamp() -> str:
@@ -320,21 +326,28 @@ def _append_stream(
     )
     total = local_path.stat().st_size
     sent = offset
-    report_at = offset + PROGRESS_STEP
+    step = min(PROGRESS_STEP, max(256 * 1024, (total - offset) // 4))
+    report_at = offset + step
+    started = last_report = time.monotonic()
     try:
         with local_path.open("rb") as handle:
             handle.seek(offset)
             while True:
-                chunk = handle.read(1024 * 1024)
+                chunk = handle.read(256 * 1024)
                 if not chunk:
                     break
                 process.stdin.write(chunk)
                 sent += len(chunk)
-                if sent >= report_at and sent < total:
-                    report_at = sent + PROGRESS_STEP
+                now = time.monotonic()
+                if sent >= report_at or now - last_report >= PROGRESS_SECONDS or sent == total:
+                    report_at = sent + step
+                    last_report = now
+                    elapsed = max(now - started, 0.001)
                     log(
-                        f"[push] {name} {sent / 1048576:.1f}/"
-                        f"{total / 1048576:.1f} MB"
+                        f"[push-progress] {name} {sent / total:.0%} "
+                        f"({sent / 1048576:.1f}/{total / 1048576:.1f} MB), "
+                        f"{(sent - offset) / 1048576 / elapsed:.2f} MB/s "
+                        f"streamed @ {_stamp()}"
                     )
     except (BrokenPipeError, OSError) as error:
         with contextlib.suppress(Exception):
@@ -378,7 +391,7 @@ def push_file(
     ledger: Path | None = None,
     keep_local: bool = False,
     timeline=None,
-    log=print,
+    log=_console_log,
     remote_name: str | None = None,
 ) -> PushOutcome:
     """Push one saved file, verify it remotely, then delete the local copy.
@@ -460,6 +473,7 @@ def push_file(
                     f"{remote_path} @ {_stamp()}"
                 )
             _append_stream(config, remote_path, path, offset, log, name)
+            log(f"[push-check] {name} upload sent; verifying remote sha256 @ {_stamp()}")
             if remote_sha256(config, remote_path) != digest:
                 raise RemoteError("sha256 mismatch after upload")
             last_error = ""
@@ -507,7 +521,7 @@ def drain_backlog(
     ledger: Path | None = None,
     keep_local: bool = False,
     timeline=None,
-    log=print,
+    log=_console_log,
 ) -> tuple[int, int, int]:
     """Mirror-and-prune one pass over output_dir, depth included.
 
@@ -543,7 +557,8 @@ def drain_backlog(
     archived = 0
     failed = 0
     freed = 0
-    for file in files:
+    started = time.monotonic()
+    for completed, file in enumerate(files, 1):
         try:
             size = file.stat().st_size
         except OSError:
@@ -563,6 +578,15 @@ def drain_backlog(
                 freed += size
         else:
             failed += 1
+        if completed % PROGRESS_FILES == 0 or completed == len(files):
+            elapsed = max(time.monotonic() - started, 0.001)
+            log(
+                f"[push-progress] {completed}/{len(files)} files "
+                f"({completed / len(files):.0%}), {archived} archived, "
+                f"{failed} failed, {freed / 1048576:.1f} MB freed; "
+                f"{completed * 60 / elapsed:.1f} files/min, "
+                f"elapsed {elapsed:.0f}s @ {_stamp()}"
+            )
     log(
         f"[push-backlog] done: {archived} archived, {failed} failed, "
         f"{freed / 1048576:.1f} MB freed @ {_stamp()}"
@@ -611,6 +635,9 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> int:
+    # Keep status lines visible even when stdout is redirected through tee.
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(line_buffering=True)
     args = build_parser().parse_args(argv)
     local = (args.dir or _default_local_dir()).expanduser()
     try:
