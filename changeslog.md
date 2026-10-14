@@ -1,5 +1,10 @@
 previous changes logs are wiped.
 
+## 2026-10-14 — failed_urls.py --zip writes a deletion manifest
+- `--zip batch1.zip` now also writes `<zip>.manifest.txt` next to the zip (`--manifest PATH` to override): four `#` header lines (zip name, made time, member/pdf counts, written time) then one zip-internal path per line for every file inside, `./` prefixes normalized. Rewritten on every `--zip` run so it always matches the current zip; the tool never deletes anything itself.
+- The run prints a ready-to-run delete loop to execute from the directory the zip was built in, and only after the upload is verified: `grep -v '^#' <manifest> | while IFS= read -r f; do rm -f -- "$f"; done`.
+- Verified: 50/50 total (`/tmp/test_d_tracking.py` gains 7 manifest checks: default placement, header, body + `./` strip, printed hint, custom path, write-failure exit 1) + 10/10 regression; end-to-end simulate deleted exactly the manifest-listed members (including a name with spaces), leaving non-member files, the manifest and the zip untouched.
+
 ## 2026-10-14 — scan/ keeps a .gitkeep; empty entry.txt untracked (fast-forward safety)
 - `scan/entry.txt` was the only tracked file inside `scan/` and it was an empty placeholder; a fast-forward could have tried to overwrite a box's local crawl history in it. It is now untracked (`git rm --cached`, file kept on disk byte-for-byte) and `scan/.gitkeep` replaces it so the directory still exists in fresh clones.
 - `.gitignore`: `/scan/` -> `/scan/*` + `!/scan/.gitkeep`. The negation requires the parent directory not be ignored itself, which is why `/scan/*` is used; everything inside scan/ (entry.txt, downloaded.txt, blocked.txt, failed.txt, timeline.log, crawl journals) stays local-only, `.gitkeep` is the only trackable path.

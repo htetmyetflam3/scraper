@@ -17,12 +17,18 @@ Default mode - backfill failed URLs
 
     python3 python/bin/failed_urls.py [--scan-dir DIR] [--dry-run] [--all]
 
-Zip mode - what a batch zip actually contains
+Zip mode - what a batch zip actually contains, plus a deletion manifest
     Prints the member count, when the zip was made, which PDFs were saved
     after that moment (from scan/timeline.log => not inside the zip), and
     which PDFs on disk near the zip are missing from it.
+    Also writes ``<zip>.manifest.txt`` next to the zip: header comments,
+    then one zip-internal path per line for every file inside, so exactly
+    those files can be deleted after the upload is verified. The tool
+    itself never deletes anything; re-running --zip rewrites the manifest
+    so it always matches the current zip.
 
     python3 python/bin/failed_urls.py --zip batch1.zip [--pdfs-dir DIR]
+                                       [--manifest PATH]
 
 Dcrawler itself keeps scan/failed.txt up to date automatically now; this
 helper exists for history written before that, and for zip audits.
@@ -262,7 +268,12 @@ def parse_timeline(scan_dir: Path) -> list[tuple[dt.datetime, str, str]]:
     return events
 
 
-def zip_audit(zip_path: Path, scan_dir: Path, pdfs_dir: Path | None) -> int:
+def zip_audit(
+    zip_path: Path,
+    scan_dir: Path,
+    pdfs_dir: Path | None,
+    manifest_path: Path | None = None,
+) -> int:
     zip_path = zip_path.resolve()
     if not zip_path.is_file():
         print(f"[zip] not found: {zip_path}")
@@ -274,11 +285,40 @@ def zip_audit(zip_path: Path, scan_dir: Path, pdfs_dir: Path | None) -> int:
         print(f"[zip] cannot read {zip_path.name}: {error}")
         return 1
     made = dt.datetime.fromtimestamp(zip_path.stat().st_mtime)
-    members = [Path(name).name for name in names if not name.endswith("/")]
+    file_members = [name for name in names if not name.endswith("/")]
+    members = [Path(name).name for name in file_members]
     pdf_members = {name for name in members if name.lower().endswith(".pdf")}
     print(
-        f"[zip] {zip_path.name}: {len(members):,} member(s), "
+        f"[zip] {zip_path.name}: {len(file_members):,} member(s), "
         f"{len(pdf_members):,} .pdf, made {made.strftime('%m-%d %H:%M:%S')}"
+    )
+
+    manifest = (
+        manifest_path
+        if manifest_path is not None
+        else zip_path.with_name(zip_path.name + ".manifest.txt")
+    )
+    listed = [name[2:] if name.startswith("./") else name for name in file_members]
+    header = [
+        f"# zip: {zip_path.name}",
+        f"# made: {made.strftime('%m-%d %H:%M:%S')}",
+        f"# files: {len(file_members):,} ({len(pdf_members):,} .pdf)",
+        f"# written: {dt.datetime.now().strftime('%m-%d %H:%M:%S')} "
+        "by failed_urls.py --zip",
+    ]
+    try:
+        manifest.write_text("\n".join(header + listed) + "\n", encoding="utf-8")
+    except OSError as error:
+        print(f"[zip] cannot write manifest {manifest}: {error}")
+        return 1
+    print(f"[zip] manifest written: {manifest} ({len(listed):,} path(s))")
+    print(
+        "[zip] delete exactly those files only after the upload is verified, "
+        "run from the directory the zip was built in:"
+    )
+    print(
+        f"[zip]   grep -v '^#' {manifest} | "
+        'while IFS= read -r f; do rm -f -- "$f"; done'
     )
 
     saved = [
@@ -368,10 +408,19 @@ def main(argv: list[str] | None = None) -> int:
         default=None,
         help="with --zip: where to look for PDFs missing from it (default: the zip's folder)",
     )
+    parser.add_argument(
+        "--manifest",
+        type=Path,
+        default=None,
+        help=(
+            "with --zip: where to write the member list "
+            "(default: <zip>.manifest.txt next to the zip)"
+        ),
+    )
     args = parser.parse_args(argv)
     scan_dir = (args.scan_dir or repo_scan_dir()).resolve()
     if args.zip is not None:
-        return zip_audit(args.zip, scan_dir, args.pdfs_dir)
+        return zip_audit(args.zip, scan_dir, args.pdfs_dir, args.manifest)
     return backfill(scan_dir, dry_run=args.dry_run, include_all=args.all)
 
 
