@@ -24,4 +24,5 @@ Thumbs.db
 /pdfs/
 /python/pdfs/
 downloaded_files/
-/scan/
+/scan/*
+!/scan/.gitkeep

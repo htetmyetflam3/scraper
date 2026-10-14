@@ -1,5 +1,12 @@
 previous changes logs are wiped.
 
+## 2026-10-14 — scan/ keeps a .gitkeep; empty entry.txt untracked (fast-forward safety)
+- `scan/entry.txt` was the only tracked file inside `scan/` and it was an empty placeholder; a fast-forward could have tried to overwrite a box's local crawl history in it. It is now untracked (`git rm --cached`, file kept on disk byte-for-byte) and `scan/.gitkeep` replaces it so the directory still exists in fresh clones.
+- `.gitignore`: `/scan/` -> `/scan/*` + `!/scan/.gitkeep`. The negation requires the parent directory not be ignored itself, which is why `/scan/*` is used; everything inside scan/ (entry.txt, downloaded.txt, blocked.txt, failed.txt, timeline.log, crawl journals) stays local-only, `.gitkeep` is the only trackable path.
+- Box-side one-time step when pulling this commit: `git rm --cached scan/entry.txt` then `git pull`. A plain pull first aborts safely ("would be overwritten by merge") whenever entry.txt is modified locally, and that file was 0 bytes in every commit ever, so nothing can be lost either way.
+- Verified in a throwaway clone of the repo: dirty entry.txt -> pull refused, content intact; after `git rm --cached` -> pull fast-forwards, content intact, `git ls-files scan/` lists only `scan/.gitkeep`, other scan/ files stay ignored across further pulls.
+- Checked every tracked blob at HEAD: `scan/entry.txt` was the only empty one. No behavioral code touched.
+
 ## 2026-10-14 — Timestamps + one failed-download ledger + failed_urls.py helper
 - Small `HH:MM:SS` stamps so parallel zip/upload/download work stays trackable: `[start] <source> @ HH:MM:SS` at run start, both `[resume]` lines, every `[saved]` line, the final `Finished:` line, and `[paused]` on Ctrl+C (Dcrawler and main.py) — the interrupt time and the resume time are now always visible.
 - New append-only `scan/timeline.log`, one row per event: `MM-DD HH:MM:SS event [detail]`. Events: start, resume (pages=N), live (continuing from URL), saved (name + size), pause, summary (saved/downloaded/no_download/unresolved/pages). Oldest first, never rewritten; a timeline write failure only warns and the run continues.
