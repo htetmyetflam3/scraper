@@ -1,5 +1,9 @@
 previous changes logs are wiped.
 
+## 2026-10-14 — stray scan/gitkeep reverted (owner push 3b9f021)
+- The pushed commit `3b9f021 updated` added an empty `scan/gitkeep` — same intent as `scan/.gitkeep` but missing the dot, which already exists and is the only trackable path under the new `/scan/*` ignore rule. Not a file-location move, so reverted per the kept/reverted rule; the file was 0 bytes, nothing lost.
+- `git ls-files scan/` lists exactly `scan/.gitkeep` again. Any box that pulled it loses the stray file on its next pull (it is tracked-and-deleted upstream, so the pull removes it cleanly).
+
 ## 2026-10-14 — failed_urls.py --zip writes a deletion manifest
 - `--zip batch1.zip` now also writes `<zip>.manifest.txt` next to the zip (`--manifest PATH` to override): four `#` header lines (zip name, made time, member/pdf counts, written time) then one zip-internal path per line for every file inside, `./` prefixes normalized. Rewritten on every `--zip` run so it always matches the current zip; the tool never deletes anything itself.
 - The run prints a ready-to-run delete loop to execute from the directory the zip was built in, and only after the upload is verified: `grep -v '^#' <manifest> | while IFS= read -r f; do rm -f -- "$f"; done`.
