@@ -11,6 +11,7 @@ BIN_DIR = Path(__file__).resolve().parent / "python" / "bin"
 sys.path.insert(0, str(BIN_DIR))
 
 from Dcrawler import download_entries, note_pause  # noqa: E402
+from download_rate import validate_limit  # noqa: E402
 from fetch_results import fetch_results  # noqa: E402
 from phatmal import (  # noqa: E402
     login_and_verify,
@@ -70,6 +71,17 @@ def build_parser() -> argparse.ArgumentParser:
             "the SSH_* .env settings, verify its sha256, then delete the local "
             "copy. Interrupted pushes resume on the next run; failures stay on "
             "disk and are recorded in scan/failed.txt."
+        ),
+    )
+    parser.add_argument(
+        "--download-limit",
+        type=validate_limit,
+        default=0.0,
+        metavar="MB_PER_SEC",
+        help=(
+            "With --download/--download-remote/--main: cap aggregate crawler "
+            "HTTP response bodies in MB/s (1 MB = 1048576 bytes). "
+            "Default 0 = unlimited; does not limit SSH uploads."
         ),
     )
     parser.add_argument(
@@ -141,11 +153,17 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     if args.keep_local and args.download_remote is None:
         parser.error("--keep-local needs --download-remote")
+    if args.download_limit and not (
+        args.main or args.download is not None or args.download_remote is not None
+    ):
+        parser.error("--download-limit needs --download, --download-remote or --main")
+    # Preserve the default call signatures when no limit was requested.
+    rate_options = {"download_limit": args.download_limit} if args.download_limit else {}
     try:
         if args.main:
             fetch_results()
             find_entry()
-            download_entries(fresh=args.fresh)
+            download_entries(fresh=args.fresh, **rate_options)
             return 0
         if (
             args.search is None
@@ -169,13 +187,13 @@ def main(argv: list[str] | None = None) -> int:
             find_entry()
         if args.download is not None:
             if args.download is USE_ENTRY_FILE:
-                download_entries(fresh=args.fresh)
+                download_entries(fresh=args.fresh, **rate_options)
             else:
-                download_entries(args.download, fresh=args.fresh)
+                download_entries(args.download, fresh=args.fresh, **rate_options)
         if args.download_remote is not None:
             if args.download_remote is USE_ENTRY_FILE:
                 download_entries(
-                    fresh=args.fresh, remote=True, keep_local=args.keep_local
+                    fresh=args.fresh, remote=True, keep_local=args.keep_local, **rate_options
                 )
             else:
                 download_entries(
@@ -183,6 +201,7 @@ def main(argv: list[str] | None = None) -> int:
                     fresh=args.fresh,
                     remote=True,
                     keep_local=args.keep_local,
+                    **rate_options,
                 )
         if args.scribd is not None:
             if args.scribd is USE_SCRIBD_FILE:

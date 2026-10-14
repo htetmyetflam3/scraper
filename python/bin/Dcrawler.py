@@ -24,6 +24,7 @@ import httpx
 from bs4 import BeautifulSoup
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from domain_guard import excluded_site_reason
+from download_rate import client_options as _rate_client_options, limit_downloads
 from download_links import FILE_EXTENSION, extract_file_links, guard_download_url
 from mediafire import (
     fetch_with_retries,
@@ -764,6 +765,7 @@ def _sitemap_scan(
     records: list[tuple[str, str]] = []
     collected_downloads: list[str] = []
     with httpx.Client(
+        **_rate_client_options(),
         timeout=SITEMAP_TIMEOUT,
         follow_redirects=False,
         headers={"Accept": "application/xml,text/xml,*/*;q=0.5"},
@@ -1858,6 +1860,26 @@ async def _download_entries_async(
     fresh: bool = False,
     remote: bool = False,
     keep_local: bool = False,
+    download_limit: float = 0.0,
+) -> DownloadSummary:
+    with limit_downloads(download_limit):
+        if download_limit:
+            print(
+                f"[download-limit] {download_limit:g} MB/s aggregate response-body cap "
+                f"(1 MB = 1048576 bytes); uploads unchanged @ {_stamp()}",
+                flush=True,
+            )
+        return await _run_download_entries_async(
+            entry_source, output_dir, fresh, remote, keep_local
+        )
+
+
+async def _run_download_entries_async(
+    entry_source: str | Path,
+    output_dir: Path,
+    fresh: bool = False,
+    remote: bool = False,
+    keep_local: bool = False,
 ) -> DownloadSummary:
     summary = DownloadSummary()
     if fresh:
@@ -1922,6 +1944,7 @@ async def _download_entries_async(
             timeline=_timeline,
         )
     async with httpx.AsyncClient(
+        **_rate_client_options(asynchronous=True),
         follow_redirects=False,
         headers={"Accept": "text/html,application/xhtml+xml,application/pdf,*/*;q=0.8"},
     ) as client:
@@ -2082,6 +2105,7 @@ def download_entries(
     fresh: bool = False,
     remote: bool = False,
     keep_local: bool = False,
+    download_limit: float = 0.0,
 ) -> DownloadSummary:
     """Process one site or entry-file sites sequentially, saving each file in turn.
 
@@ -2089,11 +2113,12 @@ def download_entries(
     files are still skipped via the downloaded-memory. remote=True pushes
     each saved file to the SSH host from the SSH_* settings, verifies its
     sha256, and deletes the local copy unless keep_local=True; interrupted
-    pushes resume on the next run and failures stay on disk.
+    pushes resume on the next run and failures stay on disk. download_limit
+    caps aggregate HTTP response bodies in MB/s (1048576 bytes); 0 is unlimited.
     """
     return asyncio.run(
         _download_entries_async(
-            entry_source, Path(output_dir), fresh, remote, keep_local
+            entry_source, Path(output_dir), fresh, remote, keep_local, download_limit
         )
     )
 
