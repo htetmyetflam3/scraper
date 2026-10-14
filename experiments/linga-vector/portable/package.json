@@ -1,0 +1,21 @@
+{
+  "name": "linga-vector-evaluation-handoff",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=22.22.0" },
+  "scripts": {
+    "test": "node --test work/*.test.mjs",
+    "pages": "node work/page-svg.mjs && node work/a4-frame.mjs",
+    "witnesses": "node work/rebuild-witnesses.mjs",
+    "probe": "node work/a4-page-witness-probe.mjs",
+    "clusters": "node work/a4-cluster-probe.mjs",
+    "verify": "node verify.mjs"
+  },
+  "dependencies": {
+    "@napi-rs/canvas": "1.0.10",
+    "harfbuzzjs": "1.6.3",
+    "mammoth": "1.13.0",
+    "pdfjs-dist": "6.4.299"
+  }
+}

@@ -1,0 +1,11 @@
+--- a/Parsed/parser/core/ttf-cmap.mjs
++++ b/Parsed/parser/core/ttf-cmap.mjs
+@@ -78,7 +78,7 @@
+             gid = (c + deltas[j]) & 0xffff;
+           } else {
+             const idx = ((ranges[j] / 2) | 0) + (c - starts[j]) + j - segCount;
+-            const addr = ro + idx * 2;
++            const addr = ro + (segCount + idx) * 2;
+             if (addr + 2 > sub.length) continue; 
+             gid = readU16PythonSlice(sub, addr);
+             if (gid) gid = (gid + deltas[j]) & 0xffff;

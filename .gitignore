@@ -26,3 +26,6 @@ Thumbs.db
 downloaded_files/
 /scan/*
 !/scan/.gitkeep
+
+# Release ZIPs are published as GitHub Release assets, not Git blobs.
+/release-assets/*.zip
