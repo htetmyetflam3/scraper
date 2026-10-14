@@ -27,5 +27,5 @@ downloaded_files/
 /scan/*
 !/scan/.gitkeep
 
-# Release ZIPs are published as GitHub Release assets, not Git blobs.
+# Ignore regenerated ZIPs; the requested tagged recovery archive is explicitly tracked.
 /release-assets/*.zip

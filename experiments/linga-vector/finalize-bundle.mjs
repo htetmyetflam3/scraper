@@ -1,15 +1,17 @@
+// One ZIP download; solid XZ payload avoids duplicating similar font data.
 import fs from 'node:fs';import path from 'node:path';import crypto from 'node:crypto';import {execFileSync} from 'node:child_process';
 const stage=process.argv[2]||'/tmp/linga-vector-bundle',root=path.join(stage,'Parsed/parser/tools/vector-evaluation');
-const zip=path.resolve(process.argv[3]||'release-assets/linga-vector-evaluation-recovery.zip');
+const zip=path.resolve(process.argv[3]||'release-assets/linga-vector-evaluation-recovery.zip'),envelope='/tmp/linga-solid-envelope',dest=path.join(envelope,'Parsed/parser/tools/vector-evaluation');
 const ignored=new Set(['node_modules','.git','.cache']);
-function walk(dir){return fs.readdirSync(dir,{withFileTypes:true}).sort((a,b)=>a.name.localeCompare(b.name)).flatMap(e=>ignored.has(e.name)?[]:e.isDirectory()?walk(path.join(dir,e.name)):[path.join(dir,e.name)]);}
+function walk(d){return fs.readdirSync(d,{withFileTypes:true}).sort((a,b)=>a.name.localeCompare(b.name)).flatMap(e=>ignored.has(e.name)?[]:e.isDirectory()?walk(path.join(d,e.name)):[path.join(d,e.name)]);}
 const hash=b=>crypto.createHash('sha256').update(b).digest('hex');
 const files=walk(root).filter(f=>path.basename(f)!=='MANIFEST.json').map(f=>{const b=fs.readFileSync(f);return {path:path.relative(root,f).split(path.sep).join('/'),bytes:b.length,sha256:hash(b)};});
-const manifest={status:'NOT GREEN — recovery evaluation package, no production integration',createdAt:new Date().toISOString(),baseline:'712728395276b4fb57f25b8c3b05757f990a55ca',legacyFonts:'f9cddc495fb107ebd2c95059390dc9083bab7fa9',independentPdfBlob:'383c90b766e7b0929f799eefcbc615766f30889a',recovery:'Old external scratch folders absent. Surviving repo notes/patch/tests preserved; core data recovered and regenerated. See README for unavailable historical diagnostics.',files};
-fs.writeFileSync(path.join(root,'MANIFEST.json'),JSON.stringify(manifest,null,2)+'\n');
-fs.mkdirSync(path.dirname(zip),{recursive:true});if(fs.existsSync(zip))throw Error('Refusing to replace existing ZIP: '+zip);
-const entries=[...files.map(f=>'Parsed/parser/tools/vector-evaluation/'+f.path),'Parsed/parser/tools/vector-evaluation/MANIFEST.json'];
-execFileSync('zip',['-q','-9',zip,'-@'],{cwd:stage,input:entries.join('\n')+'\n',maxBuffer:1024*1024});
-execFileSync('unzip',['-tq',zip],{stdio:'inherit'});
-const bytes=fs.readFileSync(zip),sha=hash(bytes);fs.writeFileSync(path.join(path.dirname(zip),'SHA256SUMS'),`${sha}  ${path.basename(zip)}\n`);
-console.log(JSON.stringify({zip,bytes:bytes.length,sha256:sha,payloadFiles:entries.length},null,2));
+fs.writeFileSync(path.join(root,'MANIFEST.json'),JSON.stringify({status:'NOT GREEN — recovery evaluation, no production integration',createdAt:new Date().toISOString(),baseline:'712728395276b4fb57f25b8c3b05757f990a55ca',legacyFonts:'f9cddc495fb107ebd2c95059390dc9083bab7fa9',recovery:'Core results regenerated, not a verbatim backup of every old scratch diagnostic. Read README.',excludedBaselineAssets:['Unchanged OCR-only model/mya.traineddata; not used by this vector experiment'],files},null,2)+'\n');
+fs.mkdirSync(dest,{recursive:true});const listing=path.join(envelope,'payload-files.txt');fs.writeFileSync(listing,[...files.map(f=>f.path),'MANIFEST.json'].join('\n')+'\n');
+const payload=path.join(dest,'PAYLOAD.tar.xz');
+execFileSync('bash',['-o','pipefail','-c','tar -C "$INPUT_ROOT" -cf - -T "$FILE_LIST" | xz -9 -T1 > "$OUTPUT_PAYLOAD"'],{env:{...process.env,INPUT_ROOT:root,FILE_LIST:listing,OUTPUT_PAYLOAD:payload},stdio:'inherit'});
+fs.writeFileSync(path.join(dest,'PAYLOAD.sha256'),hash(fs.readFileSync(payload))+'  PAYLOAD.tar.xz\n');fs.copyFileSync(path.join(root,'restore.mjs'),path.join(dest,'restore.mjs'));
+fs.writeFileSync(path.join(dest,'README.md'),'# Portable Linga vector handoff — NOT GREEN\n\nThis ZIP includes every experiment dependency locally in PAYLOAD.tar.xz.\nSolid compression keeps this ONE download smaller; no parts or additional font\ndownloads are needed. The unchanged OCR-only traineddata model is excluded.\n\nExtract at the Linga root, then:\n\n```\ncd Parsed/parser/tools/vector-evaluation\nnode restore.mjs\nnpm ci --no-audit --no-fund\nnpm test\n```\n\nRequires Node >=22.22 and tar with XZ support. restore.mjs verifies the payload,\nextracts only inside this evaluation directory, then verifies every payload file.\nIt refuses to replace an existing work/ directory. No live parser file is replaced.\nRead the restored README and notes/HANDOFF.md for recovery limits and next work.\nThe reconstructed core results pass 17 tests; extraction is NOT validated.\n');
+fs.mkdirSync(path.dirname(zip),{recursive:true});if(fs.existsSync(zip))throw Error('Refusing to replace ZIP: '+zip);
+execFileSync('zip',['-q','-9',zip,'Parsed/parser/tools/vector-evaluation/README.md','Parsed/parser/tools/vector-evaluation/restore.mjs','Parsed/parser/tools/vector-evaluation/PAYLOAD.sha256','Parsed/parser/tools/vector-evaluation/PAYLOAD.tar.xz'],{cwd:envelope,stdio:'inherit'});
+execFileSync('unzip',['-tq',zip],{stdio:'inherit'});const b=fs.readFileSync(zip),sha256=hash(b);fs.writeFileSync(path.join(path.dirname(zip),'SHA256SUMS'),`${sha256}  ${path.basename(zip)}\n`);console.log(JSON.stringify({zip,bytes:b.length,sha256,payloadFiles:files.length+1},null,2));

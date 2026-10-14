@@ -11,6 +11,8 @@ fs.cpSync(path.join(here,'portable'),root,{recursive:true});
 for(const rel of ['Parsed/parser','Parsed/fonts','logen','package.json']){
  const dest=path.join(root,'snapshot/linga',rel);fs.mkdirSync(path.dirname(dest),{recursive:true});fs.cpSync(path.join(source,rel),dest,{recursive:true});
 }
+// This unchanged 25 MB OCR model is not used in the digital-vector lane.
+fs.rmSync(path.join(root,'snapshot/linga/Parsed/parser/model/mya.traineddata'),{force:true});
 fs.mkdirSync(path.join(root,'assets'),{recursive:true});fs.cpSync(legacy,path.join(root,'assets/legacy-fonts'),{recursive:true});
 fs.mkdirSync(path.join(root,'patches'),{recursive:true});fs.copyFileSync(path.join(here,'cmap-format4.patch'),path.join(root,'patches/cmap-format4.patch'));
 const baseSvg=fs.readFileSync(path.join(source,'Parsed/parser/shape/svg.mjs'),'utf8');

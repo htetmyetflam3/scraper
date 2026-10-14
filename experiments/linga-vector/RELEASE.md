@@ -4,36 +4,50 @@
 
 Release/tag: `linga-vector-eval-2026-10-14`
 
-Download:
-https://github.com/htetmyetflam3/scraper/releases/download/linga-vector-eval-2026-10-14/linga-vector-evaluation-recovery.zip
+[Download the single ZIP](https://github.com/htetmyetflam3/scraper/raw/linga-vector-eval-2026-10-14/release-assets/linga-vector-evaluation-recovery.zip)
 
-Checksums:
-https://github.com/htetmyetflam3/scraper/releases/download/linga-vector-eval-2026-10-14/SHA256SUMS
+[SHA256SUMS](https://github.com/htetmyetflam3/scraper/raw/linga-vector-eval-2026-10-14/release-assets/SHA256SUMS)
 
-- ZIP: 85,940,948 bytes (~82 MiB), 828 entries including the manifest.
-- ZIP SHA-256: `3be6d9809d0746f34f8902fc65574e548a2c7374925759dd0e1b0655376a5001`
-- Extract at the Linga root. Only `Parsed/parser/tools/vector-evaluation/` is added.
-- No live parser files are replaced; verified fixes are separate unapplied patches.
-- Includes pinned baseline parser/assets/dictionary, recovered fonts, independent
-  PDF and historical trace, rebuilt native/A4 pages, both witness shadows,
-  relative-path evaluation scripts, fresh logs, handoff and recovery inventory.
-- All 339 font identities reproduced; all nine native contour counts reproduced.
-- 17 fresh tests passed, including after extracting into a different directory.
-- Every one of 827 payload files verified by SHA-256 before and after extraction.
-- `node verify.mjs`, then `npm ci --no-audit --no-fund`, then `npm test` in the
-  extracted directory. npm dependencies are pinned; platform binaries are not bundled.
+- ZIP: **36,124,451 bytes (~34.5 MiB)**. No archive parts or extra font downloads.
+- ZIP SHA-256: `823c2d562264a3c4b68e183680cd88eee7ce55c2a80ae5c6642aba1ad8a33a68`
+- Extract at the Linga root; it creates `Parsed/parser/tools/vector-evaluation/`.
+- The ZIP uses an included solid-compressed payload to keep similar font data
+  small. Run **`node restore.mjs`** in that directory to restore and verify it
+  locally. Requires Node >=22.22 and tar with XZ support. No network is used by
+  restoration, and an existing evaluation `work/` will not be overwritten.
+- Then run `npm ci --no-audit --no-fund` and `npm test`.
+- No live parser file is replaced; the two verified fixes are separate unapplied
+  patches. Snapshot data must not be copied over production files.
+- Includes pinned baseline code, vector assets, sealed dictionary, all recovered
+  fonts, independent PDF/historical trace, rebuilt native/A4 pages, witness shadows,
+  relative-path scripts, fresh logs, handoff and an honest recovery inventory.
+- The unchanged 25 MB **OCR-only traineddata** asset is excluded; it was never
+  used or modified in this digital-vector experiment. No experimental asset was
+  removed to achieve the smaller package.
+- All 339 font identities and nine recorded native contour counts reproduced.
+- **17 fresh tests passed after restoring into a different directory.**
+- **827 payload files verified by SHA-256**, before and after the relocated test.
 
 ## Honest recovery boundary
 
 External scratch folders disappeared across a sandbox transition. The surviving
 repository notes, patch and tests were preserved. Core inputs/assets were
-recovered from their pinned GitHub revisions, evaluation scripts reconstructed,
-and the main recorded results reproduced. Some older isolated-glyph scripts,
-strict-output JSON/TXT, intermediate probes and historical logs were not recovered
-verbatim. The ZIP explicitly inventories that gap; it is not labelled a complete
-byte-for-byte backup of all prior scratch work.
+recovered from pinned GitHub revisions, scripts reconstructed, and the main
+recorded results reproduced. Some older isolated-glyph scripts, strict-output
+JSON/TXT, intermediate probes and historical logs were not recovered verbatim.
+The restored README inventories that gap; this is not a byte-for-byte backup of
+every prior scratch file.
 
 Complete layout-free nine-page Unicode extraction is still unfinished. Raw-byte
-votes, closest hypotheses, unit tests and zero dictionary unknowns are not a green
-extraction verdict. Merging scraper PR #4 preserves this handoff; it does not wire
-or enable experimental Linga processing in the crawler/download path.
+votes, closest hypotheses, unit tests and zero dictionary unknowns are not green
+extraction verdicts. Merging scraper PR #4 preserves this handoff; it does not
+wire or enable experimental Linga processing in the crawler/download path.
+
+## Release storage
+
+GitHub's release-asset upload endpoint returned EOF even for the small checksum
+file; the API-host alternative returned 404. No uploaded binary release asset is
+claimed. The ZIP and checksum are preserved **in the tagged Git commit** and
+linked above from the release page. The automatic release source archive also
+contains this ZIP. The original larger Git push failed; only this compact package
+is being published, with the historical recovery limits explicitly documented.

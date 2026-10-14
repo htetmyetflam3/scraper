@@ -2,6 +2,22 @@
 
 **NOT GREEN. This archive does not enable extraction in the downloader.**
 
+## Unpack the included payload first (one download, no archive parts)
+
+The release ZIP uses a solid-compressed `PAYLOAD.tar.xz` to avoid storing similar
+font data repeatedly. After unzipping at your Linga root, run:
+
+```
+cd Parsed/parser/tools/vector-evaluation
+node restore.mjs
+```
+
+This requires Node and tar with XZ support. It makes no network requests, verifies
+the included payload, restores files only in this evaluation directory, and
+refuses to overwrite an existing `work/`. Once restored, skip this step on later
+runs. The unchanged OCR-only `model/mya.traineddata` baseline asset is excluded;
+it was never an input or modified output of this digital-vector experiment.
+
 ## Install without overwriting production
 
 Extract the ZIP at your Linga repository root. It adds only:
