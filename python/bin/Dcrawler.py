@@ -1914,18 +1914,13 @@ async def _download_entries_async(
         f"{len(known_hashes)} known file-hash(es)"
     )
     if remote_cfg is not None:
-        pushed, push_failed, pushed_bytes = await asyncio.to_thread(
+        await asyncio.to_thread(
             _remote_drain_backlog,
             output_dir,
             remote_cfg,
             keep_local=keep_local,
             timeline=_timeline,
         )
-        if pushed or push_failed:
-            print(
-                f"[push-backlog] pushed {pushed}, failed {push_failed} "
-                f"({pushed_bytes / 1048576:.1f} MB) @ {_stamp()}"
-            )
     async with httpx.AsyncClient(
         follow_redirects=False,
         headers={"Accept": "text/html,application/xhtml+xml,application/pdf,*/*;q=0.8"},

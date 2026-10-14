@@ -31,11 +31,13 @@ Configuration (environment wins over the repo-root .env):
 
 from __future__ import annotations
 
+import argparse
 import contextlib
 import hashlib
 import os
 import shlex
 import subprocess
+import sys
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -82,7 +84,6 @@ class PushOutcome:
 @dataclass
 class UploadedLedger:
     by_digest: dict[str, str] = field(default_factory=dict)
-    by_name_size: dict[tuple[str, int], str] = field(default_factory=dict)
 
 
 def _stamp() -> str:
@@ -254,17 +255,14 @@ def read_uploaded(ledger: Path | None = None) -> UploadedLedger:
         parts = line.split("\t")
         if len(parts) < 4:
             continue
-        digest, name, remote_path, size_text = (
+        digest, name, remote_path = (
             parts[0].strip(),
             parts[1].strip(),
             parts[2].strip(),
-            parts[3].strip(),
         )
         if len(digest) != 64 or not remote_path:
             continue
         entries.by_digest[digest] = remote_path
-        if size_text.isdigit():
-            entries.by_name_size[(name, int(size_text))] = remote_path
     return entries
 
 
@@ -276,6 +274,8 @@ def remember_uploaded(
     ledger: Path | None = None,
 ) -> None:
     target = ledger or UPLOAD_LEDGER
+    if digest in read_uploaded(target).by_digest:
+        return
     line = (
         f"{digest}\t{name}\t{remote_path}\t{size}\t"
         f"{time.strftime('%m-%d %H:%M:%S')}"
@@ -357,6 +357,19 @@ def _append_stream(
         raise RemoteError(f"remote write failed: {message}")
 
 
+def _delete_local(path: Path, timeline, log) -> bool:
+    """Remove a local file whose bytes are verified on the remote."""
+    try:
+        path.unlink()
+    except OSError as error:
+        log(f"[push-warn] cannot remove {path.name}: {error}")
+        return False
+    log(f"[push-free] {path.name} removed locally @ {_stamp()}")
+    if timeline is not None:
+        timeline("push-free", path.name)
+    return True
+
+
 def push_file(
     path: Path,
     config: RemoteConfig,
@@ -366,39 +379,53 @@ def push_file(
     keep_local: bool = False,
     timeline=None,
     log=print,
+    remote_name: str | None = None,
 ) -> PushOutcome:
     """Push one saved file, verify it remotely, then delete the local copy.
 
-    Returns PushOutcome; ok=False leaves the local file untouched for the
-    next run (the same file is retried and resumes from the remote size).
+    ``remote_name`` keeps sub-directory structure when the local tree has
+    depth (the drain walks pdfs/ recursively); it defaults to the file name.
+    A file already in the ledger is trusted only after a live size + sha256
+    check on the host: an entry pointing at a missing or mismatched remote
+    file is re-uploaded instead of deleting anything locally.
     """
     path = Path(path)
     name = path.name
+    rel = (remote_name or name).replace("\\", "/").lstrip("/")
     try:
         size = path.stat().st_size
     except OSError as error:
         return PushOutcome(False, f"local file vanished: {error}")
-    remote_dir = config.directory
-    remote_path = f"{remote_dir}/{name}"
+    remote_parent = config.directory
+    if "/" in rel:
+        remote_parent = f"{remote_parent}/{rel.rsplit('/', 1)[0]}"
+    remote_path = f"{config.directory}/{rel}"
     entries = read_uploaded(ledger)
     if digest is None:
-        quick = entries.by_name_size.get((name, size))
-        if quick:
-            log(f"[push-skip] {name} already in uploaded-host.txt @ {_stamp()}")
-            return PushOutcome(
-                True,
-                "already in uploaded-host.txt",
-                remote_path=quick,
-                skipped=True,
-            )
         digest = sha256_file(path)
     known = entries.by_digest.get(digest)
-    if known:
-        log(f"[push-skip] {name} already in uploaded-host.txt @ {_stamp()}")
+    if (
+        known
+        and remote_size(config, known) == size
+        and remote_sha256(config, known) == digest
+    ):
+        log(f"[push-skip] {name} already archived and verified @ {_stamp()}")
+        deleted = False
+        if not keep_local:
+            deleted = _delete_local(path, timeline, log)
         return PushOutcome(
-            True, "already in uploaded-host.txt", remote_path=known, skipped=True
+            True,
+            "already archived, sha256 verified",
+            remote_path=known,
+            skipped=True,
+            deleted=deleted,
         )
-    ensure_dir(config, remote_dir)
+    if known:
+        log(
+            f"[push-warn] {name} is in uploaded-host.txt but not verified on "
+            f"the host; re-uploading @ {_stamp()}"
+        )
+    ensure_dir(config, remote_parent)
 
     resumed = False
     verified_existing = False
@@ -414,13 +441,13 @@ def push_file(
                     verified_existing = True
                     last_error = ""
                     break
-                remote_path = _reserve_remote_name(config, remote_dir, name)
+                remote_path = _reserve_remote_name(config, remote_parent, name)
                 offset = 0
             elif current < size:
                 offset = current
                 resumed = True
             else:
-                remote_path = _reserve_remote_name(config, remote_dir, name)
+                remote_path = _reserve_remote_name(config, remote_parent, name)
                 offset = 0
             if offset:
                 log(
@@ -463,14 +490,7 @@ def push_file(
     log(f"[push-ok] {name} {detail} -> {remote_path} @ {_stamp()}")
     deleted = False
     if not keep_local:
-        try:
-            path.unlink()
-            deleted = True
-            log(f"[push-free] {name} removed locally @ {_stamp()}")
-            if timeline is not None:
-                timeline("push-free", name)
-        except OSError as error:
-            log(f"[push-warn] uploaded but cannot remove {name}: {error}")
+        deleted = _delete_local(path, timeline, log)
     return PushOutcome(
         True,
         detail,
@@ -489,16 +509,24 @@ def drain_backlog(
     timeline=None,
     log=print,
 ) -> tuple[int, int, int]:
-    """Push files already sitting in output_dir (leftovers, first run, retries).
+    """Mirror-and-prune one pass over output_dir, depth included.
 
-    Returns (pushed, failed, bytes_moved). Staged temps (.download-*.tmp)
-    and anything already in the ledger are skipped or left in place.
+    Every file is pushed (or recognised as already archived) with the same
+    verify-then-delete rule as push_file, so this doubles as the standalone
+    watcher's single step. Staged temps (.download-*.tmp), dotfiles and
+    dot-directories are never touched. Returns (archived, failed, bytes
+    freed locally); files that fail stay on disk for the next pass.
     """
+    root = Path(output_dir)
     try:
         files = sorted(
             entry
-            for entry in Path(output_dir).iterdir()
-            if entry.is_file() and not entry.name.startswith(".")
+            for entry in root.rglob("*")
+            if entry.is_file()
+            and not any(
+                part.startswith(".") or part == "__pycache__"
+                for part in entry.relative_to(root).parts
+            )
         )
     except OSError:
         return 0, 0, 0
@@ -510,11 +538,11 @@ def drain_backlog(
         total_bytes = 0
     log(
         f"[push-backlog] {len(files)} file(s) "
-        f"({total_bytes / 1048576:.1f} MB) in {Path(output_dir).name}/"
+        f"({total_bytes / 1048576:.1f} MB) in {root.name}/ @ {_stamp()}"
     )
-    pushed = 0
+    archived = 0
     failed = 0
-    moved_bytes = 0
+    freed = 0
     for file in files:
         try:
             size = file.stat().st_size
@@ -527,11 +555,130 @@ def drain_backlog(
             keep_local=keep_local,
             timeline=timeline,
             log=log,
+            remote_name=str(file.relative_to(root)),
         )
         if outcome.ok:
-            pushed += 1
-            if not outcome.skipped:
-                moved_bytes += size
+            archived += 1
+            if outcome.deleted:
+                freed += size
         else:
             failed += 1
-    return pushed, failed, moved_bytes
+    log(
+        f"[push-backlog] done: {archived} archived, {failed} failed, "
+        f"{freed / 1048576:.1f} MB freed @ {_stamp()}"
+    )
+    return archived, failed, freed
+
+
+def _default_local_dir() -> Path:
+    """Same folder Dcrawler saves into: <repo>/python/pdfs."""
+    return Path(__file__).resolve().parents[1] / "pdfs"
+
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        description=(
+            "Standalone SSH archiver: push saved files to the host from the "
+            "SSH_* settings, verify each one, then free the local copy. Runs "
+            "independently of the crawler; a file only ever leaves the disk "
+            "after its bytes are verified on the host."
+        )
+    )
+    parser.add_argument(
+        "--dir",
+        type=Path,
+        default=None,
+        help="local folder to archive (default: <repo>/python/pdfs)",
+    )
+    parser.add_argument(
+        "--watch",
+        action="store_true",
+        help="keep going forever: drain, sleep, drain again (Ctrl+C stops)",
+    )
+    parser.add_argument(
+        "--interval",
+        type=float,
+        default=60.0,
+        metavar="SECONDS",
+        help="with --watch: pause between passes (default 60)",
+    )
+    parser.add_argument(
+        "--keep-local",
+        action="store_true",
+        help="archive without deleting anything locally",
+    )
+    return parser
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = build_parser().parse_args(argv)
+    local = (args.dir or _default_local_dir()).expanduser()
+    try:
+        config = load_config()
+        if not local.is_dir():
+            print(f"error: local folder not found: {local}", file=sys.stderr)
+            return 1
+        print(
+            f"[remote] {config.user}@{config.host}:{config.port} "
+            f"dir={config.directory} @ {_stamp()}"
+        )
+        info = probe(config)
+        if info:
+            print(f"[remote] {info}")
+        if not args.watch:
+            archived, failed, freed = drain_backlog(
+                local,
+                config,
+                keep_local=args.keep_local,
+                timeline=_cli_timeline,
+            )
+            return 1 if failed else 0
+        total_freed = 0
+        while True:
+            archived, failed, freed = drain_backlog(
+                local,
+                config,
+                keep_local=args.keep_local,
+                timeline=_cli_timeline,
+            )
+            total_freed += freed
+            if archived or failed:
+                print(
+                    f"[watch] archived {archived}, failed {failed}, "
+                    f"freed {freed / 1048576:.1f} MB this pass "
+                    f"({total_freed / 1048576:.1f} MB total); next check in "
+                    f"{args.interval:.0f}s @ {_stamp()}"
+                )
+            else:
+                print(
+                    f"[watch] nothing new; next check in {args.interval:.0f}s "
+                    f"@ {_stamp()}"
+                )
+            time.sleep(max(args.interval, 1.0))
+    except RemoteError as error:
+        print(f"error: {error}", file=sys.stderr)
+        return 1
+    except KeyboardInterrupt:
+        print(
+            "\n[paused] watcher stopped; unarchived files stay local. "
+            f"@ {_stamp()}"
+        )
+        return 130
+
+
+def _cli_timeline(event: str, detail: str = "") -> None:
+    """Timeline rows for standalone runs: same file the crawler writes."""
+    target = REPO_ROOT / "scan" / "timeline.log"
+    line = f"{time.strftime('%m-%d %H:%M:%S')} {event}"
+    if detail:
+        line += f" {detail}"
+    try:
+        target.parent.mkdir(parents=True, exist_ok=True)
+        with target.open("a", encoding="utf-8") as handle:
+            handle.write(line + "\n")
+    except OSError as error:
+        print(f"[timeline-warn] cannot record {event}: {error}")
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
