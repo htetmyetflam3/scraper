@@ -10,7 +10,7 @@ from pathlib import Path
 BIN_DIR = Path(__file__).resolve().parent / "python" / "bin"
 sys.path.insert(0, str(BIN_DIR))
 
-from Dcrawler import download_entries  # noqa: E402
+from Dcrawler import download_entries, note_pause  # noqa: E402
 from fetch_results import fetch_results  # noqa: E402
 from phatmal import (  # noqa: E402
     login_and_verify,
@@ -183,7 +183,10 @@ def main(argv: list[str] | None = None) -> int:
         print(f"error: {error}", file=sys.stderr)
         return 1
     except KeyboardInterrupt:
-        print("\n[paused] interrupted; progress is journaled - rerun to resume.")
+        print(
+            "\n[paused] interrupted; progress is journaled - rerun to "
+            f"resume. @ {note_pause()}"
+        )
         return 130
     return 0
 

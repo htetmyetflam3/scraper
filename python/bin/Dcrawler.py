@@ -42,6 +42,8 @@ SCAN_DIR = REPO_ROOT.parent / "scan"
 ENTRY_FILE = SCAN_DIR / "entry.txt"
 BLOCKED_FILE = SCAN_DIR / "blocked.txt"
 DOWNLOADED_FILE = SCAN_DIR / "downloaded.txt"
+TIMELINE_FILE = SCAN_DIR / "timeline.log"
+FAILED_FILE = SCAN_DIR / "failed.txt"
 OUTPUT_DIR = REPO_ROOT / "pdfs"
 MAX_SITE_PAGES = 3_000
 REQUEST_TIMEOUT = 30.0
@@ -958,9 +960,10 @@ async def _crawl_site(
     done, journal_children = _load_journal(site_key)
     journal = _CrawlJournal(site_key)
     if done:
+        _timeline("resume", f"{site_key} pages={len(done):,}")
         print(
             f"[resume] {site_key}: {len(done):,} page(s) finished on earlier "
-            "run(s); replaying them without network"
+            f"run(s); replaying them without network @ {_stamp()}"
         )
 
     for url in sitemap_downloads:
@@ -1126,9 +1129,10 @@ async def _crawl_site(
                 )
             if replayed and not live_announced:
                 live_announced = True
+                _timeline("live", f"{site_key} from={page_url}")
                 print(
                     f"[resume] {site_key}: replayed {replayed:,} journaled "
-                    f"page(s); continuing live from {page_url}"
+                    f"page(s); continuing live from {page_url} @ {_stamp()}"
                 )
 
     journal.close()
@@ -1752,6 +1756,87 @@ def _remember_blocked(url: str, path: Path | None = None) -> None:
         print(f"[blocked-warn] cannot record {url}: {error}")
 
 
+def _stamp() -> str:
+    """Small console stamp, HH:MM:SS, for tracking parallel work at a glance."""
+    return time.strftime("%H:%M:%S")
+
+
+def _file_stamp() -> str:
+    """Date+time stamp for the log files, MM-DD HH:MM:SS."""
+    return time.strftime("%m-%d %H:%M:%S")
+
+
+def _timeline(event: str, detail: str = "", path: Path | None = None) -> None:
+    """Append one timestamped event line to scan/timeline.log.
+
+    The durable answer to "what ran while zip/upload ran in parallel":
+    start/resume/live/saved/pause/summary rows, oldest first, appended
+    only. A timeline failure never stops a run.
+    """
+    target = path or TIMELINE_FILE
+    text = " ".join(str(detail).split())
+    line = f"{_file_stamp()} {event}" + (f" {text}" if text else "")
+    try:
+        target.parent.mkdir(parents=True, exist_ok=True)
+        with target.open("a", encoding="utf-8") as handle:
+            handle.write(line + "\n")
+    except OSError as error:
+        print(f"[timeline-warn] cannot record {event}: {error}")
+
+
+def _failed_keys(path: Path | None = None) -> set[tuple[str, str]]:
+    """(status, url) pairs already present in scan/failed.txt, for dedupe."""
+    try:
+        lines = (path or FAILED_FILE).read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return set()
+    keys: set[tuple[str, str]] = set()
+    for line in lines:
+        parts = line.split("\t")
+        if len(parts) >= 3:
+            keys.add((parts[1].strip(), parts[2].strip()))
+    return keys
+
+
+def _remember_failed(
+    status: str,
+    url: str,
+    detail: str = "",
+    known: set[tuple[str, str]] | None = None,
+    path: Path | None = None,
+) -> bool:
+    """Append one time/status/url/detail record to scan/failed.txt.
+
+    Blocked pages (no download button) and failed downloads (unresolved,
+    rejected) share this one append-only ledger, so what did not make it is
+    finally on record instead of only scrolling past in the console.
+    Returns True when a new row was written. The ledger is for looking at;
+    skipping still comes from scan/blocked.txt only.
+    """
+    key = (status, url.strip())
+    if known is not None and key in known:
+        return False
+    text = " ".join(str(detail).split())
+    line = f"{_file_stamp()}\t{status}\t{url.strip()}\t{text}"
+    target = path or FAILED_FILE
+    try:
+        target.parent.mkdir(parents=True, exist_ok=True)
+        with target.open("a", encoding="utf-8") as handle:
+            handle.write(line + "\n")
+    except OSError as error:
+        print(f"[failed-warn] cannot record {url}: {error}")
+        return False
+    if known is not None:
+        known.add(key)
+    return True
+
+
+def note_pause() -> str:
+    """Record an interrupt in the timeline; returns the HH:MM:SS stamp."""
+    _timeline("pause")
+    return _stamp()
+
+
 def _memory_identity(candidate: DownloadCandidate) -> str:
     """Stable cross-run identity for the downloaded-memory: the canonical
     candidate key with whitespace collapsed (form data can hold newlines)."""
@@ -1883,6 +1968,10 @@ async def _download_entries_async(
     processed_candidates: set[str] = set()
     seen_hashes: set[str] = set()
     blocked_urls = _load_blocked_urls()
+    failed_keys = _failed_keys()
+    failed_new = 0
+    print(f"[start] {source} @ {_stamp()}")
+    _timeline("start", source)
     known_hashes, downloaded_urls, disk_files, disk_bytes = _load_downloaded_memory(
         output_dir
     )
@@ -1897,6 +1986,7 @@ async def _download_entries_async(
     ) as client:
 
         async def download_one(candidate: DownloadCandidate) -> None:
+            nonlocal failed_new
             try:
                 payload = await _resolve_candidate(client, candidate)
             except Exception as error:
@@ -1917,10 +2007,19 @@ async def _download_entries_async(
                 if blocked_key not in blocked_urls:
                     blocked_urls.add(blocked_key)
                     _remember_blocked(blocked_key)
+                if _remember_failed(
+                    "blocked",
+                    candidate.url,
+                    "page has no download button or file link",
+                    failed_keys,
+                ):
+                    failed_new += 1
                 return
             if payload is None:
                 summary.unresolved.append(candidate.url)
                 print(f"[unresolved] {candidate.url}: {reason}")
+                if _remember_failed("unresolved", candidate.url, reason, failed_keys):
+                    failed_new += 1
                 return
             data, extension, headers, final_url = payload
             digest = hashlib.sha256(data).hexdigest()
@@ -1954,9 +2053,12 @@ async def _download_entries_async(
             if path is None:
                 summary.unresolved.append(candidate.url)
                 print(f"[rejected] {candidate.url}: {detail}")
+                if _remember_failed("rejected", candidate.url, detail, failed_keys):
+                    failed_new += 1
                 return
             summary.saved.append(path)
-            print(f"[saved] {path.name} ({detail})")
+            print(f"[saved] {path.name} ({detail}) @ {_stamp()}")
+            _timeline("saved", f"{path.name} {detail}")
             _remember_downloaded(memory_key, digest)
 
         async def process_candidates() -> None:
@@ -2003,6 +2105,17 @@ async def _download_entries_async(
             summary.pages += count
             print(f"[site] {seed_urls[0]}: checked {count:,} page URL(s)")
             await process_candidates()
+    if failed_new:
+        print(
+            f"[failed] {failed_new} new failure record(s) in "
+            f"scan/{FAILED_FILE.name} @ {_stamp()}"
+        )
+    _timeline(
+        "summary",
+        f"saved={len(summary.saved)} downloaded={len(summary.downloaded)} "
+        f"no_download={len(summary.no_download)} "
+        f"unresolved={len(summary.unresolved)} pages={summary.pages:,}",
+    )
     return summary
 
 
@@ -2030,7 +2143,10 @@ if __name__ == "__main__":
     except (OSError, ValueError) as error:
         raise SystemExit(str(error)) from error
     except KeyboardInterrupt:
-        print("\n[paused] interrupted; progress is journaled - rerun to resume.")
+        print(
+            "\n[paused] interrupted; progress is journaled - rerun to "
+            f"resume. @ {note_pause()}"
+        )
         raise SystemExit(130) from None
     print(
         f"Finished: {report.sites} site(s), {report.pages:,} page URL(s), "
@@ -2039,5 +2155,5 @@ if __name__ == "__main__":
         f"{len(report.downloaded)} already-downloaded, "
         f"{len(report.skipped)} blocked-skipped, "
         f"{len(report.no_download)} page(s) without download, "
-        f"{len(report.unresolved)} unresolved."
+        f"{len(report.unresolved)} unresolved. @ {_stamp()}"
     )
