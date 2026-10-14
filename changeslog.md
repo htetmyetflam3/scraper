@@ -1,5 +1,10 @@
 previous changes logs are wiped.
 
+## 2026-10-14 — deletion is its own step: failed_urls.py --delete-zip
+- `--zip` now only audits and writes the manifest; it no longer prints any delete command, and says so: "manifest creation deletes nothing".
+- New separate mode `--delete-zip batch1.zip [--base DIR] [--yes]`: reads the zip's manifest and deletes exactly those files. Dry run and nothing removed without `--yes`; refuses to run when the manifest does not match the zip's current contents (stale manifest), never touches absolute paths or `..` escapes, skips symlinks, reports counts (deleted/missing/symlink/unsafe/error) and hints `--base DIR` when the listed paths are not under the default base (the zip's own folder). `--yes`/`--base` without `--delete-zip`, and `--zip` together with `--delete-zip`, exit 2.
+- Verified: 60/60 (`/tmp/test_d_tracking.py`: dry run deletes nothing, `--yes` removes exactly the members and leaves non-members/zip/manifest, rerun reports missing + base hint, stale-manifest refusal, zip-slip `../` canary untouched while the safe member is deleted, flag validation, missing zip/manifest exits) + 10/10 regression. Test scripts stay out of the repo.
+
 ## 2026-10-14 — stray scan/gitkeep reverted (owner push 3b9f021)
 - The pushed commit `3b9f021 updated` added an empty `scan/gitkeep` — same intent as `scan/.gitkeep` but missing the dot, which already exists and is the only trackable path under the new `/scan/*` ignore rule. Not a file-location move, so reverted per the kept/reverted rule; the file was 0 bytes, nothing lost.
 - `git ls-files scan/` lists exactly `scan/.gitkeep` again. Any box that pulled it loses the stray file on its next pull (it is tracked-and-deleted upstream, so the pull removes it cleanly).

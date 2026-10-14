@@ -30,6 +30,15 @@ Zip mode - what a batch zip actually contains, plus a deletion manifest
     python3 python/bin/failed_urls.py --zip batch1.zip [--pdfs-dir DIR]
                                        [--manifest PATH]
 
+Delete mode - separate step, run ONLY after the upload is verified
+    Deletes exactly the files listed in ``<zip>.manifest.txt``. Refuses to
+    run when the manifest does not match the zip's current contents, and
+    never touches absolute paths or ``..`` escapes. Dry run by default;
+    ``--yes`` performs the deletions. ``--base DIR`` when the zip was
+    built somewhere other than the zip's own folder.
+
+    python3 python/bin/failed_urls.py --delete-zip batch1.zip [--base DIR] [--yes]
+
 Dcrawler itself keeps scan/failed.txt up to date automatically now; this
 helper exists for history written before that, and for zip audits.
 """
@@ -298,7 +307,7 @@ def zip_audit(
         if manifest_path is not None
         else zip_path.with_name(zip_path.name + ".manifest.txt")
     )
-    listed = [name[2:] if name.startswith("./") else name for name in file_members]
+    listed = [normalize_member(name) for name in file_members]
     header = [
         f"# zip: {zip_path.name}",
         f"# made: {made.strftime('%m-%d %H:%M:%S')}",
@@ -312,13 +321,12 @@ def zip_audit(
         print(f"[zip] cannot write manifest {manifest}: {error}")
         return 1
     print(f"[zip] manifest written: {manifest} ({len(listed):,} path(s))")
+    hint = f"python/bin/failed_urls.py --delete-zip {zip_path}"
+    if manifest_path is not None:
+        hint += f" --manifest {manifest}"
     print(
-        "[zip] delete exactly those files only after the upload is verified, "
-        "run from the directory the zip was built in:"
-    )
-    print(
-        f"[zip]   grep -v '^#' {manifest} | "
-        'while IFS= read -r f; do rm -f -- "$f"; done'
+        "[zip] manifest creation deletes nothing; when the upload is "
+        f"verified, run separately (dry run first): {hint}"
     )
 
     saved = [
@@ -376,6 +384,136 @@ def zip_audit(
     return 0
 
 
+def normalize_member(name: str) -> str:
+    """Zip member path with any leading ./ removed."""
+    while name.startswith("./"):
+        name = name[2:]
+    return name
+
+
+def delete_from_manifest(
+    zip_path: Path,
+    manifest_path: Path | None,
+    base_dir: Path | None,
+    apply_delete: bool,
+) -> int:
+    """Delete exactly the manifest-listed files, after an upload is verified.
+
+    The manifest must match the zip's current contents exactly; a stale
+    manifest refuses to run. Paths resolve under base_dir (default: the
+    zip's own folder). Absolute paths and ``..`` escapes are never touched;
+    symlinks are skipped. Dry run unless apply_delete is true.
+    """
+    zip_path = zip_path.resolve()
+    if not zip_path.is_file():
+        print(f"[delete] zip not found: {zip_path}")
+        return 1
+    manifest = (
+        manifest_path
+        if manifest_path is not None
+        else zip_path.with_name(zip_path.name + ".manifest.txt")
+    )
+    if not manifest.is_file():
+        print(f"[delete] manifest not found: {manifest} (run --zip first)")
+        return 1
+    base = (base_dir if base_dir is not None else zip_path.parent).resolve()
+    if not base.is_dir():
+        print(f"[delete] base directory not found: {base} (pass --base DIR)")
+        return 1
+    try:
+        with zipfile.ZipFile(zip_path) as bundle:
+            zip_members = {
+                normalize_member(name)
+                for name in bundle.namelist()
+                if not name.endswith("/")
+            }
+    except (OSError, zipfile.BadZipFile) as error:
+        print(f"[delete] cannot read {zip_path.name}: {error}")
+        return 1
+
+    listed: list[str] = []
+    for line in read_lines(manifest):
+        text = line.strip()
+        if text and not text.startswith("#"):
+            listed.append(normalize_member(text))
+    listed_set = set(listed)
+    if listed_set != zip_members:
+        print(
+            f"[delete] manifest does not match {zip_path.name}: "
+            f"{len(listed_set)} listed vs {len(zip_members)} inside the zip; "
+            "re-run --zip first; nothing deleted"
+        )
+        for name in sorted(listed_set - zip_members)[:3]:
+            print(f"[delete]   only in manifest: {name}")
+        for name in sorted(zip_members - listed_set)[:3]:
+            print(f"[delete]   only in zip: {name}")
+        return 1
+
+    targets: list[Path] = []
+    missing: list[str] = []
+    symlinks: list[str] = []
+    unsafe: list[str] = []
+    seen: set[str] = set()
+    for entry in listed:
+        if entry in seen:
+            continue
+        seen.add(entry)
+        if Path(entry).is_absolute() or ".." in Path(entry).parts:
+            unsafe.append(entry)
+            continue
+        candidate = base / entry
+        if candidate.is_symlink():
+            symlinks.append(entry)
+        elif candidate.is_file():
+            targets.append(candidate)
+        else:
+            missing.append(entry)
+
+    print(
+        f"[delete] {zip_path.name}: {len(listed_set)} listed path(s), "
+        f"base {base}"
+    )
+    for entry in unsafe:
+        print(f"[delete]   unsafe, never touched: {entry}")
+    for entry in symlinks:
+        print(f"[delete]   symlink, skipped: {entry}")
+
+    if not apply_delete:
+        print(f"[delete] dry run: {len(targets)} file(s) would be deleted")
+        for path in targets[:10]:
+            print(f"[delete]   - {path.relative_to(base)}")
+        if len(targets) > 10:
+            print(f"[delete]   ... and {len(targets) - 10} more")
+        if missing:
+            print(f"[delete] {len(missing)} listed path(s) not found under base")
+            for entry in missing[:5]:
+                print(f"[delete]   ? {entry}")
+            print("[delete] if the zip was built in another folder, pass --base DIR")
+        print(
+            "[delete] nothing was deleted; re-run with --yes only after the "
+            "upload is verified on the other side"
+        )
+        return 0
+
+    deleted = 0
+    errors = 0
+    for path in targets:
+        try:
+            path.unlink()
+        except OSError as error:
+            errors += 1
+            print(f"[delete] cannot delete {path}: {error}")
+        else:
+            deleted += 1
+    print(
+        f"[delete] deleted {deleted} file(s); missing {len(missing)}, "
+        f"symlink(s) {len(symlinks)}, unsafe {len(unsafe)}, error(s) {errors}"
+    )
+    if missing:
+        print("[delete] if the zip was built in another folder, pass --base DIR")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description="Backfill failed URLs from crawl/download history, or audit a batch zip."
@@ -413,12 +551,44 @@ def main(argv: list[str] | None = None) -> int:
         type=Path,
         default=None,
         help=(
-            "with --zip: where to write the member list "
-            "(default: <zip>.manifest.txt next to the zip)"
+            "with --zip: where to write the member list; with --delete-zip: "
+            "which list to read (default: <zip>.manifest.txt next to the zip)"
         ),
     )
+    parser.add_argument(
+        "--delete-zip",
+        type=Path,
+        default=None,
+        metavar="ZIP",
+        help=(
+            "separate step after the upload is verified: delete exactly the "
+            "files listed in the zip's manifest (dry run without --yes)"
+        ),
+    )
+    parser.add_argument(
+        "--base",
+        type=Path,
+        default=None,
+        help=(
+            "with --delete-zip: directory the zip was built in "
+            "(default: the zip's own folder)"
+        ),
+    )
+    parser.add_argument(
+        "--yes",
+        action="store_true",
+        help="with --delete-zip: actually delete (without it nothing is removed)",
+    )
     args = parser.parse_args(argv)
+    if args.zip is not None and args.delete_zip is not None:
+        parser.error("choose one of --zip or --delete-zip")
+    if (args.yes or args.base is not None) and args.delete_zip is None:
+        parser.error("--yes and --base need --delete-zip")
     scan_dir = (args.scan_dir or repo_scan_dir()).resolve()
+    if args.delete_zip is not None:
+        return delete_from_manifest(
+            args.delete_zip, args.manifest, args.base, args.yes
+        )
     if args.zip is not None:
         return zip_audit(args.zip, scan_dir, args.pdfs_dir, args.manifest)
     return backfill(scan_dir, dry_run=args.dry_run, include_all=args.all)
