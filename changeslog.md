@@ -1,5 +1,9 @@
 previous changes logs are wiped.
 
+## 2026-10-14 — accidental tdl README reverted (owner push fe4005d)
+- The pushed commit `fe4005d Readme.md` added `README.md` + `README_zh.md` — iyear/tdl's own project README (Telegram Downloader badges, docs links), not this repo's docs. Copy/paste accident, not a file-location move, so reverted (`55fde0a`); both files are 101 lines of upstream text, nothing of the scraper was touched by their commit or by the revert.
+- Note for the box: pulling the revert deletes those two files locally. If a real scraper README is wanted, write one for this repo instead of importing another project's.
+
 ## 2026-10-14 — deletion is its own step: failed_urls.py --delete-zip
 - `--zip` now only audits and writes the manifest; it no longer prints any delete command, and says so: "manifest creation deletes nothing".
 - New separate mode `--delete-zip batch1.zip [--base DIR] [--yes]`: reads the zip's manifest and deletes exactly those files. Dry run and nothing removed without `--yes`; refuses to run when the manifest does not match the zip's current contents (stale manifest), never touches absolute paths or `..` escapes, skips symlinks, reports counts (deleted/missing/symlink/unsafe/error) and hints `--base DIR` when the listed paths are not under the default base (the zip's own folder). `--yes`/`--base` without `--delete-zip`, and `--zip` together with `--delete-zip`, exit 2.
