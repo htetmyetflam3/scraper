@@ -1,0 +1,250 @@
+"""Single executor for the scrape pipeline: search, entry-crawl, download."""
+
+from __future__ import annotations
+
+import argparse
+import asyncio
+import sys
+from pathlib import Path
+
+BIN_DIR = Path(__file__).resolve().parent / "python" / "bin"
+sys.path.insert(0, str(BIN_DIR))
+
+from Dcrawler import download_entries, note_pause  # noqa: E402
+from download_rate import validate_limit  # noqa: E402
+from fetch_results import fetch_results  # noqa: E402
+from phatmal import (  # noqa: E402
+    login_and_verify,
+    probe_content,
+    run_phatmal,
+    slug_from_input,
+)
+from Scrawler import find_entry  # noqa: E402
+from scribd import download_scribd, read_links_file  # noqa: E402
+from serpapi import SerpApiError  # noqa: E402
+
+USE_ENTRY_FILE: object = object()
+USE_SCRIBD_FILE: object = object()
+USE_PHATMAL_LIBRARY: object = object()
+
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        description="Run the scrape pipeline stages independently or all at once."
+    )
+    parser.add_argument(
+        "--search",
+        nargs="*",
+        default=None,
+        metavar="KEYWORD",
+        help=(
+            "Call SerpApi and append to search_results.json: bare flag "
+            "uses the default keywords, or pass keyword(s) to fetch only "
+            "those (e.g. --search \"pdfများ\"). Already-saved keywords "
+            "are skipped without API calls."
+        ),
+    )
+    parser.add_argument(
+        "--entry",
+        action="store_true",
+        help="Crawl saved results for download links and write scan/entry.txt.",
+    )
+    parser.add_argument(
+        "--download",
+        nargs="?",
+        const=USE_ENTRY_FILE,
+        default=None,
+        metavar="SITE_URL",
+        help=(
+            "Download files using site links from scan/entry.txt, "
+            'or from SITE_URL when given (e.g. --download "https://example.com").'
+        ),
+    )
+    parser.add_argument(
+        "--download-remote",
+        nargs="?",
+        const=USE_ENTRY_FILE,
+        default=None,
+        metavar="SITE_URL",
+        help=(
+            "Like --download, but push every saved file to the SSH host from "
+            "the SSH_* .env settings, verify its sha256, then delete the local "
+            "copy. Interrupted pushes resume on the next run; failures stay on "
+            "disk and are recorded in scan/failed.txt."
+        ),
+    )
+    parser.add_argument(
+        "--download-limit",
+        type=validate_limit,
+        default=0.0,
+        metavar="MB_PER_SEC",
+        help=(
+            "With --download/--download-remote/--main: cap aggregate crawler "
+            "HTTP response bodies in MB/s (1 MB = 1048576 bytes). "
+            "Default 0 = unlimited; does not limit SSH uploads."
+        ),
+    )
+    parser.add_argument(
+        "--keep-local",
+        action="store_true",
+        help=(
+            "With --download-remote: keep the local copy after a verified "
+            "push (nothing is deleted)."
+        ),
+    )
+    parser.add_argument(
+        "--fresh",
+        action="store_true",
+        help=(
+            "With --download/--main: wipe the crawl journals and revisit "
+            "every page (saved files are still skipped, not re-downloaded)."
+        ),
+    )
+    parser.add_argument(
+        "--scribd",
+        nargs="?",
+        const=USE_SCRIBD_FILE,
+        default=None,
+        metavar="SCRIBD_URL",
+        help=(
+            "Download scribd documents from the scribd links file, "
+            "or the given document URL when passed."
+        ),
+    )
+    parser.add_argument(
+        "--main",
+        action="store_true",
+        help="Run search, then entry crawl, then download, in order.",
+    )
+    parser.add_argument(
+        "--phatmal-check",
+        action="store_true",
+        help=(
+            "Log in to the phatmal API with the PHATMAL_* .env credentials "
+            "and verify the session works."
+        ),
+    )
+    parser.add_argument(
+        "--phatmal-probe",
+        default=None,
+        metavar="SLUG_OR_URL",
+        help=(
+            "Log in to the phatmal API and probe the likely book endpoints "
+            "for a slug or /ebook/<slug> URL, printing each answer's shape."
+        ),
+    )
+    parser.add_argument(
+        "--phatmal",
+        nargs="?",
+        const=USE_PHATMAL_LIBRARY,
+        default=None,
+        metavar="SLUG_OR_URL",
+        help=(
+            "Download phatmal ebooks with the PHATMAL_* .env credentials: "
+            "bare flag crawls the whole library, or pass a slug or "
+            "/ebook/<slug> URL for one book."
+        ),
+    )
+    return parser
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = build_parser()
+    args = parser.parse_args(argv)
+    if args.keep_local and args.download_remote is None:
+        parser.error("--keep-local needs --download-remote")
+    if args.download_limit and not (
+        args.main or args.download is not None or args.download_remote is not None
+    ):
+        parser.error("--download-limit needs --download, --download-remote or --main")
+    # Preserve the default call signatures when no limit was requested.
+    rate_options = {"download_limit": args.download_limit} if args.download_limit else {}
+    try:
+        if args.main:
+            fetch_results()
+            find_entry()
+            download_entries(fresh=args.fresh, **rate_options)
+            return 0
+        if (
+            args.search is None
+            and not args.entry
+            and args.download is None
+            and args.download_remote is None
+            and args.scribd is None
+            and not args.fresh
+            and not args.phatmal_check
+            and args.phatmal_probe is None
+            and args.phatmal is None
+        ):
+            parser.print_usage(sys.stderr)
+            return 2
+        if args.search is not None:
+            if args.search:
+                fetch_results(keywords=args.search)
+            else:
+                fetch_results()
+        if args.entry:
+            find_entry()
+        if args.download is not None:
+            if args.download is USE_ENTRY_FILE:
+                download_entries(fresh=args.fresh, **rate_options)
+            else:
+                download_entries(args.download, fresh=args.fresh, **rate_options)
+        if args.download_remote is not None:
+            if args.download_remote is USE_ENTRY_FILE:
+                download_entries(
+                    fresh=args.fresh, remote=True, keep_local=args.keep_local, **rate_options
+                )
+            else:
+                download_entries(
+                    args.download_remote,
+                    fresh=args.fresh,
+                    remote=True,
+                    keep_local=args.keep_local,
+                    **rate_options,
+                )
+        if args.scribd is not None:
+            if args.scribd is USE_SCRIBD_FILE:
+                links = read_links_file()
+            else:
+                links = [args.scribd]
+            summary = download_scribd(links)
+            if links and not summary.downloaded:
+                return 1
+        if args.phatmal_check:
+            if not asyncio.run(login_and_verify()):
+                return 1
+        if args.phatmal_probe is not None:
+            slug = slug_from_input(args.phatmal_probe)
+            if not slug:
+                print(
+                    "error: --phatmal-probe needs a slug or /ebook/<slug> URL",
+                    file=sys.stderr,
+                )
+                return 2
+            if not asyncio.run(probe_content(slug)):
+                return 1
+        if args.phatmal is not None:
+            target = None if args.phatmal is USE_PHATMAL_LIBRARY else args.phatmal
+            if target is not None and not slug_from_input(target):
+                print(
+                    "error: --phatmal needs a slug or /ebook/<slug> URL",
+                    file=sys.stderr,
+                )
+                return 2
+            if not asyncio.run(run_phatmal(target)):
+                return 1
+    except (SerpApiError, OSError, ValueError) as error:
+        print(f"error: {error}", file=sys.stderr)
+        return 1
+    except KeyboardInterrupt:
+        print(
+            "\n[paused] interrupted; progress is journaled - rerun to "
+            f"resume. @ {note_pause()}"
+        )
+        return 130
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

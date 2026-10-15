@@ -1,0 +1,30 @@
+# Local environments and caches
+
+*venv*
+*.env*
+!.env.example
+*__pycache__*
+.venv/
+*/pdfs/*
+*pdfs*
+*/__pycache__/
+*.py[cod]
+.cache/
+.pytest_cache/
+.ruff_cache/
+
+# Credentials and temporary/runtime files
+*node_modules*
+*.log
+*.tmp
+*.swp
+*.linearizing
+.DS_Store
+Thumbs.db
+
+# Downloaded/generated data
+/pdfs/
+/python/pdfs/
+downloaded_files/
+/scan/*
+!/scan/.gitkeep
