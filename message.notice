@@ -1,24 +1,3 @@
-i answered ur question and fking session keep replaying . so here is how we communicate.
-
-to ur 4 question 
-1- no      
-      
-2-not sure what u mean dead site my crawler already skip if the site can't access so if that behaviour still retain ,then  don't needretry  up to 20 minute . it is already ship by skipping between failed / can't access / can't find download button/ by registeing the failed  and block url so not sure why ur asking this.
-we need to adjust what u mean failed and what I meant failed
-
-
-f1-shouldnt exist with error keep record output files and once craling finish and before it quit 
-give 3 turn to each failed n blocked url 
-
-
-each turn is single attempt to download the every single  urls from those file and on success remove them from failed record 
-and while giving attempt if failed just move next line and keep doing and after 3 turn quit .
-
-do the same for blocked one.
-
-keep failedurl.py and dedeup pdf 
-
-upload wont have  stucking loop  if connection time out retry it will success or failed if failed then  extend retry at 15 sec -30 sec-1minute and set up to  3minute and exit
-
-
-important reminder ur version must prodcue all the txt that my main brach produce in scan dir bro .it must record all as my main brach if ur not sure find the  .txt output files.
+1-no mean 5gb is crawler hard quit for all flags 
+2-dont wait for both failed/ cant access / block or whatever just record them and once crawling finished ( all.url to find and done all url to download )give 3 attempt to those fike each attempt is one time retry to single url in those files. so remove waiting 20 minute it is time wasting for crawler.
+3 - ur correct anyway skip for all of them and retry after everything finish to guard.
