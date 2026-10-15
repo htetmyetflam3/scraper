@@ -14,6 +14,7 @@ BIN_DIR = Path(__file__).resolve().parent / "python" / "bin"
 sys.path.insert(0, str(BIN_DIR))
 
 from Dcrawler import ENTRY_FILE, OUTPUT_DIR, download_entries, note_pause  # noqa: E402
+from disk_floor import DiskTight  # noqa: E402
 from download_rate import validate_limit  # noqa: E402
 from fetch_results import DEFAULT_KEYWORDS, fetch_results  # noqa: E402
 from mailer import RunMail  # noqa: E402
@@ -60,8 +61,13 @@ htetmyet986@gmail.com via smtp.hostinger.com:465 (MAIL_PASSWORD in .env); a
 copy of each goes to that mailbox's Sent folder via imap.hostinger.com:993.
 --process mails started, then one report at the {NIGHT_HOURS:g}-hour mark (or when all is
 done) listing every problem with its part and time; nothing in between unless
-it quits with an error (uploads failing while under 5 GB is free): that failed
-email goes right away, with the problems so far.
+it quits with an error (the disk under 5 GB free): that failed email goes
+right away, with the problems so far.
+
+disk: 5 GB is kept free for the system. Every download command (--main,
+--download, --process, --scribd, --phatmal) checks it before each file and
+quits with an error under it; free space (e.g. uv run main.py --upload), then
+rerun to resume.
 """
 
 
@@ -147,11 +153,10 @@ def build_parser() -> argparse.ArgumentParser:
             "Night run in one terminal: download from scan/entry.txt while "
             "uploading to the SSH host (checked every -i seconds). Pages and "
             "files that fail or can't be reached are skipped and recorded like "
-            "--download; keeps 5 GB of disk free (downloading "
-            f"waits for uploads below that), stops at the {NIGHT_HOURS:g}-hour mark "
+            f"--download; stops at the {NIGHT_HOURS:g}-hour mark "
             "(NIGHT_HOURS at the top of main.py) and mails "
-            "a report. Quits with an error (mailed right away) if uploads fail "
-            "while under 5 GB is free; rerun resumes."
+            "a report. Quits with an error (mailed right away) when the disk "
+            "goes under 5 GB free, like every download command; rerun resumes."
         ),
     )
     command.add_argument(
@@ -314,6 +319,11 @@ def main(argv: list[str] | None = None) -> int:
                 details=error.report.details(),
                 problems=error.report.problem_rows(),
             )
+        return 1
+    except DiskTight as error:
+        print(f"error: {error}", file=sys.stderr)
+        if mail is not None:
+            mail.send_failed(part, error)
         return 1
     except (SerpApiError, OSError, ValueError, RunFailed) as error:
         print(f"error: {error}", file=sys.stderr)

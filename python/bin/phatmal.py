@@ -18,6 +18,7 @@ from pathlib import Path
 
 import httpx
 
+from disk_floor import check_disk
 from mediafire import is_docx
 from pdf_support import is_pdf
 from site_login import load_dotenv_values
@@ -525,6 +526,7 @@ async def download_book(
         print(f"[phatmal] [skip] {title}: no file link in API data")
         return "skipped"
     url, _kind = picked
+    check_disk(output_dir)  # under the 5 GB kept for the system every command quits
     print(f"[phatmal] [download] {title}", flush=True)
     data = await _download_file(client, url)
     if data is None:
@@ -604,6 +606,7 @@ async def run_phatmal(
     """None crawls the whole library; else one phatmal.com/ebook/<slug> URL
     (any other URL raises ValueError before logging in). False only when
     nothing was saved and something failed (or the list came back empty)."""
+    check_disk(output_dir or OUTPUT_DIR)  # before logging in: no room, no run
     if target is None:
         stats = await crawl_library(output_dir)
         return stats["saved"] > 0 or (

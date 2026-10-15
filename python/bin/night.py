@@ -11,15 +11,17 @@ Night rules (the owner is asleep, nobody can press a key):
   run tries it again), a page without a download button goes to
   scan/blocked.txt, a download that didn't work goes to scan/failed.txt.
   Nothing is waited for or retried during the run.
-- 5 GB of disk is kept free for the system (packages): below it downloading
-  pauses until uploads free space. "Tight" means exactly that: under 5 GB.
+- 5 GB of disk is kept free for the system (packages). "Tight" means
+  exactly that: under 5 GB. Like every download command, the crawler checks
+  it before each file and quits hard when tight: downloading and uploading
+  stop and the run exits with an error (NightFailed, part download); main.py
+  mails the failure right away with every problem so far.
 - Upload: a file that fails 5 tries ->
-  - the disk has room: quit uploading (no retrying all night); downloading
-    goes on and the files stay in python/pdfs for `main.py --upload`. When
-    the disk later gets tight, the uploader tries again (5 tries).
-  - the disk is tight while downloading goes on: quit entirely - stop
-    downloading and uploading and exit with an error (NightFailed); main.py
-    mails the failure right away with every problem so far.
+  - downloading goes on and the disk has room: quit uploading (no retrying
+    all night); the files stay in python/pdfs for `main.py --upload`.
+  - downloading goes on and the disk is tight: quit entirely - stop
+    downloading and uploading and exit with an error (NightFailed, part
+    upload), mailed right away like above.
   - downloading is finished or stopping: quit uploading.
 - At the wake-up mark (`hours`: NIGHT_HOURS at the top of main.py, 6)
   downloading stops at a safe point (journals keep the place, a rerun
@@ -32,14 +34,13 @@ Night rules (the owner is asleep, nobody can press a key):
 from __future__ import annotations
 
 import _thread
-import asyncio
-import shutil
 import threading
 import time
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
 
+from disk_floor import DISK_FLOOR, DiskTight, disk_tight, size_text
 from Dcrawler import ENTRY_FILE, OUTPUT_DIR, DownloadSummary, StopRun, download_entries
 from mailer import clock, duration, now
 from save_remote import (
@@ -54,19 +55,7 @@ from save_remote import (
 
 HARD_STOP_GRACE = 300.0  # after a stop request (mark or failure), force it if no safe point came
 UPLOAD_STOP_GRACE = 120.0  # after the mark, time to send what is already downloaded
-DISK_FLOOR = 5 * 1024**3  # kept free for the system; under it downloading pauses = "tight"
-DISK_CHECK_SECONDS = 30.0
 UPLOAD_TRIES = RETRY_ATTEMPTS  # "about 5 failed retries" before the rule decides
-
-
-def free_bytes(path: Path) -> int:
-    return shutil.disk_usage(path).free
-
-
-def size_text(count: float) -> str:
-    if count >= 1024**3:
-        return f"{count / 1024**3:.1f} GB"
-    return f"{count / 1048576:.1f} MB"
 
 
 def _stamp() -> str:
@@ -131,10 +120,10 @@ class NightReport:
         if stopped_early and self.current_site:
             lines.append(f"📍 Stopped while on {self.current_site}.")
         steps = []
-        if stopped_early:
-            steps.append("▶ Continue: uv run main.py --process (downloads resume where they stopped)")
         if self.left_files:
             steps.append("▶ Send the files still on disk: uv run main.py --upload")
+        if stopped_early:
+            steps.append("▶ Continue: uv run main.py --process (downloads resume where they stopped)")
         if steps:
             lines += ["", *steps]
         return lines
@@ -145,8 +134,8 @@ class NightReport:
 
 class NightGuard:
     """Night policy shared by the crawler (main thread, asyncio) and the
-    upload thread. Dcrawler calls checkpoint/site_started/wait_for_disk/
-    note_saved."""
+    upload thread. Dcrawler calls checkpoint/site_started/note_saved (the
+    5 GB check before each file is Dcrawler's own, disk_floor.check_disk)."""
 
     def __init__(
         self,
@@ -166,6 +155,7 @@ class NightGuard:
         self.stop_reason = ""
         self.mark_reached = False
         self.failure = ""  # why the run quit entirely (exit with an error)
+        self.failure_part = "upload"  # the part named in the failure email
         self.hard_timer: threading.Timer | None = None
         self.download_done = threading.Event()
         self.download_running = False
@@ -174,22 +164,13 @@ class NightGuard:
         self.problems: list[Problem] = []
         self.saved_files = 0
         self.saved_bytes = 0
-        self.disk_pauses = 0
-        self.disk_paused_for = 0.0
-        self.disk_problem: Problem | None = None
         self.uploaded = 0
         self.uploaded_bytes = 0
-        self.upload_paused = False
         self.current_site = ""
 
     # ---------------------------------------------------------------- shared
     def seconds_left(self) -> float:
         return max(self.deadline - time.monotonic(), 0.0)
-
-    def disk_check(self) -> tuple[bool, int]:
-        """(tight, free bytes): tight = under the DISK_FLOOR kept for the system."""
-        free = free_bytes(self.output_dir)
-        return free < DISK_FLOOR, free
 
     def problem(self, part: str, text: str, when: datetime | None = None) -> Problem:
         item = Problem(when or now(), part, text)
@@ -214,12 +195,13 @@ class NightGuard:
         self.mark_reached = True
         self.request_stop(f"{self.hours:g}-hour mark")
 
-    def fail(self, text: str) -> None:
+    def fail(self, text: str, part: str = "upload") -> None:
         """Quit entirely: stop uploading and downloading; run_process then
         raises NightFailed and main.py mails the failure right away."""
         if self.failure:
             return
         self.failure = text
+        self.failure_part = part
         print(f"[night-fail] {text} Exiting with an error @ {_stamp()}", flush=True)
         self.upload_stop.set()
         self.request_stop("quitting with an error")
@@ -244,58 +226,6 @@ class NightGuard:
             self.saved_files += 1
             self.saved_bytes += max(int(size), 0)
 
-    async def pause(self, seconds: float) -> None:
-        """asyncio sleep that ends at the stop (raises StopRun)."""
-        end = time.monotonic() + seconds
-        while True:
-            self.checkpoint()
-            left = end - time.monotonic()
-            if left <= 0:
-                return
-            await asyncio.sleep(min(left, 1.0))
-
-    async def wait_for_disk(self) -> None:
-        """Before each download: pause while the disk is tight (under DISK_FLOOR)."""
-        tight, free = self.disk_check()
-        if not tight:
-            return
-        began_clock = now()
-        began = time.monotonic()
-        print(f"[disk-wait] only {size_text(free)} free ({size_text(DISK_FLOOR)} is kept for the system): downloading paused until uploads free space @ {_stamp()}", flush=True)
-        checks = 0
-        try:
-            while tight:
-                await self.pause(DISK_CHECK_SECONDS)
-                tight, free = self.disk_check()
-                checks += 1
-                if checks % 10 == 0 and tight:
-                    print(f"[disk-wait] still {size_text(free)} free @ {_stamp()}", flush=True)
-        except StopRun:
-            self._disk_paused(began_clock, time.monotonic() - began, at_stop=True)
-            raise
-        waited = time.monotonic() - began
-        print(f"[disk-ok] {size_text(free)} free again after {duration(timedelta(seconds=waited))}; downloading continues @ {_stamp()}", flush=True)
-        self._disk_paused(began_clock, waited)
-
-    def _disk_paused(self, began_clock: datetime, seconds: float, *, at_stop: bool = False) -> None:
-        """One report row for every disk pause: they repeat whenever uploads
-        are slower than downloads."""
-        self.disk_pauses += 1
-        self.disk_paused_for += seconds
-        paused = duration(timedelta(seconds=self.disk_paused_for))
-        if self.disk_pauses == 1:
-            text = f"the disk went under {size_text(DISK_FLOOR)} free (kept for the system); downloading paused {paused} until uploads freed space."
-        else:
-            text = (
-                f"the disk went under {size_text(DISK_FLOOR)} free (kept for the system) {self.disk_pauses} times; "
-                f"downloading paused {paused} in total until uploads freed space."
-            )
-        if at_stop:
-            text += " It was still paused at the stop."
-        if self.disk_problem is None:
-            self.disk_problem = self.problem("download", text, began_clock)
-        else:
-            self.disk_problem.text = text
 
     # ------------------------------------------------------ upload side (thread)
     def _wait(self, seconds: float, *, wake_when_done: bool = False) -> None:
@@ -317,23 +247,9 @@ class NightGuard:
 
     def _upload_loop(self, interval: float) -> None:
         while not self.upload_stop.is_set():
-            if self.upload_paused:
-                if self.download_done.is_set():
-                    return
-                tight, free = self.disk_check()
-                if not tight:
-                    self._wait(interval, wake_when_done=True)
-                    continue
-                self.upload_paused = False
-                print(f"[upload-resume] the disk got tight ({size_text(free)} free, under {size_text(DISK_FLOOR)}) and downloading is not finished; uploading again @ {_stamp()}", flush=True)
-                self.problem("upload", f"uploading started again: the disk got tight ({size_text(free)} free, under {size_text(DISK_FLOOR)}) before downloading finished.")
             for file in pending_files(self.output_dir):
                 if self.upload_stop.is_set() or not self._push(file, interval):
-                    break
-            if self.upload_stop.is_set():
-                return
-            if self.upload_paused:
-                continue
+                    return  # stopped, quit uploading, or quit entirely
             if self.download_done.is_set() and not pending_files(self.output_dir):
                 return
             self._wait(interval, wake_when_done=True)
@@ -371,7 +287,7 @@ class NightGuard:
                 self._wait(RETRY_DELAY)
                 continue
             downloading = not (self.download_done.is_set() or self.stop_event.is_set())
-            tight, free = self.disk_check()
+            tight, free = disk_tight(self.output_dir)
             waiting = pending_files(self.output_dir)
             if downloading and tight:
                 self.fail(
@@ -392,7 +308,6 @@ class NightGuard:
                 flush=True,
             )
             self.problem("upload", f"{UPLOAD_TRIES} tries failed ({detail}). {why[0].upper()}{why[1:]}, so uploading stopped.")
-            self.upload_paused = True
             return False
         return False
 
@@ -427,6 +342,14 @@ def run_process(
         guard.download_running = True
         try:
             summary = download_entries(entry_file, output_dir, download_limit=download_limit, guard=guard)
+        except DiskTight as tight:
+            summary = tight.summary
+            guard.fail(
+                f"The disk went under the {size_text(DISK_FLOOR)} kept for the system "
+                f"({size_text(tight.free)} free): downloading and uploading stopped, "
+                f"{len(pending_files(output_dir))} file(s) stay in python/pdfs.",
+                part="download",
+            )
         finally:
             guard.download_running = False
             if guard.hard_timer is not None:
@@ -487,5 +410,5 @@ def run_process(
     for item in report.problems:
         print(f"[night] problem {clock(item.when)} {item.part.upper()}: {item.text}", flush=True)
     if report.failure:
-        raise NightFailed("upload", report.failure, report)
+        raise NightFailed(guard.failure_part, report.failure, report)
     return report

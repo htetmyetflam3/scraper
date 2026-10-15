@@ -16,6 +16,8 @@ import urllib.parse
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from disk_floor import check_disk
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCAN_DIR = REPO_ROOT.parent / "scan"
 SCRIBD_LINKS_FILE = SCAN_DIR / "scribd.txt"
@@ -78,6 +80,7 @@ def download_scribd(
     out = Path(output_dir)
     out.mkdir(parents=True, exist_ok=True)
     for position, url in enumerate(urls, start=1):
+        check_disk(out)  # under the 5 GB kept for the system every command quits
         print(f"[scribd] {position}/{len(urls)}: {url}", flush=True)
         before = {path.name for path in out.glob("*.pdf")}
         try:

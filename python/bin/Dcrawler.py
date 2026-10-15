@@ -23,6 +23,7 @@ from pathlib import Path
 import httpx
 from bs4 import BeautifulSoup
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from disk_floor import DiskTight, check_disk, size_text
 from domain_guard import excluded_site_reason
 from download_rate import client_options as _rate_client_options, limit_downloads
 from download_links import FILE_EXTENSION, extract_file_links, guard_download_url
@@ -1909,6 +1910,7 @@ async def _run_download_entries_async(
     blocked_urls = _load_blocked_urls()
     failed_keys = _failed_keys()
     failed_new = 0
+    disk_full: DiskTight | None = None
     print(f"[start] {source} @ {_stamp()}")
     _timeline("start", source)
     remote_cfg = None
@@ -1944,8 +1946,7 @@ async def _run_download_entries_async(
 
         async def download_one(candidate: DownloadCandidate) -> None:
             nonlocal failed_new
-            if guard is not None:
-                await guard.wait_for_disk()
+            check_disk(output_dir)  # under the 5 GB kept for the system every command quits
             try:
                 payload = await _resolve_candidate(client, candidate)
             except Exception as error:
@@ -2098,6 +2099,15 @@ async def _run_download_entries_async(
                 flush=True,
             )
             _timeline("night-stop", summary.stopped)
+        except DiskTight as tight:
+            disk_full = tight
+            summary.stopped = "disk under 5 GB"
+            print(
+                f"[disk-full] {tight}; progress is journaled - free some space, "
+                f"then rerun to resume @ {_stamp()}",
+                flush=True,
+            )
+            _timeline("disk-full", f"free={size_text(tight.free)}")
     if failed_new:
         print(
             f"[failed] {failed_new} new failure record(s) in "
@@ -2111,6 +2121,9 @@ async def _run_download_entries_async(
         f"upload_failed={len(summary.upload_failed)}"
         + (f" stopped={summary.stopped}" if summary.stopped else ""),
     )
+    if disk_full is not None:
+        disk_full.summary = summary
+        raise disk_full
     return summary
 
 
