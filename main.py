@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import shlex
 import sys
 import time
 import urllib.parse
@@ -15,6 +16,7 @@ sys.path.insert(0, str(BIN_DIR))
 from Dcrawler import ENTRY_FILE, OUTPUT_DIR, download_entries, note_pause  # noqa: E402
 from download_rate import validate_limit  # noqa: E402
 from fetch_results import DEFAULT_KEYWORDS, fetch_results  # noqa: E402
+from mailer import RunMail  # noqa: E402
 from phatmal import run_phatmal  # noqa: E402
 from save_remote import watch  # noqa: E402
 from Scrawler import find_entry  # noqa: E402
@@ -43,7 +45,14 @@ examples:
   uv run main.py --phatmal https://phatmal.com/ebook/<slug>
 
 exit codes: 0 ok, 1 failed, 2 usage error, 130 paused (Ctrl+C; rerun resumes)
+
+email: every command except --findentry mails a started notice, then a
+finished or failed one naming the part (SMTP_* and MAIL_TO in .env).
 """
+
+
+class RunFailed(Exception):
+    """A command ran but produced nothing; reported like any other failure."""
 
 
 def _limit(text: str) -> float:
@@ -182,6 +191,13 @@ def _scribd_links(value: object) -> list[str]:
     return [text] if _is_url(text) else read_links_file(text)
 
 
+def _download_details(summary) -> list[str]:
+    return [
+        f"📚 Saved {len(summary.saved)} new file(s) · {len(summary.downloaded)} already "
+        f"downloaded · {len(summary.unresolved)} could not be downloaded."
+    ]
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -200,31 +216,49 @@ def main(argv: list[str] | None = None) -> int:
         parser.print_help()
         return 0
     limit = args.limit or 0.0
+    job = "main.py " + shlex.join(sys.argv[1:] if argv is None else argv)
+    mail = None if args.findentry is not None else RunMail(job)
+    part = "download"
+    details: list[str] = []
     try:
+        if mail is not None:
+            mail.send_started()
         if args.findentry is not None:
             keywords = _keywords(args.findentry)
             fetch_results(keywords=keywords)
             find_entry(keywords=keywords)
         elif args.main:
+            part = "search"
             fetch_results()
+            part = "entry crawl"
             find_entry()
-            download_entries(download_limit=limit)
+            part = "download"
+            details = _download_details(download_entries(download_limit=limit))
         elif args.download is not None:
             source = ENTRY_FILE if args.download is USE_ENTRY_FILE else args.download
-            download_entries(source, download_limit=limit)
+            details = _download_details(download_entries(source, download_limit=limit))
         elif args.upload:
+            part = "upload"
             watch(OUTPUT_DIR, args.interval or DEFAULT_INTERVAL)
         elif args.scribd is not None:
+            part = "scribd download"
             links = _scribd_links(args.scribd)
             summary = download_scribd(links)
             if links and not summary.downloaded:
-                return 1
+                raise RunFailed(f"nothing downloaded; all {len(links)} link(s) failed")
+            details = [
+                f"📄 Downloaded {len(summary.downloaded)} Scribd document(s), "
+                f"{len(summary.failed)} failed."
+            ]
         else:
+            part = "phatmal download"
             target = None if args.phatmal is USE_PHATMAL_LIBRARY else args.phatmal
             if not asyncio.run(run_phatmal(target)):
-                return 1
-    except (SerpApiError, OSError, ValueError) as error:
+                raise RunFailed("nothing was saved; see the log above")
+    except (SerpApiError, OSError, ValueError, RunFailed) as error:
         print(f"error: {error}", file=sys.stderr)
+        if mail is not None:
+            mail.send_failed(part, error)
         return 1
     except KeyboardInterrupt:
         if args.upload:
@@ -238,6 +272,12 @@ def main(argv: list[str] | None = None) -> int:
                 f"resume. @ {note_pause()}"
             )
         return 130
+    except Exception as error:
+        if mail is not None:
+            mail.send_failed(part, f"{type(error).__name__}: {error}")
+        raise
+    if mail is not None:
+        mail.send_finished(details)
     return 0
 
 
