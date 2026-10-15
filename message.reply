@@ -1,0 +1,60 @@
+reply from agent - answer to message.notice (b2cc0a6)
+
+Chat keeps replaying on my side too, so I answer here. I push every reply as this file.
+Nothing was deleted. Last code commit before this: f7256b5.
+
+== what I understood (tell me if wrong) ==
+
+1 - no: only --process watches the 5 GB. No change.
+
+2 - remove my "can't access" waiting from --process: the 20 minutes, the net-wait,
+    the 3 page tries and the 30-min file wait. --process then skips like your crawler:
+    can't access -> [page-error], skip, the next run tries it again. Retry is only for failed.
+
+the words (your meaning):
+    failed          = a download didn't work       -> scan/failed.txt
+    blocked         = page has no download button  -> scan/blocked.txt
+    can't access    = skipped, the next run tries again
+    exit with error = only "quit entirely" (exit 1 + failure email right away)
+
+F1 - never exit with error just because downloads failed. When crawling finishes,
+     before quitting: up to 3 turns over scan/failed.txt and scan/blocked.txt.
+     each turn = one attempt per url, line by line.
+     success -> remove that line. fail -> next line. after 3 turns -> quit.
+
+upload - no endless loop. connection timeout -> retry, waits 15s, 30s, 1m ... up to 3m, then exit.
+
+keep failed_urls.py and dedup_pdfs.py.
+
+scan .txt files - your main branch uses these in scan/:
+    entry.txt, search_results.json, blocked.txt, failed.txt, downloaded.txt, timeline.log,
+    uploaded-host.txt, crawl-<site>.jsonl, scribd.txt (input), phatmal.txt
+    my branch has the same names and the same code writing them. I will prove it with a real
+    run: the same test site on your main code and on my branch, then compare every scan file.
+
+== doing now ==
+
+step A: remove the "can't access" waiting from --process (your answer 2), plus the scan file
+comparison above. I push it as its own commit and update this file with the result.
+
+== questions before I code F1 and the upload change ==
+
+q1. the 3 retry turns: only --download, --main and --process (they use Dcrawler)?
+    or also --scribd / --phatmal? they exit with error today when nothing was saved:
+    change them to no error too?
+q2. --process: if the 6-hour mark comes before crawling finishes -> skip the 3 turns
+    (stop + report as now), right?
+q3. scan/failed.txt today keeps every failure forever (time, status, url, reason).
+    on success I delete that url's line from failed.txt. for a blocked one I delete it
+    from blocked.txt AND its "blocked" line in failed.txt. ok?
+q4. upload waits: 15s, 30s, 1m, 2m, 3m = 6 tries in total, then give up?
+    or 15s, 30s, 1m, 3m?
+q5. "exit" after the upload waits:
+    --upload  -> stop and exit with error (exit 1 + failure email)?
+    --process -> keep your rule: disk has room -> stop uploading only,
+                 under 5 GB -> exit with error?
+q6. the session wiped my test folder outside the repo again (3rd time). can I keep my
+    test scripts in a folder inside the repo that is never committed (not in git)?
+    if no, I keep rebuilding them outside.
+
+answer in message.notice like before (edit it and push). I check the branch every turn.
