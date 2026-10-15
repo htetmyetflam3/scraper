@@ -1,43 +1,32 @@
-reply from agent - answer to message.notice (b2cc0a6)
+reply from agent #2 - step A done (commit 27f7704). previous reply: b1f2ab3.
 
-Chat keeps replaying on my side too, so I answer here. I push every reply as this file.
-Nothing was deleted. Last code commit before this: f7256b5.
+note: your commit 27e3005 "another message" only deleted the 15 .pyc files in
+python/bin/__pycache__. message.notice did not change - if you wrote a new message,
+it did not get into that commit. I kept your .pyc deletion.
 
-== what I understood (tell me if wrong) ==
+== DONE: step A (your answer 2) ==
 
-1 - no: only --process watches the 5 GB. No change.
+- --process no longer waits for a site it can't access. Deleted: the 20 minutes,
+  the net-wait, the 3 page tries, the 30-min file wait.
+- --process now downloads with your crawler's own rules, same as --download:
+      can't access        -> [page-error], skipped, the next run tries it again
+      no download button  -> scan/blocked.txt
+      download failed     -> scan/failed.txt
+- kept in --process: the 6-hour mark stop, the 5 GB pause, the upload rule.
 
-2 - remove my "can't access" waiting from --process: the 20 minutes, the net-wait,
-    the 3 page tries and the 30-min file wait. --process then skips like your crawler:
-    can't access -> [page-error], skip, the next run tries it again. Retry is only for failed.
+== TESTED (real runs: local test sites, fake ssh host, local mail servers) ==
 
-the words (your meaning):
-    failed          = a download didn't work       -> scan/failed.txt
-    blocked         = page has no download button  -> scan/blocked.txt
-    can't access    = skipped, the next run tries again
-    exit with error = only "quit entirely" (exit 1 + failure email right away)
+- test site killed in the middle of --process -> [page-error] for the rest, no waiting,
+  the run ends by itself within seconds, exit 0, report email (no failure email).
+  rerun with the site back -> resumes, all 30 files on the host.
+- your reminder (scan .txt files): your main branch code (f932217) and my branch on the
+  same test site (2 good pdf, 1 duplicate, 1 page without download, 1 missing pdf,
+  1 fake pdf). identical records in blocked.txt, failed.txt, downloaded.txt, timeline.log,
+  uploaded-host.txt and crawl-*.jsonl, for --download, --upload and --process: 21/21.
+- all the other night checks still pass: 31/31.
+- NOT tested: real sites, a real VPS outage, real Hostinger mail (blocked from my sandbox).
 
-F1 - never exit with error just because downloads failed. When crawling finishes,
-     before quitting: up to 3 turns over scan/failed.txt and scan/blocked.txt.
-     each turn = one attempt per url, line by line.
-     success -> remove that line. fail -> next line. after 3 turns -> quit.
-
-upload - no endless loop. connection timeout -> retry, waits 15s, 30s, 1m ... up to 3m, then exit.
-
-keep failed_urls.py and dedup_pdfs.py.
-
-scan .txt files - your main branch uses these in scan/:
-    entry.txt, search_results.json, blocked.txt, failed.txt, downloaded.txt, timeline.log,
-    uploaded-host.txt, crawl-<site>.jsonl, scribd.txt (input), phatmal.txt
-    my branch has the same names and the same code writing them. I will prove it with a real
-    run: the same test site on your main code and on my branch, then compare every scan file.
-
-== doing now ==
-
-step A: remove the "can't access" waiting from --process (your answer 2), plus the scan file
-comparison above. I push it as its own commit and update this file with the result.
-
-== questions before I code F1 and the upload change ==
+== STILL NEED YOUR ANSWERS before I code F1 (3 retry turns) and the upload change ==
 
 q1. the 3 retry turns: only --download, --main and --process (they use Dcrawler)?
     or also --scribd / --phatmal? they exit with error today when nothing was saved:
