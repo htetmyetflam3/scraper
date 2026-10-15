@@ -60,13 +60,6 @@ REQUEST_TIMEOUT = 30.0
 SITEMAP_TIMEOUT = 12.0
 MAX_PROVIDER_STEPS = 3
 MAX_PROVIDER_TARGETS = 8
-# Night run (main.py --process passes a guard): a page whose site still
-# answers gets PAGE_TRIES tries; a file whose fetch failed while the internet
-# was down is retried after it is back, at most FILE_TRIES times.
-PAGE_TRIES = 3
-PAGE_RETRY_DELAY = 10.0
-FILE_TRIES = 3
-SITE_DOWN_STATUSES = frozenset({500, 502, 503, 504})
 DOCUMENT_ACCEPT = (
     "application/pdf,"
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document,"
@@ -112,14 +105,6 @@ class StopRun(BaseException):
     A BaseException like KeyboardInterrupt, so no ``except Exception`` in
     the crawl swallows it; pages are journaled only after their files, so a
     rerun resumes exactly like after Ctrl+C."""
-
-
-class SkipSite(Exception):
-    """The night guard gave up waiting for this site; move to the next one."""
-
-
-class _SiteTrouble(Exception):
-    """A page answered 500/502/503/504 during a night run (site in trouble)."""
 
 
 @dataclass
@@ -963,10 +948,8 @@ async def _crawl_site(
     network and continue where the previous run stopped. Each page's files
     are downloaded before continuing.
 
-    With a night guard (main.py --process): a page that fails because the
-    site or the internet stopped answering is waited for and retried instead
-    of skipped, and the guard can stop the crawl between pages (StopRun) or
-    give up on a site that stays down (SkipSite).
+    With a night guard (main.py --process) the crawl can also be stopped
+    between pages (StopRun); a page that fails is skipped the same way.
     """
     site_key = _site_key(seed_urls[0])
     if site_key is None:
@@ -1087,8 +1070,6 @@ async def _crawl_site(
             return list(discovered)
 
         if response.status_code != 200:
-            if guard is not None and response.status_code in SITE_DOWN_STATUSES:
-                raise _SiteTrouble(f"HTTP {response.status_code}")
             return None
         content_type = response.headers.get("content-type", "").split(";", 1)[0]
         content_type_lower = content_type.strip().lower()
@@ -1136,8 +1117,15 @@ async def _crawl_site(
                 continue
             if guard is not None:
                 guard.checkpoint()
+            discovered.clear()
+            children: list[str] | None = None
             had_candidates = len(candidates)
-            children = await _fetch_page(visit_page, page_url, discovered, guard)
+            try:
+                children = await visit_page(page_url)
+            except (httpx.HTTPError, ValueError, TypeError) as error:
+                print(f"[page-error] {page_url}: {error}")
+            except Exception as error:
+                print(f"[page-error] {page_url}: {type(error).__name__}: {error}")
             await process_candidates()
             if children is not None:
                 fresh_fetched += 1
@@ -1161,43 +1149,6 @@ async def _crawl_site(
     finally:
         journal.close()
     return fresh_fetched
-
-
-async def _fetch_page(
-    visit_page, page_url: str, discovered: list[str], guard
-) -> list[str] | None:
-    """visit_page; None means failed (not journaled, retried next run).
-
-    With a night guard: a site/internet outage is waited out and the page
-    retried; a page whose site still answers gets PAGE_TRIES tries."""
-    tries = 0
-    while True:
-        discovered.clear()
-        try:
-            return await visit_page(page_url)
-        except (httpx.TransportError, _SiteTrouble) as error:
-            text = str(error) or type(error).__name__
-            if guard is not None:
-                guard.checkpoint()
-                if not await guard.site_answers(page_url):
-                    await guard.wait_until_back(page_url, text)
-                    continue
-                tries += 1
-                if tries < PAGE_TRIES:
-                    print(
-                        f"[page-retry] {page_url}: {text}; the site answers, "
-                        f"try {tries + 1}/{PAGE_TRIES} in {PAGE_RETRY_DELAY:.0f}s",
-                        flush=True,
-                    )
-                    await guard.pause(PAGE_RETRY_DELAY)
-                    continue
-            print(f"[page-error] {page_url}: {text}")
-        except (httpx.HTTPError, ValueError, TypeError) as error:
-            print(f"[page-error] {page_url}: {error}")
-        except Exception as error:
-            print(f"[page-error] {page_url}: {type(error).__name__}: {error}")
-        return None
-
 
 def _drive_ids(url: str) -> list[str]:
     parts = urllib.parse.urlsplit(url)
@@ -1995,27 +1946,16 @@ async def _run_download_entries_async(
             nonlocal failed_new
             if guard is not None:
                 await guard.wait_for_disk()
-            tries = 0
-            while True:
-                try:
-                    payload = await _resolve_candidate(client, candidate)
-                except Exception as error:
-                    payload = None
-                    reason = str(error) or type(error).__name__
-                else:
-                    reason = (
-                        "provider did not return a valid PDF/DOCX "
-                        "(possibly expired, private, or confirmation-blocked)"
-                    )
-                if (
-                    payload is None
-                    and guard is not None
-                    and tries < FILE_TRIES
-                    and await guard.file_trouble(candidate.url, reason)
-                ):
-                    tries += 1
-                    continue
-                break
+            try:
+                payload = await _resolve_candidate(client, candidate)
+            except Exception as error:
+                payload = None
+                reason = str(error) or type(error).__name__
+            else:
+                reason = (
+                    "provider did not return a valid PDF/DOCX "
+                    "(possibly expired, private, or confirmation-blocked)"
+                )
             if payload is _NO_DOWNLOAD:
                 summary.no_download.append(candidate.url)
                 print(
@@ -2134,29 +2074,19 @@ async def _run_download_entries_async(
         try:
             await process_candidates()
             single_site = len(sites) == 1
-            site_list = list(sites.values())
-            for index, seed_urls in enumerate(site_list):
+            for seed_urls in sites.values():
                 if guard is not None:
                     guard.checkpoint()
-                    guard.site_started(seed_urls[0], len(site_list) - index - 1)
-                try:
-                    await ensure_logged_in_async(client, seed_urls[0])
-                    count = await _crawl_site(
-                        client,
-                        seed_urls,
-                        candidates,
-                        process_candidates,
-                        max_pages=None if single_site else MAX_SITE_PAGES,
-                        guard=guard,
-                    )
-                except SkipSite as skip:
-                    print(
-                        f"[site-skip] {seed_urls[0]}: {skip}; moving on to the "
-                        f"next site (a rerun resumes this one) @ {_stamp()}",
-                        flush=True,
-                    )
-                    _timeline("site-skip", f"{seed_urls[0]} {skip}")
-                    continue
+                    guard.site_started(seed_urls[0])
+                await ensure_logged_in_async(client, seed_urls[0])
+                count = await _crawl_site(
+                    client,
+                    seed_urls,
+                    candidates,
+                    process_candidates,
+                    max_pages=None if single_site else MAX_SITE_PAGES,
+                    guard=guard,
+                )
                 summary.pages += count
                 print(f"[site] {seed_urls[0]}: checked {count:,} page URL(s)")
                 await process_candidates()
@@ -2198,8 +2128,8 @@ def download_entries(
     its sha256, then deletes the local copy; interrupted pushes resume on the
     next run and failures stay on disk. download_limit caps aggregate HTTP
     response bodies in MB/s (1048576 bytes); 0 is unlimited. guard is the
-    night-run policy from night.py (main.py --process): stop points, waiting
-    out outages, the disk floor; summary.stopped says why it stopped early.
+    night-run policy from night.py (main.py --process): stop points and the
+    disk floor; summary.stopped says why it stopped early.
     """
     return asyncio.run(
         _download_entries_async(

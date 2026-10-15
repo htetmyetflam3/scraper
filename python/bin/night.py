@@ -6,14 +6,11 @@ push, verify sha256, then free the local copy), checking python/pdfs every
 -i seconds.
 
 Night rules (the owner is asleep, nobody can press a key):
-- Nothing ends the run early except finishing everything or an unexpected
-  crash. Files that fail are logged and skipped, however many.
-- A site that stops answering is waited for (re-checked after 30 s, 1 m,
-  2 m, then every 5 m) and the same page is retried once it answers again,
-  instead of racing through the queue and "finishing" in the middle of the
-  night. A file that fails while the internet is down is retried once it is
-  back. Only when other sites are queued and the internet works (the SSH
-  host answers) is a site that stays down 20 minutes left for the next run.
+- Downloading follows the crawler's own rules, the same as --download: a
+  page or site that can't be accessed is skipped (not journaled, so the next
+  run tries it again), a page without a download button goes to
+  scan/blocked.txt, a download that didn't work goes to scan/failed.txt.
+  Nothing is waited for or retried during the run.
 - 5 GB of disk is kept free for the system (packages): below it downloading
   pauses until uploads free space. "Tight" means exactly that: under 5 GB.
 - Upload: a file that fails 5 tries ->
@@ -37,17 +34,13 @@ from __future__ import annotations
 import _thread
 import asyncio
 import shutil
-import socket
 import threading
 import time
-import urllib.parse
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
 
-import httpx
-
-from Dcrawler import ENTRY_FILE, OUTPUT_DIR, DownloadSummary, SkipSite, StopRun, download_entries
+from Dcrawler import ENTRY_FILE, OUTPUT_DIR, DownloadSummary, StopRun, download_entries
 from mailer import clock, duration, now
 from save_remote import (
     RETRY_ATTEMPTS,
@@ -63,35 +56,11 @@ HARD_STOP_GRACE = 300.0  # after a stop request (mark or failure), force it if n
 UPLOAD_STOP_GRACE = 120.0  # after the mark, time to send what is already downloaded
 DISK_FLOOR = 5 * 1024**3  # kept free for the system; under it downloading pauses = "tight"
 DISK_CHECK_SECONDS = 30.0
-PROBE_TIMEOUT = 15.0
-WAIT_STEPS = (30.0, 60.0, 120.0, 300.0)  # gaps between "is it back?" checks
-SITE_DOWN_LIMIT = 20 * 60.0
-FILE_WAIT_LIMIT = 30 * 60.0
 UPLOAD_TRIES = RETRY_ATTEMPTS  # "about 5 failed retries" before the rule decides
 
 
 def free_bytes(path: Path) -> int:
     return shutil.disk_usage(path).free
-
-
-def _tcp_answers(host: str, port: int) -> bool:
-    try:
-        with socket.create_connection((host, port), timeout=10):
-            return True
-    except OSError:
-        return False
-
-
-def _host(url: str) -> str:
-    parts = urllib.parse.urlsplit(url)
-    return parts.netloc or url
-
-
-def _root(url: str) -> str | None:
-    parts = urllib.parse.urlsplit(url)
-    if parts.scheme.lower() not in {"http", "https"} or not parts.netloc:
-        return None
-    return f"{parts.scheme}://{parts.netloc}/"
 
 
 def size_text(count: float) -> str:
@@ -176,8 +145,8 @@ class NightReport:
 
 class NightGuard:
     """Night policy shared by the crawler (main thread, asyncio) and the
-    upload thread. Dcrawler calls checkpoint/site_started/site_answers/
-    wait_until_back/pause/file_trouble/wait_for_disk/note_saved."""
+    upload thread. Dcrawler calls checkpoint/site_started/wait_for_disk/
+    note_saved."""
 
     def __init__(
         self,
@@ -212,7 +181,6 @@ class NightGuard:
         self.uploaded_bytes = 0
         self.upload_paused = False
         self.current_site = ""
-        self.sites_after = 0
 
     # ---------------------------------------------------------------- shared
     def seconds_left(self) -> float:
@@ -268,9 +236,8 @@ class NightGuard:
         if self.stop_event.is_set():
             raise StopRun(self.stop_reason)
 
-    def site_started(self, seed_url: str, sites_after: int) -> None:
+    def site_started(self, seed_url: str) -> None:
         self.current_site = seed_url
-        self.sites_after = sites_after
 
     def note_saved(self, size: int) -> None:
         with self.lock:
@@ -286,85 +253,6 @@ class NightGuard:
             if left <= 0:
                 return
             await asyncio.sleep(min(left, 1.0))
-
-    async def site_answers(self, url: str) -> bool:
-        """True when the host of url answers its root with any status < 500."""
-        root = _root(url)
-        if root is None:
-            return True
-        try:
-            async with httpx.AsyncClient(timeout=PROBE_TIMEOUT) as client:
-                async with client.stream("GET", root) as response:
-                    return response.status_code < 500
-        except httpx.HTTPError:
-            return False
-
-    async def internet_works(self) -> bool:
-        """The current site or the SSH host answers -> the internet is up."""
-        if self.current_site and await self.site_answers(self.current_site):
-            return True
-        return await asyncio.to_thread(_tcp_answers, self.config.host, self.config.port)
-
-    async def wait_until_back(self, url: str, error: str) -> None:
-        """A page failed and its site does not answer: wait until it does.
-
-        Returns when the site answers (the caller retries the same page).
-        Raises StopRun at the stop, SkipSite when other sites are queued, the
-        internet works and this site stayed down SITE_DOWN_LIMIT.
-        """
-        host = _host(url)
-        began_clock = now()
-        began = time.monotonic()
-        print(f"[net-wait] {host} does not answer ({error}); waiting for it, then the same page is retried @ {_stamp()}", flush=True)
-        step = 0
-        try:
-            while True:
-                gap = WAIT_STEPS[min(step, len(WAIT_STEPS) - 1)]
-                step += 1
-                await self.pause(gap)
-                down_for = time.monotonic() - began
-                if await self.site_answers(url):
-                    print(f"[net-back] {host} answers again after {duration(timedelta(seconds=down_for))}; retrying @ {_stamp()}", flush=True)
-                    self.problem("download", f"{host} did not answer; waited {duration(timedelta(seconds=down_for))} until it was back.", began_clock)
-                    return
-                if self.sites_after and down_for >= SITE_DOWN_LIMIT and await self.internet_works():
-                    self.problem(
-                        "download",
-                        f"{host} did not answer for {duration(timedelta(seconds=down_for))} while the "
-                        "internet worked; moved on to the next site (a rerun resumes it).",
-                        began_clock,
-                    )
-                    raise SkipSite(f"down for {duration(timedelta(seconds=down_for))}")
-                upcoming = WAIT_STEPS[min(step, len(WAIT_STEPS) - 1)]
-                print(f"[net-wait] {host} still down after {duration(timedelta(seconds=down_for))}; next check in {upcoming:.0f}s @ {_stamp()}", flush=True)
-        except StopRun:
-            self.problem("download", f"{host} did not answer; still down at the stop.", began_clock)
-            raise
-
-    async def file_trouble(self, url: str, reason: str) -> bool:
-        """A file could not be fetched. True = the internet was down and is
-        back, retry the file; False = a real failure of that file/host."""
-        if await self.site_answers(url) or await self.internet_works():
-            return False
-        host = _host(url)
-        began_clock = now()
-        began = time.monotonic()
-        print(f"[net-wait] the internet seems down ({host}, the site and the SSH host do not answer); waiting, then retrying {url} @ {_stamp()}", flush=True)
-        step = 0
-        try:
-            while time.monotonic() - began < FILE_WAIT_LIMIT:
-                await self.pause(WAIT_STEPS[min(step, len(WAIT_STEPS) - 1)])
-                step += 1
-                if await self.site_answers(url) or await self.internet_works():
-                    waited = duration(timedelta(seconds=time.monotonic() - began))
-                    print(f"[net-back] the internet is back after {waited}; retrying {url} @ {_stamp()}", flush=True)
-                    self.problem("download", f"the internet was down; waited {waited}, then retried the file.", began_clock)
-                    return True
-        except StopRun:
-            self.problem("download", "the internet was down; still down at the stop.", began_clock)
-            raise
-        self.problem("download", f"the internet stayed down {duration(timedelta(seconds=FILE_WAIT_LIMIT))}; gave up on {url} ({reason}).", began_clock)
-        return False
 
     async def wait_for_disk(self) -> None:
         """Before each download: pause while the disk is tight (under DISK_FLOOR)."""
