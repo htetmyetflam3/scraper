@@ -139,7 +139,8 @@ def build_parser() -> argparse.ArgumentParser:
         help=(
             "Night run in one terminal: download from scan/entry.txt while "
             "uploading to the SSH host (checked every -i seconds). Keeps going "
-            "through failures and outages, stops at the 6-hour mark and mails "
+            "through failures and outages, keeps 5 GB of disk free (downloading "
+            "waits for uploads below that), stops at the 6-hour mark and mails "
             "a report; rerun resumes."
         ),
     )

@@ -14,12 +14,12 @@ Night rules (the owner is asleep, nobody can press a key):
   night. A file that fails while the internet is down is retried once it is
   back. Only when other sites are queued and the internet works (the SSH
   host answers) is a site that stays down 20 minutes left for the next run.
-- Upload: a file that fails 5 tries -> if downloading continues and the free
-  disk cannot hold what the download will still bring in before the stop
-  (at the -l speed, or the speed measured so far), keep retrying until it
-  works; otherwise uploading pauses (files stay in python/pdfs for
-  `main.py --upload`) and only starts again if the disk gets tight.
-- Less than 2 GB free: downloading pauses until uploads free space.
+- 5 GB of disk is kept free for the system (packages): below it downloading
+  pauses until uploads free space. "Tight" means exactly that: under 5 GB.
+- Upload: a file that fails 5 tries -> if downloading is not finished and
+  the disk is tight, keep retrying until it works; otherwise uploading pauses
+  (files stay in python/pdfs for `main.py --upload`) and only starts again
+  if the disk gets tight while downloading is not finished.
 - At the 6-hour mark (wake-up time) downloading stops at a safe point
   (journals keep the place, a rerun resumes), the uploader gets up to 2
   minutes to send what is already downloaded, then one report is mailed with
@@ -56,14 +56,13 @@ from save_remote import (
 NIGHT_HOURS = 6.0
 HARD_STOP_GRACE = 300.0  # after the mark, force the stop if no safe point came
 UPLOAD_STOP_GRACE = 120.0  # after the mark, time to send what is already downloaded
-DISK_FLOOR = 2 * 1024**3  # below this many free bytes downloading pauses
+DISK_FLOOR = 5 * 1024**3  # kept free for the system; under it downloading pauses = "tight"
 DISK_CHECK_SECONDS = 30.0
 PROBE_TIMEOUT = 15.0
 WAIT_STEPS = (30.0, 60.0, 120.0, 300.0)  # gaps between "is it back?" checks
 SITE_DOWN_LIMIT = 20 * 60.0
 FILE_WAIT_LIMIT = 30 * 60.0
 UPLOAD_TRIES = RETRY_ATTEMPTS  # "about 5 failed retries" before the rule decides
-MIN_RATE_SECONDS = 60.0  # measure the download speed for at least this long
 
 
 def free_bytes(path: Path) -> int:
@@ -167,13 +166,11 @@ class NightGuard:
         self,
         output_dir: Path,
         config: RemoteConfig,
-        download_limit: float = 0.0,
         hours: float | None = None,
     ) -> None:
         hours = NIGHT_HOURS if hours is None else hours
         self.output_dir = Path(output_dir)
         self.config = config
-        self.download_limit = download_limit
         self.hours = hours
         self.started = now()
         self.started_at = time.monotonic()
@@ -189,8 +186,9 @@ class NightGuard:
         self.problems: list[Problem] = []
         self.saved_files = 0
         self.saved_bytes = 0
-        self.waited = 0.0
-        self.wait_began: float | None = None
+        self.disk_pauses = 0
+        self.disk_paused_for = 0.0
+        self.disk_problem: Problem | None = None
         self.uploaded = 0
         self.uploaded_bytes = 0
         self.upload_paused = False
@@ -200,6 +198,11 @@ class NightGuard:
     # ---------------------------------------------------------------- shared
     def seconds_left(self) -> float:
         return max(self.deadline - time.monotonic(), 0.0)
+
+    def disk_check(self) -> tuple[bool, int]:
+        """(tight, free bytes): tight = under the DISK_FLOOR kept for the system."""
+        free = free_bytes(self.output_dir)
+        return free < DISK_FLOOR, free
 
     def problem(self, part: str, text: str, when: datetime | None = None) -> Problem:
         item = Problem(when or now(), part, text)
@@ -264,17 +267,6 @@ class NightGuard:
             return True
         return await asyncio.to_thread(_tcp_answers, self.config.host, self.config.port)
 
-    def _begin_wait(self) -> float:
-        began = time.monotonic()
-        with self.lock:
-            self.wait_began = began
-        return began
-
-    def _end_wait(self, began: float) -> None:
-        with self.lock:
-            self.waited += time.monotonic() - began
-            self.wait_began = None
-
     async def wait_until_back(self, url: str, error: str) -> None:
         """A page failed and its site does not answer: wait until it does.
 
@@ -284,7 +276,7 @@ class NightGuard:
         """
         host = _host(url)
         began_clock = now()
-        began = self._begin_wait()
+        began = time.monotonic()
         print(f"[net-wait] {host} does not answer ({error}); waiting for it, then the same page is retried @ {_stamp()}", flush=True)
         step = 0
         try:
@@ -310,8 +302,6 @@ class NightGuard:
         except StopRun:
             self.problem("download", f"{host} did not answer; still down at the stop.", began_clock)
             raise
-        finally:
-            self._end_wait(began)
 
     async def file_trouble(self, url: str, reason: str) -> bool:
         """A file could not be fetched. True = the internet was down and is
@@ -320,7 +310,7 @@ class NightGuard:
             return False
         host = _host(url)
         began_clock = now()
-        began = self._begin_wait()
+        began = time.monotonic()
         print(f"[net-wait] the internet seems down ({host}, the site and the SSH host do not answer); waiting, then retrying {url} @ {_stamp()}", flush=True)
         step = 0
         try:
@@ -335,59 +325,53 @@ class NightGuard:
         except StopRun:
             self.problem("download", "the internet was down; still down at the stop.", began_clock)
             raise
-        finally:
-            self._end_wait(began)
         self.problem("download", f"the internet stayed down {duration(timedelta(seconds=FILE_WAIT_LIMIT))}; gave up on {url} ({reason}).", began_clock)
         return False
 
     async def wait_for_disk(self) -> None:
-        """Before each download: pause while less than DISK_FLOOR is free."""
-        free = free_bytes(self.output_dir)
-        if free >= DISK_FLOOR:
+        """Before each download: pause while the disk is tight (under DISK_FLOOR)."""
+        tight, free = self.disk_check()
+        if not tight:
             return
         began_clock = now()
-        began = self._begin_wait()
-        print(f"[disk-wait] only {size_text(free)} free (< {size_text(DISK_FLOOR)}): downloading paused until uploads free space @ {_stamp()}", flush=True)
+        began = time.monotonic()
+        print(f"[disk-wait] only {size_text(free)} free ({size_text(DISK_FLOOR)} is kept for the system): downloading paused until uploads free space @ {_stamp()}", flush=True)
         checks = 0
         try:
-            while free < DISK_FLOOR:
+            while tight:
                 await self.pause(DISK_CHECK_SECONDS)
-                free = free_bytes(self.output_dir)
+                tight, free = self.disk_check()
                 checks += 1
-                if checks % 10 == 0:
+                if checks % 10 == 0 and tight:
                     print(f"[disk-wait] still {size_text(free)} free @ {_stamp()}", flush=True)
         except StopRun:
-            self.problem("download", f"the disk was nearly full ({size_text(free)} free); downloading stayed paused until the stop.", began_clock)
+            self._disk_paused(began_clock, time.monotonic() - began, at_stop=True)
             raise
-        finally:
-            self._end_wait(began)
-        waited = duration(timedelta(seconds=time.monotonic() - began))
-        print(f"[disk-ok] {size_text(free)} free again after {waited}; downloading continues @ {_stamp()}", flush=True)
-        self.problem("download", f"the disk was nearly full; downloading paused {waited} until uploads freed space.", began_clock)
+        waited = time.monotonic() - began
+        print(f"[disk-ok] {size_text(free)} free again after {duration(timedelta(seconds=waited))}; downloading continues @ {_stamp()}", flush=True)
+        self._disk_paused(began_clock, waited)
+
+    def _disk_paused(self, began_clock: datetime, seconds: float, *, at_stop: bool = False) -> None:
+        """One report row for every disk pause: they repeat whenever uploads
+        are slower than downloads."""
+        self.disk_pauses += 1
+        self.disk_paused_for += seconds
+        paused = duration(timedelta(seconds=self.disk_paused_for))
+        if self.disk_pauses == 1:
+            text = f"the disk went under {size_text(DISK_FLOOR)} free (kept for the system); downloading paused {paused} until uploads freed space."
+        else:
+            text = (
+                f"the disk went under {size_text(DISK_FLOOR)} free (kept for the system) {self.disk_pauses} times; "
+                f"downloading paused {paused} in total until uploads freed space."
+            )
+        if at_stop:
+            text += " It was still paused at the stop."
+        if self.disk_problem is None:
+            self.disk_problem = self.problem("download", text, began_clock)
+        else:
+            self.disk_problem.text = text
 
     # ------------------------------------------------------ upload side (thread)
-    def expected_rate(self) -> float | None:
-        """Bytes/s the download is expected to add: the -l cap, else the speed
-        measured so far (waiting time excluded); None while still unknown."""
-        if self.download_limit:
-            return self.download_limit * 1048576
-        with self.lock:
-            moment = time.monotonic()
-            ongoing = moment - self.wait_began if self.wait_began is not None else 0.0
-            active = moment - self.started_at - self.waited - ongoing
-            saved = self.saved_bytes
-        if saved <= 0 or active < MIN_RATE_SECONDS:
-            return None
-        return saved / active
-
-    def disk_check(self) -> tuple[bool, int, float | None]:
-        """(tight, free bytes, bytes still expected before the stop)."""
-        free = free_bytes(self.output_dir)
-        rate = self.expected_rate()
-        expected = None if rate is None else rate * self.seconds_left()
-        tight = expected is None or free - DISK_FLOOR < expected
-        return tight, free, expected
-
     def _wait(self, seconds: float, *, wake_when_done: bool = False) -> None:
         end = time.monotonic() + seconds
         done_before = self.download_done.is_set()
@@ -410,13 +394,13 @@ class NightGuard:
             if self.upload_paused:
                 if self.download_done.is_set():
                     return
-                tight, free, _expected = self.disk_check()
+                tight, free = self.disk_check()
                 if not tight:
                     self._wait(interval, wake_when_done=True)
                     continue
                 self.upload_paused = False
-                print(f"[upload-resume] the disk got tight ({size_text(free)} free) while downloading continues; uploading again @ {_stamp()}", flush=True)
-                self.problem("upload", f"uploading started again: the disk got tight ({size_text(free)} free) while downloading continued.")
+                print(f"[upload-resume] the disk got tight ({size_text(free)} free, under {size_text(DISK_FLOOR)}) and downloading is not finished; uploading again @ {_stamp()}", flush=True)
+                self.problem("upload", f"uploading started again: the disk got tight ({size_text(free)} free, under {size_text(DISK_FLOOR)}) before downloading finished.")
             for file in pending_files(self.output_dir):
                 if self.upload_stop.is_set() or not self._push(file, interval):
                     break
@@ -465,29 +449,26 @@ class NightGuard:
                 self._wait(RETRY_DELAY)
                 continue
             downloading = not self.download_done.is_set()
-            tight, free, expected = self.disk_check()
+            tight, free = self.disk_check()
             if downloading and tight:
                 if retrying is None:
-                    need = "speed not measured yet" if expected is None else f"about {size_text(expected)} still to come"
                     print(
-                        f"[upload-retry] {file.name}: {UPLOAD_TRIES} tries failed ({detail}); downloading continues "
-                        f"and the disk is tight ({size_text(free)} free, {need}) - retrying every {interval:.0f}s "
-                        f"until it works or the stop at {clock(self.stop_at)} @ {_stamp()}",
+                        f"[upload-retry] {file.name}: {UPLOAD_TRIES} tries failed ({detail}); downloading is not "
+                        f"finished and the disk is tight ({size_text(free)} free, under the {size_text(DISK_FLOOR)} "
+                        f"kept for the system) - retrying every {interval:.0f}s until it works or the stop at "
+                        f"{clock(self.stop_at)} @ {_stamp()}",
                         flush=True,
                     )
                     retrying = self.problem(
                         "upload",
-                        f"{UPLOAD_TRIES} tries failed ({detail}). Downloading continued and the disk was tight "
-                        f"({size_text(free)} free, {need}), so uploads kept retrying.",
+                        f"{UPLOAD_TRIES} tries failed ({detail}). Downloading was not finished and the disk was tight "
+                        f"({size_text(free)} free, under {size_text(DISK_FLOOR)}), so uploads kept retrying.",
                     )
                 failures = 0
                 self._wait(interval)
                 continue
             if downloading:
-                why = (
-                    f"the disk had room for the rest of the run ({size_text(free)} free, "
-                    f"about {size_text(expected or 0)} still to come)"
-                )
+                why = f"the disk had room ({size_text(free)} free, more than the {size_text(DISK_FLOOR)} kept for the system)"
             else:
                 why = "downloading had finished"
             waiting = pending_files(self.output_dir)
@@ -514,7 +495,7 @@ def run_process(
     the NIGHT_HOURS mark. config comes from save_remote.start_remote (the SSH
     check is done by the caller while the owner is still awake)."""
     output_dir = Path(output_dir)
-    guard = NightGuard(output_dir, config, download_limit)
+    guard = NightGuard(output_dir, config)
     print(
         f"[night] started {clock(guard.started)} (Myanmar time); stops at the "
         f"{NIGHT_HOURS:g}-hour mark, {clock(guard.stop_at)}; uploads checked every "
