@@ -17,12 +17,16 @@ from Dcrawler import ENTRY_FILE, OUTPUT_DIR, download_entries, note_pause  # noq
 from download_rate import validate_limit  # noqa: E402
 from fetch_results import DEFAULT_KEYWORDS, fetch_results  # noqa: E402
 from mailer import RunMail  # noqa: E402
-from night import NIGHT_HOURS, NightFailed, run_process  # noqa: E402
+from night import NightFailed, run_process  # noqa: E402
 from phatmal import run_phatmal  # noqa: E402
 from save_remote import start_remote, watch  # noqa: E402
 from Scrawler import find_entry  # noqa: E402
 from scribd import download_scribd, read_links_file  # noqa: E402
 from serpapi import SerpApiError  # noqa: E402
+
+# --process (night run): hours until it stops at a safe point and mails the
+# report - your wake-up time. No flag on purpose: edit this number.
+NIGHT_HOURS = 6
 
 USE_DEFAULT_KEYWORDS: object = object()
 USE_ENTRY_FILE: object = object()
@@ -30,7 +34,7 @@ USE_SCRIBD_FILE: object = object()
 USE_PHATMAL_LIBRARY: object = object()
 DEFAULT_INTERVAL = 60.0
 
-EXAMPLES = """\
+EXAMPLES = f"""\
 examples:
   uv run main.py --findentry
   uv run main.py --findentry "pdfများ"
@@ -47,14 +51,14 @@ examples:
   uv run main.py --phatmal
   uv run main.py --phatmal https://phatmal.com/ebook/<slug>
 
-exit codes: 0 ok (also --process stopping at its 6-hour mark), 1 failed,
+exit codes: 0 ok (also --process stopping at its {NIGHT_HOURS:g}-hour mark), 1 failed,
 2 usage error, 130 paused (Ctrl+C; rerun resumes)
 
 email: every command except --findentry mails a started notice, then a
 finished or failed one naming the part: kaungmyatthu@devnovex.shop ->
 htetmyet986@gmail.com via smtp.hostinger.com:465 (MAIL_PASSWORD in .env); a
 copy of each goes to that mailbox's Sent folder via imap.hostinger.com:993.
---process mails started, then one report at the 6-hour mark (or when all is
+--process mails started, then one report at the {NIGHT_HOURS:g}-hour mark (or when all is
 done) listing every problem with its part and time; nothing in between unless
 it quits with an error (uploads failing while under 5 GB is free): that failed
 email goes right away, with the problems so far.
@@ -143,7 +147,8 @@ def build_parser() -> argparse.ArgumentParser:
             "Night run in one terminal: download from scan/entry.txt while "
             "uploading to the SSH host (checked every -i seconds). Keeps going "
             "through failures and outages, keeps 5 GB of disk free (downloading "
-            "waits for uploads below that), stops at the 6-hour mark and mails "
+            f"waits for uploads below that), stops at the {NIGHT_HOURS:g}-hour mark "
+            "(NIGHT_HOURS at the top of main.py) and mails "
             "a report. Quits with an error (mailed right away) if uploads fail "
             "while under 5 GB is free; rerun resumes."
         ),
@@ -283,7 +288,7 @@ def main(argv: list[str] | None = None) -> int:
             OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
             config = start_remote(OUTPUT_DIR)  # checked now, while you are awake
             part = "download"
-            report = run_process(config, args.interval or DEFAULT_INTERVAL, limit)
+            report = run_process(config, args.interval or DEFAULT_INTERVAL, limit, hours=NIGHT_HOURS)
         elif args.scribd is not None:
             part = "scribd download"
             links = _scribd_links(args.scribd)

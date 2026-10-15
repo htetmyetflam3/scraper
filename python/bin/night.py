@@ -24,11 +24,12 @@ Night rules (the owner is asleep, nobody can press a key):
     downloading and uploading and exit with an error (NightFailed); main.py
     mails the failure right away with every problem so far.
   - downloading is finished or stopping: quit uploading.
-- At the 6-hour mark (wake-up time) downloading stops at a safe point
-  (journals keep the place, a rerun resumes), the uploader gets up to 2
-  minutes to send what is already downloaded, then one report is mailed with
-  every problem, its part (download/upload) and time. No other mail in the
-  night, except the failure above.
+- At the wake-up mark (`hours`: NIGHT_HOURS at the top of main.py, 6)
+  downloading stops at a safe point (journals keep the place, a rerun
+  resumes), the uploader gets up to 2 minutes to send what is already
+  downloaded, then one report is mailed with every problem, its part
+  (download/upload) and time. No other mail in the night, except the failure
+  above.
 """
 
 from __future__ import annotations
@@ -58,7 +59,6 @@ from save_remote import (
     timeline_row,
 )
 
-NIGHT_HOURS = 6.0
 HARD_STOP_GRACE = 300.0  # after a stop request (mark or failure), force it if no safe point came
 UPLOAD_STOP_GRACE = 120.0  # after the mark, time to send what is already downloaded
 DISK_FLOOR = 5 * 1024**3  # kept free for the system; under it downloading pauses = "tight"
@@ -183,9 +183,8 @@ class NightGuard:
         self,
         output_dir: Path,
         config: RemoteConfig,
-        hours: float | None = None,
+        hours: float,
     ) -> None:
-        hours = NIGHT_HOURS if hours is None else hours
         self.output_dir = Path(output_dir)
         self.config = config
         self.hours = hours
@@ -245,7 +244,7 @@ class NightGuard:
 
     def reach_mark(self) -> None:
         self.mark_reached = True
-        self.request_stop(f"{NIGHT_HOURS:g}-hour mark")
+        self.request_stop(f"{self.hours:g}-hour mark")
 
     def fail(self, text: str) -> None:
         """Quit entirely: stop uploading and downloading; run_process then
@@ -515,17 +514,18 @@ def run_process(
     interval: float,
     download_limit: float = 0.0,
     *,
+    hours: float,
     entry_file: str | Path = ENTRY_FILE,
     output_dir: str | Path = OUTPUT_DIR,
 ) -> NightReport:
     """Download entry_file's sites with uploads running alongside; stop at
-    the NIGHT_HOURS mark. config comes from save_remote.start_remote (the SSH
+    `hours` (main.py's NIGHT_HOURS). config comes from save_remote.start_remote (the SSH
     check is done by the caller while the owner is still awake)."""
     output_dir = Path(output_dir)
-    guard = NightGuard(output_dir, config)
+    guard = NightGuard(output_dir, config, hours)
     print(
         f"[night] started {clock(guard.started)} (Myanmar time); stops at the "
-        f"{NIGHT_HOURS:g}-hour mark, {clock(guard.stop_at)}; uploads checked every "
+        f"{hours:g}-hour mark, {clock(guard.stop_at)}; uploads checked every "
         f"{interval:g}s @ {_stamp()}",
         flush=True,
     )
@@ -592,7 +592,7 @@ def run_process(
     if report.failure:
         ending = "quit with an error"
     elif report.reached_mark:
-        ending = f"stopped at the {NIGHT_HOURS:g}-hour mark"
+        ending = f"stopped at the {hours:g}-hour mark"
     else:
         ending = "finished"
     print(f"[night] {ending}: " + " | ".join(line for line in report.details() if line and not line.startswith("▶")), flush=True)

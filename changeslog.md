@@ -1,4 +1,8 @@
 
+## 2026-10-16 — night run: the 6 hours is `NIGHT_HOURS` at the top of main.py
+- The wake-up mark of `--process` (stop at a safe point, mail the report) is now one inline constant in the obvious place: `NIGHT_HOURS = 6` near the top of main.py, with a comment. No flag on purpose; edit the number. It moved out of python/bin/night.py, which has no hours of its own any more (`run_process(..., hours=)` / `NightGuard(..., hours)`).
+- The help follows the number: the `--process` help ("stops at the 6-hour mark (NIGHT_HOURS at the top of main.py)"), the exit-code and email lines, the started email and the report.
+- Verified outside the repo: night suite 29/29 on real `main.py --process` runs — a copy with the line edited to `NIGHT_HOURS = 7` shows 7 everywhere in the help; edited to `NIGHT_HOURS = 0.003` (10.8 s) the run stops at that mark (exit 0, report "stopped at the 0.003-hour mark"); the earlier night checks (finish, mark + resume, upload stop/quit with an error, disk pause, Ctrl+C, start checks, forced stops) still pass.
 ## 2026-10-16 — night run: uploads failing on a tight disk quit everything with an error, mailed right away
 - `--process`, after an upload fails 5 tries (connection dropped/closed), checks the disk and whether downloading is still going:
   - **disk has room** (5 GB or more free) → quits uploading only: `[upload-stop] …: 5 tries failed (…); the disk had room (… free) - uploading stops, N file(s) stay in python/pdfs`. Downloading goes on. No more retrying the whole night (the old "retry every -i until it works" mode and `[upload-back]` are deleted).
