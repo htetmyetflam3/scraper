@@ -260,8 +260,16 @@ def finished_message(
 
 
 def failed_message(
-    job: str, started: datetime, failed: datetime, part: str, error: object
+    job: str,
+    started: datetime,
+    failed: datetime,
+    part: str,
+    error: object,
+    *,
+    details: list[str] | tuple[str, ...] = (),
+    problems: list[tuple[datetime, str, str]] | tuple = (),
 ) -> tuple[str, str]:
+    """details/problems: what a --process night run did before it quit."""
     subject = f"⚠️ Your little scraper failed: {part} · {clock(failed)}"
     body = [
         "Heads up! ⚠️",
@@ -271,11 +279,24 @@ def failed_message(
         "",
         f"Error: {error}",
         "",
-        "Progress is saved: run the same command again to resume.",
-        "",
-        f"Job: {job}",
     ]
+    if problems:
+        body += [*_problem_lines(problems), ""]
+    if details:
+        body += [*details, ""]
+    else:
+        body += ["Progress is saved: run the same command again to resume.", ""]
+    body.append(f"Job: {job}")
     return subject, "\n".join(body) + "\n"
+
+
+def _problem_lines(problems: list[tuple[datetime, str, str]] | tuple) -> list[str]:
+    rows = [f"⚠️ {len(problems)} problem(s) (Myanmar time):"]
+    for when, part, text in list(problems)[:MAX_PROBLEM_ROWS]:
+        rows.append(f"  • {clock(when)} · {part.upper()} · {text}")
+    if len(problems) > MAX_PROBLEM_ROWS:
+        rows.append(f"  … and {len(problems) - MAX_PROBLEM_ROWS} more in the console log.")
+    return rows
 
 
 def report_message(
@@ -314,14 +335,7 @@ def report_message(
             "everything in scan/entry.txt is done."
         )
         art = NIGHT_FINISHED if is_night(ended) else DAY_FINISHED
-    if problems:
-        rows = [f"⚠️ {len(problems)} problem(s) (Myanmar time):"]
-        for when, part, text in list(problems)[:MAX_PROBLEM_ROWS]:
-            rows.append(f"  • {clock(when)} · {part.upper()} · {text}")
-        if len(problems) > MAX_PROBLEM_ROWS:
-            rows.append(f"  … and {len(problems) - MAX_PROBLEM_ROWS} more in the console log.")
-    else:
-        rows = ["✔ No problems."]
+    rows = _problem_lines(problems) if problems else ["✔ No problems."]
     body = [
         greeting,
         "",
@@ -381,8 +395,18 @@ class RunMail:
     def send_finished(self, details: list[str] | tuple[str, ...] = ()) -> None:
         self._deliver("finished", lambda: finished_message(self.job, self.started, now(), details))
 
-    def send_failed(self, part: str, error: object) -> None:
-        self._deliver("failed", lambda: failed_message(self.job, self.started, now(), part, error))
+    def send_failed(
+        self,
+        part: str,
+        error: object,
+        *,
+        details: list[str] | tuple[str, ...] = (),
+        problems: list[tuple[datetime, str, str]] | tuple = (),
+    ) -> None:
+        self._deliver(
+            "failed",
+            lambda: failed_message(self.job, self.started, now(), part, error, details=details, problems=problems),
+        )
 
     def send_report(
         self,

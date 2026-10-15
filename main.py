@@ -17,7 +17,7 @@ from Dcrawler import ENTRY_FILE, OUTPUT_DIR, download_entries, note_pause  # noq
 from download_rate import validate_limit  # noqa: E402
 from fetch_results import DEFAULT_KEYWORDS, fetch_results  # noqa: E402
 from mailer import RunMail  # noqa: E402
-from night import NIGHT_HOURS, run_process  # noqa: E402
+from night import NIGHT_HOURS, NightFailed, run_process  # noqa: E402
 from phatmal import run_phatmal  # noqa: E402
 from save_remote import start_remote, watch  # noqa: E402
 from Scrawler import find_entry  # noqa: E402
@@ -55,7 +55,9 @@ finished or failed one naming the part: kaungmyatthu@devnovex.shop ->
 htetmyet986@gmail.com via smtp.hostinger.com:465 (MAIL_PASSWORD in .env); a
 copy of each goes to that mailbox's Sent folder via imap.hostinger.com:993.
 --process mails started, then one report at the 6-hour mark (or when all is
-done) listing every problem with its part and time; nothing in between.
+done) listing every problem with its part and time; nothing in between unless
+it quits with an error (uploads failing while under 5 GB is free): that failed
+email goes right away, with the problems so far.
 """
 
 
@@ -142,7 +144,8 @@ def build_parser() -> argparse.ArgumentParser:
             "uploading to the SSH host (checked every -i seconds). Keeps going "
             "through failures and outages, keeps 5 GB of disk free (downloading "
             "waits for uploads below that), stops at the 6-hour mark and mails "
-            "a report; rerun resumes."
+            "a report. Quits with an error (mailed right away) if uploads fail "
+            "while under 5 GB is free; rerun resumes."
         ),
     )
     command.add_argument(
@@ -249,7 +252,7 @@ def main(argv: list[str] | None = None) -> int:
             mail.send_started(
                 [
                     f"🕕 Night run: downloads + uploads until the {NIGHT_HOURS:g}-hour "
-                    "mark, then one report (no mail in between)."
+                    "mark, then one report (no mail in between unless it fails)."
                 ]
                 if args.process
                 else []
@@ -296,6 +299,16 @@ def main(argv: list[str] | None = None) -> int:
             target = None if args.phatmal is USE_PHATMAL_LIBRARY else args.phatmal
             if not asyncio.run(run_phatmal(target)):
                 raise RunFailed("nothing was saved; see the log above")
+    except NightFailed as error:
+        print(f"error: {error}", file=sys.stderr)
+        if mail is not None:
+            mail.send_failed(
+                error.part,
+                error,
+                details=error.report.details(),
+                problems=error.report.problem_rows(),
+            )
+        return 1
     except (SerpApiError, OSError, ValueError, RunFailed) as error:
         print(f"error: {error}", file=sys.stderr)
         if mail is not None:
