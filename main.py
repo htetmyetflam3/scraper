@@ -13,7 +13,7 @@ from pathlib import Path
 BIN_DIR = Path(__file__).resolve().parent / "python" / "bin"
 sys.path.insert(0, str(BIN_DIR))
 
-from Dcrawler import ENTRY_FILE, OUTPUT_DIR, download_entries, note_pause  # noqa: E402
+from Dcrawler import ENTRY_FILE, OUTPUT_DIR, download_entries, note_pause, retry_line  # noqa: E402
 from disk_floor import DiskTight  # noqa: E402
 from download_rate import validate_limit  # noqa: E402
 from fetch_results import DEFAULT_KEYWORDS, fetch_results  # noqa: E402
@@ -228,10 +228,13 @@ def _scribd_links(value: object) -> list[str]:
 
 
 def _download_details(summary) -> list[str]:
-    return [
+    lines = [
         f"📚 Saved {len(summary.saved)} new file(s) · {len(summary.downloaded)} already "
         f"downloaded · {len(summary.unresolved)} could not be downloaded."
     ]
+    if summary.retried:
+        lines.append(retry_line(summary))
+    return lines
 
 
 def main(argv: list[str] | None = None) -> int:

@@ -61,6 +61,11 @@ REQUEST_TIMEOUT = 30.0
 SITEMAP_TIMEOUT = 12.0
 MAX_PROVIDER_STEPS = 3
 MAX_PROVIDER_TARGETS = 8
+# After the crawl (every URL found and every download tried): each URL in
+# scan/failed.txt and scan/blocked.txt gets RETRY_TURNS turns, one try per
+# turn, no waiting; one that works is removed from both files.
+RETRY_TURNS = 3
+RETRY_STATUSES = ("unresolved", "rejected", "blocked")
 DOCUMENT_ACCEPT = (
     "application/pdf,"
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document,"
@@ -133,6 +138,18 @@ class DownloadSummary:
     downloaded: list[str] = field(default_factory=list)
     upload_failed: list[str] = field(default_factory=list)
     stopped: str = ""
+    retried: int = 0  # URLs from scan/failed.txt + scan/blocked.txt that got the retry turns
+    recovered: list[str] = field(default_factory=list)
+    retry_left: int = 0
+
+
+def retry_line(summary: DownloadSummary) -> str:
+    """The retry turns' result, for the finished email and the night report."""
+    return (
+        f"🔁 Retry ({RETRY_TURNS} turns over scan/failed.txt + scan/blocked.txt): "
+        f"{len(summary.recovered)} of {summary.retried} URL(s) recovered, "
+        f"{summary.retry_left} still failing."
+    )
 
 
 def _hostname(url: str) -> str | None:
@@ -1677,6 +1694,70 @@ def _remember_blocked(url: str, path: Path | None = None) -> None:
         print(f"[blocked-warn] cannot record {url}: {error}")
 
 
+def _is_http_url(url: str) -> bool:
+    try:
+        parts = urllib.parse.urlsplit(url)
+    except ValueError:
+        return False
+    return parts.scheme.lower() in {"http", "https"} and bool(parts.netloc)
+
+
+def _retry_urls(failed_path: Path | None = None, blocked_path: Path | None = None) -> list[str]:
+    """URLs for the retry turns: scan/failed.txt rows (unresolved, rejected,
+    blocked), then scan/blocked.txt lines, in file order, each once. Blocked
+    POST forms are stored as form identities, not URLs, so they cannot be
+    rebuilt for a retry and stay as they are."""
+    urls: list[str] = []
+    seen: set[str] = set()
+    try:
+        failed_lines = (failed_path or FAILED_FILE).read_text(encoding="utf-8").splitlines()
+    except OSError:
+        failed_lines = []
+    try:
+        blocked_lines = (blocked_path or BLOCKED_FILE).read_text(encoding="utf-8").splitlines()
+    except OSError:
+        blocked_lines = []
+    candidates = [
+        parts[2].strip()
+        for parts in (line.split("\t") for line in failed_lines)
+        if len(parts) >= 3 and parts[1] in RETRY_STATUSES
+    ] + [line.strip() for line in blocked_lines]
+    for url in candidates:
+        if url and url not in seen and _is_http_url(url):
+            seen.add(url)
+            urls.append(url)
+    return urls
+
+
+def _rewrite_without(target: Path, keep) -> None:
+    try:
+        lines = target.read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return
+    kept = [line for line in lines if keep(line)]
+    if len(kept) == len(lines):
+        return
+    temp = target.with_name(target.name + ".tmp")
+    try:
+        temp.write_text("".join(line + "\n" for line in kept), encoding="utf-8")
+        temp.replace(target)
+    except OSError as error:
+        print(f"[retry-warn] cannot update {target.name}: {error}")
+
+
+def _forget_records(url: str, failed_path: Path | None = None, blocked_path: Path | None = None) -> None:
+    """A retried URL worked: remove its unresolved/rejected/blocked rows from
+    scan/failed.txt and its line from scan/blocked.txt."""
+    url = url.strip()
+
+    def keep_failed(line: str) -> bool:
+        parts = line.split("\t")
+        return not (len(parts) >= 3 and parts[1] in RETRY_STATUSES and parts[2].strip() == url)
+
+    _rewrite_without(failed_path or FAILED_FILE, keep_failed)
+    _rewrite_without(blocked_path or BLOCKED_FILE, lambda line: line.strip() != url)
+
+
 def _stamp() -> str:
     """Small console stamp, HH:MM:SS, for tracking parallel work at a glance."""
     return time.strftime("%H:%M:%S")
@@ -1944,8 +2025,11 @@ async def _run_download_entries_async(
         headers={"Accept": "text/html,application/xhtml+xml,application/pdf,*/*;q=0.8"},
     ) as client:
 
-        async def download_one(candidate: DownloadCandidate) -> None:
-            nonlocal failed_new
+        async def fetch_and_save(candidate: DownloadCandidate) -> tuple[str, str, Path | None, str]:
+            """One try at candidate -> (outcome, text, path, digest); outcome is
+            saved | downloaded | duplicate | no-download | unresolved | rejected.
+            What worked is recorded here, the same for the crawl and the retry
+            turns (python/pdfs, downloaded.txt, timeline.log)."""
             check_disk(output_dir)  # under the 5 GB kept for the system every command quits
             try:
                 payload = await _resolve_candidate(client, candidate)
@@ -1958,48 +2042,26 @@ async def _run_download_entries_async(
                     "(possibly expired, private, or confirmation-blocked)"
                 )
             if payload is _NO_DOWNLOAD:
-                summary.no_download.append(candidate.url)
-                print(
-                    f"[no-download] {candidate.url}: "
-                    "page has no download button or file link"
-                )
-                blocked_key = _blocked_identity(candidate)
-                if blocked_key not in blocked_urls:
-                    blocked_urls.add(blocked_key)
-                    _remember_blocked(blocked_key)
-                if _remember_failed(
-                    "blocked",
-                    candidate.url,
-                    "page has no download button or file link",
-                    failed_keys,
-                ):
-                    failed_new += 1
-                return
+                return "no-download", "page has no download button or file link", None, ""
             if payload is None:
-                summary.unresolved.append(candidate.url)
-                print(f"[unresolved] {candidate.url}: {reason}")
-                if _remember_failed("unresolved", candidate.url, reason, failed_keys):
-                    failed_new += 1
-                return
+                return "unresolved", reason, None, ""
             data, extension, headers, final_url = payload
             digest = hashlib.sha256(data).hexdigest()
             memory_key = _memory_identity(candidate)
             if digest in known_hashes:
-                summary.downloaded.append(candidate.url)
                 print(
                     f"[downloaded] {candidate.url}: "
                     "already downloaded on a previous run; skipping"
                 )
                 _remember_downloaded(memory_key, digest)
-                return
+                return "downloaded", "already downloaded on a previous run", None, digest
             if digest in seen_hashes:
-                summary.duplicates.append(candidate.url)
                 print(
                     f"[duplicate] {candidate.url}: "
                     "identical bytes already saved; skipping"
                 )
                 _remember_downloaded(memory_key, digest)
-                return
+                return "duplicate", "identical bytes already saved", None, digest
             seen_hashes.add(digest)
             path, detail = await asyncio.to_thread(
                 _save_payload,
@@ -2011,11 +2073,7 @@ async def _run_download_entries_async(
                 output_dir,
             )
             if path is None:
-                summary.unresolved.append(candidate.url)
-                print(f"[rejected] {candidate.url}: {detail}")
-                if _remember_failed("rejected", candidate.url, detail, failed_keys):
-                    failed_new += 1
-                return
+                return "rejected", detail, None, digest
             summary.saved.append(path)
             if guard is not None:
                 try:
@@ -2025,6 +2083,39 @@ async def _run_download_entries_async(
             print(f"[saved] {path.name} ({detail}) @ {_stamp()}")
             _timeline("saved", f"{path.name} {detail}")
             _remember_downloaded(memory_key, digest)
+            return "saved", detail, path, digest
+
+        async def download_one(candidate: DownloadCandidate) -> None:
+            nonlocal failed_new
+            outcome, text, path, digest = await fetch_and_save(candidate)
+            if outcome == "no-download":
+                summary.no_download.append(candidate.url)
+                print(f"[no-download] {candidate.url}: {text}")
+                blocked_key = _blocked_identity(candidate)
+                if blocked_key not in blocked_urls:
+                    blocked_urls.add(blocked_key)
+                    _remember_blocked(blocked_key)
+                if _remember_failed("blocked", candidate.url, text, failed_keys):
+                    failed_new += 1
+                return
+            if outcome == "unresolved":
+                summary.unresolved.append(candidate.url)
+                print(f"[unresolved] {candidate.url}: {text}")
+                if _remember_failed("unresolved", candidate.url, text, failed_keys):
+                    failed_new += 1
+                return
+            if outcome == "downloaded":
+                summary.downloaded.append(candidate.url)
+                return
+            if outcome == "duplicate":
+                summary.duplicates.append(candidate.url)
+                return
+            if outcome == "rejected":
+                summary.unresolved.append(candidate.url)
+                print(f"[rejected] {candidate.url}: {text}")
+                if _remember_failed("rejected", candidate.url, text, failed_keys):
+                    failed_new += 1
+                return
             if remote_cfg is not None:
                 outcome = await asyncio.to_thread(
                     _remote_push_file,
@@ -2072,6 +2163,55 @@ async def _run_download_entries_async(
                     print(f"[download] {candidate.url}", flush=True)
                 await download_one(candidate)
 
+        async def retry_records() -> None:
+            """The retry turns: every URL in scan/failed.txt + scan/blocked.txt
+            gets one try per turn, RETRY_TURNS turns; one that works leaves
+            both files, one that fails waits for the next turn."""
+            urls = _retry_urls()
+            summary.retried = summary.retry_left = len(urls)
+            if not urls:
+                return
+            print(
+                f"[retry] crawling finished: {len(urls)} URL(s) from scan/{FAILED_FILE.name} "
+                f"and scan/{BLOCKED_FILE.name} get {RETRY_TURNS} turns, one try each @ {_stamp()}",
+                flush=True,
+            )
+            _timeline("retry", f"urls={len(urls)} turns={RETRY_TURNS}")
+            for turn in range(1, RETRY_TURNS + 1):
+                if not urls:
+                    break
+                print(f"[retry] turn {turn}/{RETRY_TURNS}: {len(urls)} URL(s) @ {_stamp()}", flush=True)
+                still: list[str] = []
+                for url in urls:
+                    if guard is not None:
+                        guard.checkpoint()
+                    outcome, text, path, _digest = await fetch_and_save(
+                        DownloadCandidate(url, provider=_provider_kind(url))
+                    )
+                    if outcome in {"saved", "downloaded", "duplicate"}:
+                        _forget_records(url)
+                        blocked_urls.discard(url)
+                        for status in RETRY_STATUSES:
+                            failed_keys.discard((status, url))
+                        summary.recovered.append(url)
+                        summary.retry_left -= 1
+                        what = f"saved {path.name}" if path is not None else text
+                        print(
+                            f"[retry-ok] {url}: {what} (turn {turn}/{RETRY_TURNS}); removed from "
+                            f"scan/{FAILED_FILE.name} and scan/{BLOCKED_FILE.name}",
+                            flush=True,
+                        )
+                    else:
+                        still.append(url)
+                        print(f"[retry-fail] {url}: {text} (turn {turn}/{RETRY_TURNS})", flush=True)
+                urls = still
+            print(
+                f"[retry] done: {len(summary.recovered)} recovered, {len(urls)} still failing "
+                f"(kept in scan/{FAILED_FILE.name} / scan/{BLOCKED_FILE.name}) @ {_stamp()}",
+                flush=True,
+            )
+            _timeline("retry-done", f"recovered={len(summary.recovered)} left={len(urls)}")
+
         try:
             await process_candidates()
             single_site = len(sites) == 1
@@ -2091,6 +2231,7 @@ async def _run_download_entries_async(
                 summary.pages += count
                 print(f"[site] {seed_urls[0]}: checked {count:,} page URL(s)")
                 await process_candidates()
+            await retry_records()
         except StopRun as stop:
             summary.stopped = str(stop) or "stop requested"
             print(

@@ -41,7 +41,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 from disk_floor import DISK_FLOOR, DiskTight, disk_tight, size_text
-from Dcrawler import ENTRY_FILE, OUTPUT_DIR, DownloadSummary, StopRun, download_entries
+from Dcrawler import ENTRY_FILE, OUTPUT_DIR, DownloadSummary, StopRun, download_entries, retry_line
 from mailer import clock, duration, now
 from save_remote import (
     RETRY_ATTEMPTS,
@@ -110,8 +110,10 @@ class NightReport:
                 f"📚 Download: saved {self.saved_files} new file(s) "
                 f"({size_text(self.saved_bytes)}) before the forced stop."
             )
-        lines = [
-            download,
+        lines = [download]
+        if self.summary is not None and self.summary.retried:
+            lines.append(retry_line(self.summary))
+        lines += [
             f"☁️ Upload: {self.uploaded} file(s) ({size_text(self.uploaded_bytes)}) "
             f"sent and verified · {self.left_files} file(s) "
             f"({size_text(self.left_bytes)}) still in python/pdfs.",
