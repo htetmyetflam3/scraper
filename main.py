@@ -17,8 +17,9 @@ from Dcrawler import ENTRY_FILE, OUTPUT_DIR, download_entries, note_pause  # noq
 from download_rate import validate_limit  # noqa: E402
 from fetch_results import DEFAULT_KEYWORDS, fetch_results  # noqa: E402
 from mailer import RunMail  # noqa: E402
+from night import NIGHT_HOURS, run_process  # noqa: E402
 from phatmal import run_phatmal  # noqa: E402
-from save_remote import watch  # noqa: E402
+from save_remote import start_remote, watch  # noqa: E402
 from Scrawler import find_entry  # noqa: E402
 from scribd import download_scribd, read_links_file  # noqa: E402
 from serpapi import SerpApiError  # noqa: E402
@@ -38,17 +39,22 @@ examples:
   uv run main.py --download https://example.com -l 2
   uv run main.py --download my-entries.txt
   uv run main.py --upload -i 60
+  uv run main.py --process
+  uv run main.py --process -i 60 -l 5
   uv run main.py --scribd
   uv run main.py --scribd https://www.scribd.com/document/123/title
   uv run main.py --scribd my-scribd-links.txt
   uv run main.py --phatmal
   uv run main.py --phatmal https://phatmal.com/ebook/<slug>
 
-exit codes: 0 ok, 1 failed, 2 usage error, 130 paused (Ctrl+C; rerun resumes)
+exit codes: 0 ok (also --process stopping at its 6-hour mark), 1 failed,
+2 usage error, 130 paused (Ctrl+C; rerun resumes)
 
 email: every command except --findentry mails a started notice, then a
 finished or failed one naming the part: kaungmyatthu@devnovex.shop ->
 htetmyet986@gmail.com via smtp.hostinger.com:465 (MAIL_PASSWORD in .env).
+--process mails started, then one report at the 6-hour mark (or when all is
+done) listing every problem with its part and time; nothing in between.
 """
 
 
@@ -128,6 +134,16 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
     command.add_argument(
+        "--process",
+        action="store_true",
+        help=(
+            "Night run in one terminal: download from scan/entry.txt while "
+            "uploading to the SSH host (checked every -i seconds). Keeps going "
+            "through failures and outages, stops at the 6-hour mark and mails "
+            "a report; rerun resumes."
+        ),
+    )
+    command.add_argument(
         "--scribd",
         nargs="?",
         const=USE_SCRIBD_FILE,
@@ -159,7 +175,7 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         metavar="MB_PER_SEC",
         help=(
-            "With --download/--main: download speed cap in MB/s "
+            "With --download/--main/--process: download speed cap in MB/s "
             "(1 MB = 1048576 bytes). Default 0 = unlimited."
         ),
     )
@@ -169,7 +185,10 @@ def build_parser() -> argparse.ArgumentParser:
         type=_interval,
         default=None,
         metavar="SECONDS",
-        help=f"With --upload: seconds between folder checks (default {DEFAULT_INTERVAL:g}).",
+        help=(
+            f"With --upload/--process: seconds between upload folder checks "
+            f"(default {DEFAULT_INTERVAL:g})."
+        ),
     )
     return parser
 
@@ -202,15 +221,16 @@ def _download_details(summary) -> list[str]:
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
-    if args.limit is not None and not (args.main or args.download is not None):
-        parser.error("-l works with --download or --main")
-    if args.interval is not None and not args.upload:
-        parser.error("-i works with --upload")
+    if args.limit is not None and not (args.main or args.download is not None or args.process):
+        parser.error("-l works with --download, --main or --process")
+    if args.interval is not None and not (args.upload or args.process):
+        parser.error("-i works with --upload or --process")
     if (
         args.findentry is None
         and not args.main
         and args.download is None
         and not args.upload
+        and not args.process
         and args.scribd is None
         and args.phatmal is None
     ):
@@ -221,9 +241,17 @@ def main(argv: list[str] | None = None) -> int:
     mail = None if args.findentry is not None else RunMail(job)
     part = "download"
     details: list[str] = []
+    report = None
     try:
         if mail is not None:
-            mail.send_started()
+            mail.send_started(
+                [
+                    f"🕕 Night run: downloads + uploads until the {NIGHT_HOURS:g}-hour "
+                    "mark, then one report (no mail in between)."
+                ]
+                if args.process
+                else []
+            )
         if args.findentry is not None:
             keywords = _keywords(args.findentry)
             fetch_results(keywords=keywords)
@@ -241,6 +269,16 @@ def main(argv: list[str] | None = None) -> int:
         elif args.upload:
             part = "upload"
             watch(OUTPUT_DIR, args.interval or DEFAULT_INTERVAL)
+        elif args.process:
+            if not ENTRY_FILE.is_file():
+                raise FileNotFoundError(
+                    f"No entry file at {ENTRY_FILE}; run main.py --findentry first."
+                )
+            part = "upload"
+            OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+            config = start_remote(OUTPUT_DIR)  # checked now, while you are awake
+            part = "download"
+            report = run_process(config, args.interval or DEFAULT_INTERVAL, limit)
         elif args.scribd is not None:
             part = "scribd download"
             links = _scribd_links(args.scribd)
@@ -267,6 +305,11 @@ def main(argv: list[str] | None = None) -> int:
                 "\n[paused] watcher stopped; unarchived files stay local. "
                 f"@ {time.strftime('%H:%M:%S')}"
             )
+        elif args.process:
+            print(
+                "\n[paused] interrupted; downloads are journaled and unsent files "
+                f"stay in python/pdfs - rerun to resume. @ {note_pause()}"
+            )
         else:
             print(
                 "\n[paused] interrupted; progress is journaled - rerun to "
@@ -277,7 +320,14 @@ def main(argv: list[str] | None = None) -> int:
         if mail is not None:
             mail.send_failed(part, f"{type(error).__name__}: {error}")
         raise
-    if mail is not None:
+    if mail is not None and report is not None:
+        mail.send_report(
+            reached_mark=report.reached_mark,
+            mark=f"the {NIGHT_HOURS:g}-hour mark",
+            details=report.details(),
+            problems=report.problem_rows(),
+        )
+    elif mail is not None:
         mail.send_finished(details)
     return 0
 

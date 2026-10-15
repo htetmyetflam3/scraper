@@ -1,7 +1,7 @@
 """Remote saving over SSH: push saved files to a host instead of keeping them.
 
-Used by main.py --upload (the watch loop over python/pdfs) and by Dcrawler's
-remote mode. A download is still written locally exactly as before; then this
+Used by main.py --upload (the watch loop over python/pdfs), main.py --process
+(python/bin/night.py's upload thread) and by Dcrawler's remote mode. A download is still written locally exactly as before; then this
 module pushes it over plain ``ssh``, verifies the remote sha256 against the
 *local* bytes, appends a line to scan/uploaded-host.txt, and only after that
 deletes the local copy.
@@ -510,6 +510,24 @@ def push_file(
     )
 
 
+def pending_files(root: Path) -> list[Path]:
+    """Files waiting in root, depth included, sorted. Staged temps
+    (.download-*.tmp), dotfiles, dot-directories and __pycache__ are never
+    listed, so a half-written download is never pushed."""
+    try:
+        return sorted(
+            entry
+            for entry in root.rglob("*")
+            if entry.is_file()
+            and not any(
+                part.startswith(".") or part == "__pycache__"
+                for part in entry.relative_to(root).parts
+            )
+        )
+    except OSError:
+        return []
+
+
 def drain_backlog(
     output_dir: Path,
     config: RemoteConfig,
@@ -527,18 +545,7 @@ def drain_backlog(
     freed locally); files that fail stay on disk for the next pass.
     """
     root = Path(output_dir)
-    try:
-        files = sorted(
-            entry
-            for entry in root.rglob("*")
-            if entry.is_file()
-            and not any(
-                part.startswith(".") or part == "__pycache__"
-                for part in entry.relative_to(root).parts
-            )
-        )
-    except OSError:
-        return 0, 0, 0
+    files = pending_files(root)
     if not files:
         return 0, 0, 0
     try:
@@ -593,7 +600,7 @@ def _default_local_dir() -> Path:
     return Path(__file__).resolve().parents[1] / "pdfs"
 
 
-def _start(local: Path) -> RemoteConfig:
+def start_remote(local: Path) -> RemoteConfig:
     """Load the SSH_* settings, check the local folder, announce and probe."""
     config = load_config()
     if not local.is_dir():
@@ -617,10 +624,10 @@ def watch(local: Path, interval: float) -> NoReturn:
     leaves the disk after its bytes are verified on the host. Ctrl+C
     (KeyboardInterrupt) and RemoteError propagate to the caller.
     """
-    config = _start(local)
+    config = start_remote(local)
     total_freed = 0
     while True:
-        archived, failed, freed = drain_backlog(local, config, timeline=_cli_timeline)
+        archived, failed, freed = drain_backlog(local, config, timeline=timeline_row)
         total_freed += freed
         if archived or failed:
             print(
@@ -677,8 +684,8 @@ def main(argv: list[str] | None = None) -> int:
     try:
         if args.watch:
             watch(local, args.interval)
-        config = _start(local)
-        archived, failed, freed = drain_backlog(local, config, timeline=_cli_timeline)
+        config = start_remote(local)
+        archived, failed, freed = drain_backlog(local, config, timeline=timeline_row)
         return 1 if failed else 0
     except (RemoteError, OSError) as error:
         print(f"error: {error}", file=sys.stderr)
@@ -691,7 +698,7 @@ def main(argv: list[str] | None = None) -> int:
         return 130
 
 
-def _cli_timeline(event: str, detail: str = "") -> None:
+def timeline_row(event: str, detail: str = "") -> None:
     """Timeline rows for standalone runs: same file the crawler writes."""
     target = REPO_ROOT / "scan" / "timeline.log"
     line = f"{time.strftime('%m-%d %H:%M:%S')} {event}"
