@@ -52,7 +52,8 @@ exit codes: 0 ok (also --process stopping at its 6-hour mark), 1 failed,
 
 email: every command except --findentry mails a started notice, then a
 finished or failed one naming the part: kaungmyatthu@devnovex.shop ->
-htetmyet986@gmail.com via smtp.hostinger.com:465 (MAIL_PASSWORD in .env).
+htetmyet986@gmail.com via smtp.hostinger.com:465 (MAIL_PASSWORD in .env); a
+copy of each goes to that mailbox's Sent folder via imap.hostinger.com:993.
 --process mails started, then one report at the 6-hour mark (or when all is
 done) listing every problem with its part and time; nothing in between.
 """
