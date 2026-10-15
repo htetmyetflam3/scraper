@@ -1,12 +1,11 @@
 """Email notices for scraper runs: started, finished, failed.
 
-Settings come from the environment or the repo-root .env (same parser as
-the other modules): SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD and
-MAIL_TO (comma-separated for several), plus optional MAIL_FROM (default
-SMTP_USER) and SMTP_SECURITY (``ssl`` or ``starttls``; default ``ssl`` on
-port 465, else ``starttls``). The password never travels unencrypted.
+Sent from the Hostinger mailbox kaungmyatthu@devnovex.shop through
+smtp.hostinger.com:465 (SSL, certificate verified) to htetmyet986@gmail.com.
+The only setting is the mailbox password: MAIL_PASSWORD in the repo-root
+.env (the environment wins, same parser as the other modules).
 
-Mail is best-effort: missing settings switch it off with one notice and a
+Mail is best-effort: no password switches it off with one notice and a
 failed send only prints a warning, so a night run never stops because of
 mail. Times are Myanmar time (UTC+06:30, no daylight saving); 06:00-17:59
 counts as day, the rest as night.
@@ -29,7 +28,11 @@ MYANMAR_TIME = timezone(timedelta(hours=6, minutes=30), "MMT")
 DAY_START_HOUR = 6
 NIGHT_START_HOUR = 18
 SEND_TIMEOUT = 20.0
-REQUIRED_SETTINGS = ("SMTP_HOST", "SMTP_PORT", "SMTP_USER", "SMTP_PASSWORD", "MAIL_TO")
+SMTP_HOST = "smtp.hostinger.com"
+SMTP_PORT = 465  # implicit TLS (SSL)
+SMTP_USER = "kaungmyatthu@devnovex.shop"  # Hostinger login, also the From address
+MAIL_TO = "htetmyet986@gmail.com"
+PASSWORD_SETTING = "MAIL_PASSWORD"
 
 # (frame line, message line, message line); the frame goes above and below.
 NIGHT_STARTED = (
@@ -56,68 +59,32 @@ DAY_FINISHED = (
 class MailConfig:
     host: str
     port: int
-    security: str
     user: str
     password: str
-    sender: str
-    recipients: tuple[str, ...]
+    recipient: str
 
 
 def load_mail_config() -> tuple[MailConfig | None, str]:
-    """(config, "") when every setting is usable, else (None, reason)."""
-    dotenv = load_dotenv_values()
-
-    def pick(name: str) -> str:
-        value = os.environ.get(name)
-        if value is None:
-            value = dotenv.get(name, "")
-        return value.strip()
-
-    values = {name: pick(name) for name in (*REQUIRED_SETTINGS, "MAIL_FROM", "SMTP_SECURITY")}
-    missing = [name for name in REQUIRED_SETTINGS if not values[name]]
-    if missing:
-        return None, "missing " + ", ".join(missing)
-    try:
-        port = int(values["SMTP_PORT"])
-    except ValueError:
-        return None, f"SMTP_PORT is not a number: {values['SMTP_PORT']!r}"
-    security = values["SMTP_SECURITY"].lower() or ("ssl" if port == 465 else "starttls")
-    if security not in {"ssl", "starttls"}:
-        return None, f"SMTP_SECURITY must be ssl or starttls, not {values['SMTP_SECURITY']!r}"
-    recipients = tuple(address.strip() for address in values["MAIL_TO"].split(",") if address.strip())
-    if not recipients:
-        return None, "MAIL_TO has no address"
-    return (
-        MailConfig(
-            host=values["SMTP_HOST"],
-            port=port,
-            security=security,
-            user=values["SMTP_USER"],
-            password=values["SMTP_PASSWORD"],
-            sender=values["MAIL_FROM"] or values["SMTP_USER"],
-            recipients=recipients,
-        ),
-        "",
-    )
+    """(config, "") when MAIL_PASSWORD is set, else (None, reason)."""
+    password = os.environ.get(PASSWORD_SETTING)
+    if password is None:
+        password = load_dotenv_values().get(PASSWORD_SETTING, "")
+    if not password.strip():
+        return None, f"missing {PASSWORD_SETTING}"
+    return MailConfig(SMTP_HOST, SMTP_PORT, SMTP_USER, password, MAIL_TO), ""
 
 
 def send(config: MailConfig, subject: str, body: str) -> None:
-    """Deliver one plain-text UTF-8 message; raises on any failure."""
+    """Deliver one plain-text UTF-8 message over SSL; raises on any failure."""
     message = EmailMessage()
-    message["From"] = config.sender
-    message["To"] = ", ".join(config.recipients)
+    message["From"] = config.user
+    message["To"] = config.recipient
     message["Subject"] = subject
     message["Date"] = formatdate(localtime=True)
     message["Message-ID"] = make_msgid()
     message.set_content(body)
     context = ssl.create_default_context()
-    if config.security == "ssl":
-        with smtplib.SMTP_SSL(config.host, config.port, timeout=SEND_TIMEOUT, context=context) as server:
-            server.login(config.user, config.password)
-            server.send_message(message)
-        return
-    with smtplib.SMTP(config.host, config.port, timeout=SEND_TIMEOUT) as server:
-        server.starttls(context=context)
+    with smtplib.SMTP_SSL(config.host, config.port, timeout=SEND_TIMEOUT, context=context) as server:
         server.login(config.user, config.password)
         server.send_message(message)
 
@@ -216,11 +183,11 @@ class RunMail:
         self.started = now()
         self.config, reason = load_mail_config()
         if self.config is None:
-            print(f"[mail] off: {reason} (set them in .env)", flush=True)
+            print(f"[mail] off: {reason} (set it in .env)", flush=True)
         else:
             print(
-                f"[mail] on -> {', '.join(self.config.recipients)} via "
-                f"{self.config.host}:{self.config.port} ({self.config.security})",
+                f"[mail] on: {self.config.user} -> {self.config.recipient} via "
+                f"{self.config.host}:{self.config.port} (ssl)",
                 flush=True,
             )
 

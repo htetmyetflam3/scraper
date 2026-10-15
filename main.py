@@ -47,7 +47,8 @@ examples:
 exit codes: 0 ok, 1 failed, 2 usage error, 130 paused (Ctrl+C; rerun resumes)
 
 email: every command except --findentry mails a started notice, then a
-finished or failed one naming the part (SMTP_* and MAIL_TO in .env).
+finished or failed one naming the part: kaungmyatthu@devnovex.shop ->
+htetmyet986@gmail.com via smtp.hostinger.com:465 (MAIL_PASSWORD in .env).
 """
 
 
