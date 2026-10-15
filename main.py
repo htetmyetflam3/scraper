@@ -145,8 +145,9 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help=(
             "Night run in one terminal: download from scan/entry.txt while "
-            "uploading to the SSH host (checked every -i seconds). Keeps going "
-            "through failures and outages, keeps 5 GB of disk free (downloading "
+            "uploading to the SSH host (checked every -i seconds). Pages and "
+            "files that fail or can't be reached are skipped and recorded like "
+            "--download; keeps 5 GB of disk free (downloading "
             f"waits for uploads below that), stops at the {NIGHT_HOURS:g}-hour mark "
             "(NIGHT_HOURS at the top of main.py) and mails "
             "a report. Quits with an error (mailed right away) if uploads fail "
