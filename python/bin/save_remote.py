@@ -1,10 +1,10 @@
 """Remote saving over SSH: push saved files to a host instead of keeping them.
 
-Used by Dcrawler's remote mode (main.py --download-remote). A download is
-still written locally exactly as before; then this module pushes it over
-plain ``ssh``, verifies the remote sha256 against the *local* bytes, appends
-a line to scan/uploaded-host.txt, and only after that deletes the local copy
-(unless keep_local=True).
+Used by main.py --upload (the watch loop over python/pdfs) and by Dcrawler's
+remote mode. A download is still written locally exactly as before; then this
+module pushes it over plain ``ssh``, verifies the remote sha256 against the
+*local* bytes, appends a line to scan/uploaded-host.txt, and only after that
+deletes the local copy.
 
 Design rules, matching the rest of the pipeline:
 - Plain ssh binary in BatchMode: it never prompts, so a missing key fails
@@ -41,6 +41,7 @@ import sys
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import NoReturn
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 ENV_FILE = REPO_ROOT / ".env"
@@ -389,7 +390,6 @@ def push_file(
     *,
     digest: str | None = None,
     ledger: Path | None = None,
-    keep_local: bool = False,
     timeline=None,
     log=_console_log,
     remote_name: str | None = None,
@@ -423,9 +423,7 @@ def push_file(
         and remote_sha256(config, known) == digest
     ):
         log(f"[push-skip] {name} already archived and verified @ {_stamp()}")
-        deleted = False
-        if not keep_local:
-            deleted = _delete_local(path, timeline, log)
+        deleted = _delete_local(path, timeline, log)
         return PushOutcome(
             True,
             "already archived, sha256 verified",
@@ -502,9 +500,7 @@ def push_file(
     else:
         detail = "sha256 verified"
     log(f"[push-ok] {name} {detail} -> {remote_path} @ {_stamp()}")
-    deleted = False
-    if not keep_local:
-        deleted = _delete_local(path, timeline, log)
+    deleted = _delete_local(path, timeline, log)
     return PushOutcome(
         True,
         detail,
@@ -519,7 +515,6 @@ def drain_backlog(
     config: RemoteConfig,
     *,
     ledger: Path | None = None,
-    keep_local: bool = False,
     timeline=None,
     log=_console_log,
 ) -> tuple[int, int, int]:
@@ -567,7 +562,6 @@ def drain_backlog(
             file,
             config,
             ledger=ledger,
-            keep_local=keep_local,
             timeline=timeline,
             log=log,
             remote_name=str(file.relative_to(root)),
@@ -599,6 +593,51 @@ def _default_local_dir() -> Path:
     return Path(__file__).resolve().parents[1] / "pdfs"
 
 
+def _start(local: Path) -> RemoteConfig:
+    """Load the SSH_* settings, check the local folder, announce and probe."""
+    config = load_config()
+    if not local.is_dir():
+        raise FileNotFoundError(f"local folder not found: {local}")
+    print(
+        f"[remote] {config.user}@{config.host}:{config.port} "
+        f"dir={config.directory} @ {_stamp()}",
+        flush=True,
+    )
+    print("[upload-limit] unlimited", flush=True)
+    info = probe(config)
+    if info:
+        print(f"[remote] {info}", flush=True)
+    return config
+
+
+def watch(local: Path, interval: float) -> NoReturn:
+    """Archive ``local`` forever: drain, sleep ``interval`` seconds, drain again.
+
+    Every pass uses drain_backlog's verify-then-delete rule, so a file only
+    leaves the disk after its bytes are verified on the host. Ctrl+C
+    (KeyboardInterrupt) and RemoteError propagate to the caller.
+    """
+    config = _start(local)
+    total_freed = 0
+    while True:
+        archived, failed, freed = drain_backlog(local, config, timeline=_cli_timeline)
+        total_freed += freed
+        if archived or failed:
+            print(
+                f"[watch] archived {archived}, failed {failed}, "
+                f"freed {freed / 1048576:.1f} MB this pass "
+                f"({total_freed / 1048576:.1f} MB total); next check in "
+                f"{interval:.0f}s @ {_stamp()}",
+                flush=True,
+            )
+        else:
+            print(
+                f"[watch] nothing new; next check in {interval:.0f}s @ {_stamp()}",
+                flush=True,
+            )
+        time.sleep(max(interval, 1.0))
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description=(
@@ -626,11 +665,6 @@ def build_parser() -> argparse.ArgumentParser:
         metavar="SECONDS",
         help="with --watch: pause between passes (default 60)",
     )
-    parser.add_argument(
-        "--keep-local",
-        action="store_true",
-        help="archive without deleting anything locally",
-    )
     return parser
 
 
@@ -641,49 +675,12 @@ def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     local = (args.dir or _default_local_dir()).expanduser()
     try:
-        config = load_config()
-        if not local.is_dir():
-            print(f"error: local folder not found: {local}", file=sys.stderr)
-            return 1
-        print(
-            f"[remote] {config.user}@{config.host}:{config.port} "
-            f"dir={config.directory} @ {_stamp()}"
-        )
-        print("[upload-limit] unlimited", flush=True)
-        info = probe(config)
-        if info:
-            print(f"[remote] {info}")
-        if not args.watch:
-            archived, failed, freed = drain_backlog(
-                local,
-                config,
-                keep_local=args.keep_local,
-                timeline=_cli_timeline,
-            )
-            return 1 if failed else 0
-        total_freed = 0
-        while True:
-            archived, failed, freed = drain_backlog(
-                local,
-                config,
-                keep_local=args.keep_local,
-                timeline=_cli_timeline,
-            )
-            total_freed += freed
-            if archived or failed:
-                print(
-                    f"[watch] archived {archived}, failed {failed}, "
-                    f"freed {freed / 1048576:.1f} MB this pass "
-                    f"({total_freed / 1048576:.1f} MB total); next check in "
-                    f"{args.interval:.0f}s @ {_stamp()}"
-                )
-            else:
-                print(
-                    f"[watch] nothing new; next check in {args.interval:.0f}s "
-                    f"@ {_stamp()}"
-                )
-            time.sleep(max(args.interval, 1.0))
-    except RemoteError as error:
+        if args.watch:
+            watch(local, args.interval)
+        config = _start(local)
+        archived, failed, freed = drain_backlog(local, config, timeline=_cli_timeline)
+        return 1 if failed else 0
+    except (RemoteError, OSError) as error:
         print(f"error: {error}", file=sys.stderr)
         return 1
     except KeyboardInterrupt:

@@ -466,11 +466,17 @@ def _load_existing_lines(path: Path) -> tuple[list[str], set[str]]:
     return lines, seen
 
 
-def find_entry(results_file: str | Path = SEARCH_RESULTS_FILE) -> list[str]:
+def find_entry(
+    results_file: str | Path = SEARCH_RESULTS_FILE,
+    keywords: list[str] | tuple[str, ...] | None = None,
+) -> list[str]:
     """Crawl saved search-result links and append discovered site roots to scan/entry.txt.
 
     Reads the JSON list previously saved by fetch_results.py (each item
-    needs only a ``url`` key). No search API is called here, so crawl
+    needs only a ``url`` key). With ``keywords``, only results saved for
+    those keywords are crawled (matched like fetch_results' saved-keyword
+    skip: exact text, surrounding spaces ignored); None crawls every saved
+    result. No search API is called here, so crawl
     testing never burns API quota. Previous runs are preserved: existing
     entry.txt and scribd.txt lines are kept (comments and blanks included)
     and only new roots/links are appended. Scribd result URLs go unchanged
@@ -488,7 +494,7 @@ def find_entry(results_file: str | Path = SEARCH_RESULTS_FILE) -> list[str]:
         text = path.read_text(encoding="utf-8")
     except FileNotFoundError as error:
         raise FileNotFoundError(
-            f"No saved results at {path}; run fetch_results.py first."
+            f"No saved results at {path}; run main.py --findentry first."
         ) from error
     try:
         loaded = json.loads(text)
@@ -497,9 +503,18 @@ def find_entry(results_file: str | Path = SEARCH_RESULTS_FILE) -> list[str]:
     if not isinstance(loaded, list):
         raise ValueError(f"Cannot parse {path}: expected a JSON list.")
     search_results = [item for item in loaded if isinstance(item, dict)]
+    scope = ""
+    if keywords is not None:
+        wanted = {keyword.strip() for keyword in keywords if keyword.strip()}
+        search_results = [
+            item
+            for item in search_results
+            if str(item.get("keyword", "")).strip() in wanted
+        ]
+        scope = f" for {len(wanted)} keyword(s)"
 
     print(
-        f"[crawl] scanning {len(search_results)} saved result(s) from {path}",
+        f"[crawl] scanning {len(search_results)} saved result(s){scope} from {path}",
         flush=True,
     )
 

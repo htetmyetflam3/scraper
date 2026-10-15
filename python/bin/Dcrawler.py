@@ -922,22 +922,6 @@ class _CrawlJournal:
             self.handle = None
 
 
-def _clear_journals() -> int:
-    """Delete every crawl journal for --fresh; returns how many were removed."""
-    removed = 0
-    try:
-        journals = sorted(SCAN_DIR.glob("crawl-*.jsonl"))
-    except OSError:
-        return 0
-    for path in journals:
-        try:
-            path.unlink()
-            removed += 1
-        except OSError as error:
-            print(f"[journal-warn] cannot remove {path.name}: {error}")
-    return removed
-
-
 async def _crawl_site(
     client: httpx.AsyncClient,
     seed_urls: list[str],
@@ -1857,9 +1841,7 @@ def _remember_downloaded(key: str, digest: str, path: Path | None = None) -> Non
 async def _download_entries_async(
     entry_source: str | Path,
     output_dir: Path,
-    fresh: bool = False,
     remote: bool = False,
-    keep_local: bool = False,
     download_limit: float = 0.0,
 ) -> DownloadSummary:
     with limit_downloads(download_limit, log=lambda message: print(message, flush=True)):
@@ -1871,22 +1853,15 @@ async def _download_entries_async(
             )
         else:
             print(f"[download-limit] unlimited; uploads unlimited @ {_stamp()}", flush=True)
-        return await _run_download_entries_async(
-            entry_source, output_dir, fresh, remote, keep_local
-        )
+        return await _run_download_entries_async(entry_source, output_dir, remote)
 
 
 async def _run_download_entries_async(
     entry_source: str | Path,
     output_dir: Path,
-    fresh: bool = False,
     remote: bool = False,
-    keep_local: bool = False,
 ) -> DownloadSummary:
     summary = DownloadSummary()
-    if fresh:
-        removed = _clear_journals()
-        print(f"[fresh] removed {removed} crawl journal(s); starting over")
     source = os.fspath(entry_source).strip()
     parts = urllib.parse.urlsplit(source)
     if parts.scheme.lower() in {"http", "https"} and parts.netloc:
@@ -1942,7 +1917,6 @@ async def _run_download_entries_async(
             _remote_drain_backlog,
             output_dir,
             remote_cfg,
-            keep_local=keep_local,
             timeline=_timeline,
         )
     async with httpx.AsyncClient(
@@ -2032,7 +2006,6 @@ async def _run_download_entries_async(
                     path,
                     remote_cfg,
                     digest=digest,
-                    keep_local=keep_local,
                     timeline=_timeline,
                 )
                 if not outcome.ok:
@@ -2104,44 +2077,31 @@ async def _run_download_entries_async(
 def download_entries(
     entry_source: str | Path = ENTRY_FILE,
     output_dir: str | Path = OUTPUT_DIR,
-    fresh: bool = False,
     remote: bool = False,
-    keep_local: bool = False,
     download_limit: float = 0.0,
 ) -> DownloadSummary:
     """Process one site or entry-file sites sequentially, saving each file in turn.
 
-    fresh=True wipes the crawl journals so every page is revisited; saved
-    files are still skipped via the downloaded-memory. remote=True pushes
-    each saved file to the SSH host from the SSH_* settings, verifies its
-    sha256, and deletes the local copy unless keep_local=True; interrupted
-    pushes resume on the next run and failures stay on disk. download_limit
-    caps aggregate HTTP response bodies in MB/s (1048576 bytes); 0 is unlimited.
+    Crawl journals make reruns resume where the last run stopped. remote=True
+    pushes each saved file to the SSH host from the SSH_* settings, verifies
+    its sha256, then deletes the local copy; interrupted pushes resume on the
+    next run and failures stay on disk. download_limit caps aggregate HTTP
+    response bodies in MB/s (1048576 bytes); 0 is unlimited.
     """
     return asyncio.run(
-        _download_entries_async(
-            entry_source, Path(output_dir), fresh, remote, keep_local, download_limit
-        )
+        _download_entries_async(entry_source, Path(output_dir), remote, download_limit)
     )
 
 
 if __name__ == "__main__":
     try:
-        flags = {"--fresh", "--remote", "--keep-local"}
+        flags = {"--remote"}
         raw = sys.argv[1:]
         args = [arg for arg in raw if arg not in flags]
         source = args[0] if args else ENTRY_FILE
         if len(args) > 1:
-            raise ValueError(
-                "Usage: Dcrawler.py [--fresh] [--remote] [--keep-local] "
-                "[site-url-or-entry-file]"
-            )
-        report = download_entries(
-            source,
-            fresh="--fresh" in raw,
-            remote="--remote" in raw,
-            keep_local="--keep-local" in raw,
-        )
+            raise ValueError("Usage: Dcrawler.py [--remote] [site-url-or-entry-file]")
+        report = download_entries(source, remote="--remote" in raw)
     except (OSError, ValueError) as error:
         raise SystemExit(str(error)) from error
     except KeyboardInterrupt:

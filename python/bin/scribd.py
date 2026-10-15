@@ -45,9 +45,8 @@ def read_links_file(path: str | Path = SCRIBD_LINKS_FILE) -> list[str]:
     try:
         lines = Path(path).read_text(encoding="utf-8").splitlines()
     except FileNotFoundError as error:
-        raise FileNotFoundError(
-            f"No scribd links at {path}; run --entry first."
-        ) from error
+        hint = "; run main.py --findentry first" if Path(path) == SCRIBD_LINKS_FILE else ""
+        raise FileNotFoundError(f"No scribd links file at {path}{hint}.") from error
     return [
         line.strip()
         for line in lines
@@ -59,21 +58,27 @@ def download_scribd(
     urls: list[str],
     output_dir: str | Path = PDF_DIR,
 ) -> ScribdSummary:
-    """Export each URL to PDF in ``output_dir``; keeps going past failures."""
+    """Export each URL to PDF in ``output_dir``; keeps going past failures.
+
+    Every URL must be a Scribd URL: any other one raises ValueError before
+    a single document is downloaded.
+    """
     summary = ScribdSummary()
     if not urls:
         print("[scribd] no links to download", flush=True)
         return summary
+    foreign = [url for url in urls if not is_scribd_url(url)]
+    if foreign:
+        raise ValueError(
+            f"{len(foreign)} non-Scribd URL(s), nothing downloaded: "
+            + ", ".join(foreign)
+        )
     if not EXPORTER.is_file():
         raise FileNotFoundError(f"Scribd exporter missing: {EXPORTER}")
     out = Path(output_dir)
     out.mkdir(parents=True, exist_ok=True)
     for position, url in enumerate(urls, start=1):
         print(f"[scribd] {position}/{len(urls)}: {url}", flush=True)
-        if not is_scribd_url(url):
-            print(f"[scribd-skip] not a scribd URL: {url}", flush=True)
-            summary.failed.append(url)
-            continue
         before = {path.name for path in out.glob("*.pdf")}
         try:
             # No timeout: a large document legitimately takes a long time and

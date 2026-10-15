@@ -12,6 +12,7 @@ import asyncio
 import io
 import os
 import re
+import urllib.parse
 import zipfile
 from pathlib import Path
 
@@ -23,6 +24,7 @@ from site_login import load_dotenv_values
 
 API_BASE = "https://api.phatmal.com/api"
 REFERER = "https://phatmal.com/"
+BOOK_HOSTS = frozenset({"phatmal.com", "www.phatmal.com"})
 USER_AGENT = (
     "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 "
     "(KHTML, like Gecko) Chrome/126.0.0.0 Mobile Safari/537.36"
@@ -210,15 +212,26 @@ _SECRET_KEY_HINTS = (
 )
 
 
-def slug_from_input(value: str) -> str:
-    """Book slug from a bare slug or a full /ebook/<slug> URL."""
-    text = value.strip()
-    if "://" in text:
-        text = text.split("?", 1)[0].split("#", 1)[0].rstrip("/").rsplit("/", 1)[-1]
-    text = text.strip().strip("/")
-    if not text or not all(char.isalnum() or char in "-_.~%" for char in text):
-        return ""
-    return text
+def slug_from_url(url: str) -> str:
+    """Book slug from a phatmal.com /ebook/<slug> URL; anything else raises ValueError."""
+    try:
+        parts = urllib.parse.urlsplit(url.strip())
+        host = (parts.hostname or "").rstrip(".").lower()
+    except ValueError:
+        parts, host = None, ""
+    segments = [segment for segment in parts.path.split("/") if segment] if parts else []
+    slug = segments[1] if len(segments) == 2 and segments[0] == "ebook" else ""
+    if (
+        parts is None
+        or parts.scheme.lower() not in {"http", "https"}
+        or host not in BOOK_HOSTS
+        or not slug
+        or not all(char.isalnum() or char in "-_.~%" for char in slug)
+    ):
+        raise ValueError(
+            f"not a phatmal book URL (https://phatmal.com/ebook/<slug>): {url}"
+        )
+    return slug
 
 
 def describe_shape(value: object, _depth: int = 0) -> str:
@@ -564,13 +577,8 @@ async def crawl_library(output_dir: Path | None = None) -> dict[str, int]:
     return stats
 
 
-async def download_single(
-    slug_or_url: str, output_dir: Path | None = None
-) -> bool:
-    slug = slug_from_input(slug_or_url)
-    if not slug:
-        print("error: need a slug or /ebook/<slug> URL")
-        return False
+async def download_single(url: str, output_dir: Path | None = None) -> bool:
+    slug = slug_from_url(url)
     config = load_api_config()
     if config is None:
         return False
@@ -593,7 +601,8 @@ async def download_single(
 async def run_phatmal(
     target: str | None, output_dir: Path | None = None
 ) -> bool:
-    """None crawls the whole library; else one slug/URL. False only when
+    """None crawls the whole library; else one phatmal.com/ebook/<slug> URL
+    (any other URL raises ValueError before logging in). False only when
     nothing was saved and something failed (or the list came back empty)."""
     if target is None:
         stats = await crawl_library(output_dir)
