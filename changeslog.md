@@ -316,3 +316,4 @@
 - Runs under the system manager as root with journal logs and no terminal input; no automatic restart after completion/failure. Stop sends SIGINT with a 120-second grace period.
 - Added `deploy/README.md` with start, status, logs, stop, flag changes, optional boot startup, and removal commands. Existing CLI and night-run logic unchanged.
 - Verified generated unit using `systemd-analyze verify`; mocked installation verified argument escaping, daemon reload, and active-job refusal. Actual VPS execution and SSH disconnect survival cannot be verified in this sandbox.
+- Unit verification caught quoted `WorkingDirectory` being treated as a relative path; corrected to the path directive's unquoted form and reran validation successfully (exit 0).

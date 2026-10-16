@@ -55,7 +55,7 @@ After=network-online.target
 [Service]
 Type=exec
 User=root
-WorkingDirectory={quote(str(ROOT))}
+WorkingDirectory={str(ROOT).replace("%", "%%")}
 Environment=PYTHONUNBUFFERED=1
 ExecStart={' '.join(quote(arg, command=True) for arg in command)}
 StandardInput=null
