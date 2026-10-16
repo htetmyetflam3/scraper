@@ -620,11 +620,3 @@ def find_entry(
         flush=True,
     )
     return output_lines
-
-
-if __name__ == "__main__":
-    try:
-        entries = find_entry()
-    except (OSError, ValueError) as error:
-        raise SystemExit(str(error)) from error
-    print(f"Saved {len(entries)} total line(s) in {OUTPUT_FILE}")

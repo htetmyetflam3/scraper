@@ -1,7 +1,8 @@
 """Remote saving over SSH: push saved files to a host instead of keeping them.
 
-Used by main.py --upload (the watch loop over python/pdfs), main.py --process
-(python/bin/night.py's upload thread) and by Dcrawler's remote mode. A download is still written locally exactly as before; then this
+Used by main.py --upload (the watch loop over python/pdfs) and main.py
+--process (python/bin/night.py's upload thread). A download is written
+locally first; then this
 module pushes it over plain ``ssh``, verifies the remote sha256 against the
 *local* bytes, appends a line to scan/uploaded-host.txt, and only after that
 deletes the local copy.
@@ -11,11 +12,10 @@ Design rules, matching the rest of the pipeline:
   fast instead of hanging a crawl. Nothing extra is needed on the host
   (no rsync, no lftp).
 - Interrupted uploads resume: the remote file size decides the byte offset
-  and the remainder is streamed through ``cat >> file``. Every attempt is
-  retried with a delay; a partial upload is never work lost.
+  and the remainder is streamed through ``cat >> file``. A failed try is
+  retried after each UPLOAD_WAITS gap; a partial upload is never work lost.
 - The ledger (scan/uploaded-host.txt) is append-only, keyed by sha256.
-  A failed push keeps the local file on disk; the caller records the
-  failure in scan/failed.txt.
+  A failed push keeps the local file on disk.
 - Local files are only deleted after a live sha256 verification of the
   remote bytes. Anything unverified stays on disk.
 
@@ -31,13 +31,11 @@ Configuration (environment wins over the repo-root .env):
 
 from __future__ import annotations
 
-import argparse
 import contextlib
 import hashlib
 import os
 import shlex
 import subprocess
-import sys
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -628,11 +626,6 @@ def drain_backlog(
     return archived, failed, freed
 
 
-def _default_local_dir() -> Path:
-    """Same folder Dcrawler saves into: <repo>/python/pdfs."""
-    return Path(__file__).resolve().parents[1] / "pdfs"
-
-
 def start_remote(local: Path) -> RemoteConfig:
     """Load the SSH_* settings, check the local folder, announce and probe."""
     config = load_config()
@@ -702,59 +695,6 @@ def watch(local: Path, interval: float) -> list[str]:
         time.sleep(max(interval, 1.0))
 
 
-def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(
-        description=(
-            "Standalone SSH archiver: push saved files to the host from the "
-            "SSH_* settings, verify each one, then free the local copy. Runs "
-            "independently of the crawler; a file only ever leaves the disk "
-            "after its bytes are verified on the host."
-        )
-    )
-    parser.add_argument(
-        "--dir",
-        type=Path,
-        default=None,
-        help="local folder to archive (default: <repo>/python/pdfs)",
-    )
-    parser.add_argument(
-        "--watch",
-        action="store_true",
-        help="keep going forever: drain, sleep, drain again (Ctrl+C stops)",
-    )
-    parser.add_argument(
-        "--interval",
-        type=float,
-        default=60.0,
-        metavar="SECONDS",
-        help="with --watch: pause between passes (default 60)",
-    )
-    return parser
-
-
-def main(argv: list[str] | None = None) -> int:
-    # Keep status lines visible even when stdout is redirected through tee.
-    if hasattr(sys.stdout, "reconfigure"):
-        sys.stdout.reconfigure(line_buffering=True)
-    args = build_parser().parse_args(argv)
-    local = (args.dir or _default_local_dir()).expanduser()
-    try:
-        if args.watch:
-            watch(local, args.interval)
-        config = start_remote(local)
-        archived, failed, freed = drain_backlog(local, config, timeline=timeline_row)
-        return 1 if failed else 0
-    except (RemoteError, OSError) as error:
-        print(f"error: {error}", file=sys.stderr)
-        return 1
-    except KeyboardInterrupt:
-        print(
-            "\n[paused] watcher stopped; unarchived files stay local. "
-            f"@ {_stamp()}"
-        )
-        return 130
-
-
 def timeline_row(event: str, detail: str = "") -> None:
     """Timeline rows for standalone runs: same file the crawler writes."""
     target = REPO_ROOT / "scan" / "timeline.log"
@@ -767,7 +707,3 @@ def timeline_row(event: str, detail: str = "") -> None:
             handle.write(line + "\n")
     except OSError as error:
         print(f"[timeline-warn] cannot record {event}: {error}")
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())

@@ -44,7 +44,7 @@ from pathlib import Path
 
 from disk_floor import DISK_FLOOR, DiskTight, disk_tight, size_text
 from Dcrawler import ENTRY_FILE, OUTPUT_DIR, DownloadSummary, StopRun, download_entries, retry_line
-from mailer import clock, duration, now
+from mailer import clock, now
 from save_remote import (
     UPLOAD_TRIES,
     RemoteConfig,

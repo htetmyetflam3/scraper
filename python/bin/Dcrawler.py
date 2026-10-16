@@ -11,7 +11,6 @@ import json
 import os
 import re
 import struct
-import sys
 import time
 import urllib.parse
 import xml.etree.ElementTree as ET
@@ -38,12 +37,6 @@ from save_local import (
     filename_hint as _filename_hint,
     reserve_unique_path as _reserve_unique_path,
     save_payload as _save_payload,
-)
-from save_remote import (
-    drain_backlog as _remote_drain_backlog,
-    load_config as _remote_load_config,
-    probe as _remote_probe,
-    push_file as _remote_push_file,
 )
 from site_login import ensure_logged_in_async
 from site_size_guard import FALLBACK_SITEMAP_PATHS, large_site_reason
@@ -136,7 +129,6 @@ class DownloadSummary:
     skipped: list[str] = field(default_factory=list)
     no_download: list[str] = field(default_factory=list)
     downloaded: list[str] = field(default_factory=list)
-    upload_failed: list[str] = field(default_factory=list)
     stopped: str = ""
     retried: int = 0  # URLs from scan/failed.txt + scan/blocked.txt that got the retry turns
     recovered: list[str] = field(default_factory=list)
@@ -1938,7 +1930,6 @@ def _remember_downloaded(key: str, digest: str, path: Path | None = None) -> Non
 async def _download_entries_async(
     entry_source: str | Path,
     output_dir: Path,
-    remote: bool = False,
     download_limit: float = 0.0,
     guard=None,
 ) -> DownloadSummary:
@@ -1951,13 +1942,12 @@ async def _download_entries_async(
             )
         else:
             print(f"[download-limit] unlimited; uploads unlimited @ {_stamp()}", flush=True)
-        return await _run_download_entries_async(entry_source, output_dir, remote, guard)
+        return await _run_download_entries_async(entry_source, output_dir, guard)
 
 
 async def _run_download_entries_async(
     entry_source: str | Path,
     output_dir: Path,
-    remote: bool = False,
     guard=None,
 ) -> DownloadSummary:
     summary = DownloadSummary()
@@ -1994,16 +1984,6 @@ async def _run_download_entries_async(
     disk_full: DiskTight | None = None
     print(f"[start] {source} @ {_stamp()}")
     _timeline("start", source)
-    remote_cfg = None
-    if remote:
-        remote_cfg = _remote_load_config()
-        print(
-            f"[remote] {remote_cfg.user}@{remote_cfg.host}:{remote_cfg.port} "
-            f"dir={remote_cfg.directory} @ {_stamp()}"
-        )
-        remote_info = _remote_probe(remote_cfg)
-        if remote_info:
-            print(f"[remote] {remote_info}")
     known_hashes, downloaded_urls, disk_files, disk_bytes = _load_downloaded_memory(
         output_dir
     )
@@ -2012,13 +1992,6 @@ async def _run_download_entries_async(
         f"{len(downloaded_urls)} remembered URL(s), "
         f"{len(known_hashes)} known file-hash(es)"
     )
-    if remote_cfg is not None:
-        await asyncio.to_thread(
-            _remote_drain_backlog,
-            output_dir,
-            remote_cfg,
-            timeline=_timeline,
-        )
     async with httpx.AsyncClient(
         **_rate_client_options(asynchronous=True),
         follow_redirects=False,
@@ -2087,7 +2060,7 @@ async def _run_download_entries_async(
 
         async def download_one(candidate: DownloadCandidate) -> None:
             nonlocal failed_new
-            outcome, text, path, digest = await fetch_and_save(candidate)
+            outcome, text, _path, _digest = await fetch_and_save(candidate)
             if outcome == "no-download":
                 summary.no_download.append(candidate.url)
                 print(f"[no-download] {candidate.url}: {text}")
@@ -2115,21 +2088,6 @@ async def _run_download_entries_async(
                 print(f"[rejected] {candidate.url}: {text}")
                 if _remember_failed("rejected", candidate.url, text, failed_keys):
                     failed_new += 1
-                return
-            if remote_cfg is not None:
-                outcome = await asyncio.to_thread(
-                    _remote_push_file,
-                    path,
-                    remote_cfg,
-                    digest=digest,
-                    timeline=_timeline,
-                )
-                if not outcome.ok:
-                    summary.upload_failed.append(candidate.url)
-                    if _remember_failed(
-                        "upload", candidate.url, outcome.detail, failed_keys
-                    ):
-                        failed_new += 1
 
         async def process_candidates() -> None:
             for key, candidate in list(candidates.items()):
@@ -2258,8 +2216,7 @@ async def _run_download_entries_async(
         "summary",
         f"saved={len(summary.saved)} downloaded={len(summary.downloaded)} "
         f"no_download={len(summary.no_download)} "
-        f"unresolved={len(summary.unresolved)} pages={summary.pages:,} "
-        f"upload_failed={len(summary.upload_failed)}"
+        f"unresolved={len(summary.unresolved)} pages={summary.pages:,}"
         + (f" stopped={summary.stopped}" if summary.stopped else ""),
     )
     if disk_full is not None:
@@ -2271,56 +2228,19 @@ async def _run_download_entries_async(
 def download_entries(
     entry_source: str | Path = ENTRY_FILE,
     output_dir: str | Path = OUTPUT_DIR,
-    remote: bool = False,
     download_limit: float = 0.0,
     guard=None,
 ) -> DownloadSummary:
     """Process one site or entry-file sites sequentially, saving each file in turn.
 
-    Crawl journals make reruns resume where the last run stopped. remote=True
-    pushes each saved file to the SSH host from the SSH_* settings, verifies
-    its sha256, then deletes the local copy; interrupted pushes resume on the
-    next run and failures stay on disk. download_limit caps aggregate HTTP
+    Crawl journals make reruns resume where the last run stopped. Uploading
+    is separate (main.py --upload / --process). download_limit caps aggregate HTTP
     response bodies in MB/s (1048576 bytes); 0 is unlimited. guard is the
     night-run policy from night.py (main.py --process): stop points and the
     disk floor; summary.stopped says why it stopped early.
     """
     return asyncio.run(
         _download_entries_async(
-            entry_source, Path(output_dir), remote, download_limit, guard
+            entry_source, Path(output_dir), download_limit, guard
         )
-    )
-
-
-if __name__ == "__main__":
-    try:
-        flags = {"--remote"}
-        raw = sys.argv[1:]
-        args = [arg for arg in raw if arg not in flags]
-        source = args[0] if args else ENTRY_FILE
-        if len(args) > 1:
-            raise ValueError("Usage: Dcrawler.py [--remote] [site-url-or-entry-file]")
-        report = download_entries(source, remote="--remote" in raw)
-    except (OSError, ValueError) as error:
-        raise SystemExit(str(error)) from error
-    except KeyboardInterrupt:
-        print(
-            "\n[paused] interrupted; progress is journaled - rerun to "
-            f"resume. @ {note_pause()}"
-        )
-        raise SystemExit(130) from None
-    print(
-        f"Finished: {report.sites} site(s), {report.pages:,} page URL(s), "
-        f"{report.candidates} candidate(s), {len(report.saved)} saved, "
-        f"{len(report.duplicates)} duplicate(s), "
-        f"{len(report.downloaded)} already-downloaded, "
-        f"{len(report.skipped)} blocked-skipped, "
-        f"{len(report.no_download)} page(s) without download, "
-        f"{len(report.unresolved)} unresolved"
-        + (
-            f", {len(report.upload_failed)} upload-failed"
-            if report.upload_failed
-            else ""
-        )
-        + f". @ {_stamp()}"
     )
