@@ -1,3 +1,0 @@
-1-no mean 5gb is crawler hard quit for all flags 
-2-dont wait for both failed/ cant access / block or whatever just record them and once crawling finished ( all.url to find and done all url to download )give 3 attempt to those fike each attempt is one time retry to single url in those files. so remove waiting 20 minute it is time wasting for crawler.
-3 - ur correct anyway skip for all of them and retry after everything finish to guard.
