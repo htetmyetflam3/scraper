@@ -1,74 +1,33 @@
-reply from agent #3 - answer to your message.notice in fb0c73f. previous reply: 44b43a5.
+reply from agent #4 - your chat answers (q4, q5, q6, q7). previous reply: bd6eafd.
 
-== DONE 1: 5 GB = hard quit for every download command (commit 160dad3) ==
+== DONE: upload retries (commit beaadb3) ==
 
-- --main, --download, --process, --scribd, --phatmal check free space before each file.
-  under 5 GB -> [disk-full] only X GB free, under the 5.0 GB kept for the system
-  -> exit 1, failure email right away (names the part). rerun resumes after you free space.
-- the 5 GB is in one place: python/bin/disk_floor.py (DISK_FLOOR).
-- --process: the old "pause until uploads free space" is DELETED, and so is the
-  uploader restarting on a tight disk. a full disk now ends the night with an error.
-  !! this means: if uploads are slower than downloads, the night run quits at 5 GB
-  even when uploads still work. before, it waited for uploads. that is what
-  "all flags" means to me - tell me "keep pause in --process" if you want the old way there.
-- upload rule unchanged: 5 failed tries -> disk has room: stop uploading only;
-  disk tight while downloading: quit entirely (exit with error).
+- a failed upload try waits 15s, 30s, 45s, 1m, 1m 30s, 2m, 2m 30s, 3m and tries again
+  = 9 tries. then uploading STOPS (no endless loop, the next file is not tried).
+  the numbers are UPLOAD_WAITS at the top of python/bin/save_remote.py - edit them there.
+  my reading of "15 s 30s 45 - 1min 1min 30 sec like that": +15s up to 1 min, then +30s
+  up to the 3 min you said before. tell me if you meant other numbers.
+- --upload after the 9 tries:
+    under 5 GB free -> exit 1 + failure email (your answer)
+    disk has room   -> [upload-stop], exit 0, finished email: which files stay in python/pdfs
+- --process after the 9 tries: your rule as before (room -> stop uploading, tight -> exit with error).
+- creating the remote folder is retried too now (before it failed at once on a timeout).
 
-== DONE 2: 3 retry turns after crawling (commit cf2594d) ==
+== TESTED (real runs, waits shortened; the real numbers checked separately) ==
 
-- --download, --main, --process: when crawling has finished (all URLs found, all
-  downloads tried), every URL in scan/failed.txt and scan/blocked.txt gets 3 turns:
-  one try per URL per turn, line by line, no waiting.
-  works -> saved like any download (python/pdfs, downloaded.txt, timeline) and its
-  line is removed from failed.txt AND blocked.txt. fails -> next line. after turn 3 -> done.
-- failed downloads are no error: exit 0, the finished email / night report gets
-  "Retry (3 turns ...): R of N URL(s) recovered, L still failing."
-- --process: the turns run before the last upload, so recovered files go to the host.
-- the console looks like this:
-    [retry] crawling finished: 4 URL(s) from scan/failed.txt and scan/blocked.txt get 3 turns
-    [retry] turn 1/3: 4 URL(s)
-    [retry-fail] .../books/flaky.pdf: ... (turn 1/3)
-    [retry] turn 2/3: 4 URL(s)
-    [retry-ok] .../books/flaky.pdf: saved flaky.pdf (turn 2/3); removed from scan/failed.txt and scan/blocked.txt
-    [retry] done: 1 recovered, 3 still failing
+- ssh down + room: 9 tries, [upload-stop], exit 0, 2nd file never tried, finished email.
+- ssh down + under 5 GB: exit 1, failure email (upload).
+- ssh back during the waits: file goes up on try 3, the watcher goes on.
+- all night checks 41/41, retry turns 14/14, scan/ records vs your main 23/23.
+- NOT tested: a real SSH host, the real 11.5 minutes of waiting.
 
-== TESTED (real runs, local test sites, fake ssh host, local mail server) ==
+== q6 / q7 ==
 
-- 5 GB: under 5 GB from the start -> --process, --download, --scribd, --phatmal each
-  exit 1, nothing saved, failure email names their part. disk filling in --process
-  -> [disk-full] -> exit 1 in seconds; --upload frees it; rerun finishes all 30 files.
-- retry: a file failing twice then working -> recovered on turn 2. missing file, dead
-  file, page without download -> exactly 1 try per turn, kept. next run with the site
-  fixed -> recovered on turn 1, removed from both files; a 3rd run retries only the dead one.
-- your scan .txt reminder: same records as your main branch code (f932217) in
-  blocked.txt, failed.txt, downloaded.txt, timeline.log, uploaded-host.txt,
-  crawl-*.jsonl. only difference: 2 new timeline rows (retry, retry-done). 23/23.
-- all night checks: 35/35. retry checks: 14/14.
-- NOT tested: real sites, a real full disk, real Hostinger mail.
+- q6: my tests now live in agent-tests/ inside the repo, never committed (git add by name only).
+- q7: nothing to answer - --scribd / --phatmal stay like your main branch.
 
-== CORRECTION ==
+== STILL OPEN ==
 
-I said your main branch never exited with error when --scribd / --phatmal saved
-nothing. WRONG: your main returns 1 there. I left both as they are.
-
-== HOW I READ YOUR WORDS - say if wrong ==
-
-- the turns cover EVERY URL in the two files, also other sites' records from older runs.
-- "can't access" pages ([page-error]) are not written to any file, same as your main
-  branch: they are not journaled, so the next run fetches them again. so they are not
-  in the 3 turns.
-- blocked POST forms are saved as form keys, not URLs -> cannot be retried, stay as is.
-
-== STILL OPEN (needed before the upload change) ==
-
-q4. upload waits: 15s, 30s, 1m, 2m, 3m = 6 tries in total, then give up?
-    or 15s, 30s, 1m, 3m?
-q5. "exit" after the upload waits:
-    --upload  -> stop and exit with error (exit 1 + failure email)?
-    --process -> keep your rule: disk has room -> stop uploading only,
-                 under 5 GB -> exit with error?
-q6. the session wiped my test folder outside the repo 3 times. can I keep my test
-    scripts in a folder inside the repo that is never committed? if no, I rebuild them.
-q7. --scribd / --phatmal: keep exit 1 when nothing was saved (like your main), or exit 0?
-
-answer in message.notice like before (edit it, git pull, push). I check the branch every turn.
+- "keep pause in --process"? (now --process quits at 5 GB even when uploads still work)
+- step 4 (remove the bin script command lines, delete Dcrawler's one-by-one upload part
+  and phatmal's probe + login-check): say "go" when you want it.
