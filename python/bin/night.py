@@ -1,6 +1,7 @@
 """main.py --process: the night run, download + upload in one terminal.
 
-The crawler (Dcrawler) downloads the sites in scan/entry.txt while a
+The crawler (Dcrawler) downloads the sites in scan/entry.txt, or the one site
+URL main.py was given, while a
 background thread uploads every saved file to the SSH host (save_remote:
 push, verify sha256, then free the local copy), checking python/pdfs every
 -i seconds.
@@ -38,6 +39,7 @@ from __future__ import annotations
 import _thread
 import threading
 import time
+import urllib.parse
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -56,6 +58,16 @@ from save_remote import (
 
 HARD_STOP_GRACE = 300.0  # after a stop request (mark or failure), force it if no safe point came
 UPLOAD_STOP_GRACE = 120.0  # after the mark, time to send what is already downloaded
+
+
+def source_url(entry_file: str | Path) -> str:
+    """The run's source for the mails: the one site URL main.py was given, else
+    "" for the entry file (scan/entry.txt)."""
+    text = str(entry_file).strip()
+    parts = urllib.parse.urlsplit(text)
+    if parts.scheme.lower() in {"http", "https"} and parts.netloc:
+        return text
+    return ""
 
 
 def _stamp() -> str:
@@ -96,6 +108,7 @@ class NightReport:
     current_site: str
     problems: list[Problem] = field(default_factory=list)
     failure: str = ""  # set when the run quit entirely
+    source: str = ""  # the site URL when main.py --process was given one
 
     def details(self) -> list[str]:
         if self.summary is not None:
@@ -125,7 +138,12 @@ class NightReport:
         if self.left_files:
             steps.append("▶ Send the files still on disk: uv run main.py --upload")
         if stopped_early:
-            steps.append("▶ Continue: uv run main.py --process (downloads resume where they stopped)")
+            command = "uv run main.py --process"
+            if self.source:
+                command = f"{command} {self.source}"
+            steps.append(
+                f"▶ Continue: {command} (downloads resume where they stopped)"
+            )
         if steps:
             lines += ["", *steps]
         return lines
@@ -403,6 +421,7 @@ def run_process(
         current_site=guard.current_site,
         problems=sorted(guard.problems, key=lambda item: item.when),
         failure=guard.failure,
+        source=source_url(entry_file),
     )
     if report.failure:
         ending = "quit with an error"

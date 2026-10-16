@@ -390,6 +390,7 @@ def main(argv: list[str] | None = None) -> int:
             mark=f"the {NIGHT_HOURS:g}-hour mark",
             details=report.details(),
             problems=report.problem_rows(),
+            source=report.source,
         )
     elif mail is not None:
         mail.send_finished(details)
