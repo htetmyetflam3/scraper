@@ -16,7 +16,9 @@ Night rules (the owner is asleep, nobody can press a key):
   it before each file and quits hard when tight: downloading and uploading
   stop and the run exits with an error (NightFailed, part download); main.py
   mails the failure right away with every problem so far.
-- Upload: a file that fails 5 tries ->
+- Upload: a file that still fails after the upload waits (save_remote's
+  UPLOAD_WAITS: 15 s, 30 s, 45 s, 1 min, 1 min 30 s, 2 min, 2 min 30 s, 3 min;
+  9 tries) ->
   - downloading goes on and the disk has room: quit uploading (no retrying
     all night); the files stay in python/pdfs for `main.py --upload`.
   - downloading goes on and the disk is tight: quit entirely - stop
@@ -44,8 +46,7 @@ from disk_floor import DISK_FLOOR, DiskTight, disk_tight, size_text
 from Dcrawler import ENTRY_FILE, OUTPUT_DIR, DownloadSummary, StopRun, download_entries, retry_line
 from mailer import clock, duration, now
 from save_remote import (
-    RETRY_ATTEMPTS,
-    RETRY_DELAY,
+    UPLOAD_TRIES,
     RemoteConfig,
     RemoteError,
     pending_files,
@@ -55,7 +56,6 @@ from save_remote import (
 
 HARD_STOP_GRACE = 300.0  # after a stop request (mark or failure), force it if no safe point came
 UPLOAD_STOP_GRACE = 120.0  # after the mark, time to send what is already downloaded
-UPLOAD_TRIES = RETRY_ATTEMPTS  # "about 5 failed retries" before the rule decides
 
 
 def _stamp() -> str:
@@ -256,61 +256,63 @@ class NightGuard:
                 return
             self._wait(interval, wake_when_done=True)
 
+    def _retry_wait(self, seconds: float) -> bool:
+        """push_file's gap between tries; False once uploading must stop."""
+        self._wait(seconds)
+        return not self.upload_stop.is_set()
+
     def _push(self, file: Path, interval: float) -> bool:
-        """Push one file under the owner's rule; False = stop this pass."""
-        failures = 0
-        while not self.upload_stop.is_set():
-            try:
-                size = file.stat().st_size
-            except OSError:
-                return True  # gone already: nothing to send
-            try:
-                outcome = push_file(
-                    file,
-                    self.config,
-                    timeline=timeline_row,
-                    remote_name=str(file.relative_to(self.output_dir)),
-                )
-            except RemoteError as error:
-                failures += 1
-                detail = str(error)
-            else:
-                if outcome.ok:
-                    with self.lock:
-                        self.uploaded += 1
-                        self.uploaded_bytes += size
-                    return True
-                if not file.exists():
-                    return True
-                failures += RETRY_ATTEMPTS  # push_file already made its tries
-                detail = outcome.detail
-            if failures < UPLOAD_TRIES:
-                print(f"[upload-retry] {file.name}: {detail}; try {failures + 1}/{UPLOAD_TRIES} in {RETRY_DELAY:.0f}s @ {_stamp()}", flush=True)
-                self._wait(RETRY_DELAY)
-                continue
-            downloading = not (self.download_done.is_set() or self.stop_event.is_set())
-            tight, free = disk_tight(self.output_dir)
-            waiting = pending_files(self.output_dir)
-            if downloading and tight:
-                self.fail(
-                    f"Uploads failed {UPLOAD_TRIES} tries ({detail}) while the disk was tight ({size_text(free)} free, "
-                    f"under the {size_text(DISK_FLOOR)} kept for the system): downloading and uploading stopped, "
-                    f"{len(waiting)} file(s) stay in python/pdfs."
-                )
-                return False
-            if downloading:
-                why = f"the disk had room ({size_text(free)} free, more than the {size_text(DISK_FLOOR)} kept for the system)"
-            elif self.download_done.is_set():
-                why = "downloading had finished"
-            else:
-                why = "downloading was stopping"
-            print(
-                f"[upload-stop] {file.name}: {UPLOAD_TRIES} tries failed ({detail}); {why} - uploading "
-                f"stops, {len(waiting)} file(s) stay in python/pdfs for `uv run main.py --upload` @ {_stamp()}",
-                flush=True,
-            )
-            self.problem("upload", f"{UPLOAD_TRIES} tries failed ({detail}). {why[0].upper()}{why[1:]}, so uploading stopped.")
+        """Push one file (push_file makes all the UPLOAD_WAITS tries), then
+        the owner's rule; False = stop uploading."""
+        if self.upload_stop.is_set():
             return False
+        try:
+            size = file.stat().st_size
+        except OSError:
+            return True  # gone already: nothing to send
+        try:
+            outcome = push_file(
+                file,
+                self.config,
+                timeline=timeline_row,
+                remote_name=str(file.relative_to(self.output_dir)),
+                wait=self._retry_wait,
+            )
+        except RemoteError as error:  # a local problem before any try (e.g. the ledger)
+            detail = str(error)
+        else:
+            if outcome.ok:
+                with self.lock:
+                    self.uploaded += 1
+                    self.uploaded_bytes += size
+                return True
+            if not file.exists():
+                return True
+            detail = outcome.detail
+        if self.upload_stop.is_set():
+            return False
+        downloading = not (self.download_done.is_set() or self.stop_event.is_set())
+        tight, free = disk_tight(self.output_dir)
+        waiting = pending_files(self.output_dir)
+        if downloading and tight:
+            self.fail(
+                f"Uploads failed {UPLOAD_TRIES} tries ({detail}) while the disk was tight ({size_text(free)} free, "
+                f"under the {size_text(DISK_FLOOR)} kept for the system): downloading and uploading stopped, "
+                f"{len(waiting)} file(s) stay in python/pdfs."
+            )
+            return False
+        if downloading:
+            why = f"the disk had room ({size_text(free)} free, more than the {size_text(DISK_FLOOR)} kept for the system)"
+        elif self.download_done.is_set():
+            why = "downloading had finished"
+        else:
+            why = "downloading was stopping"
+        print(
+            f"[upload-stop] {file.name}: {UPLOAD_TRIES} tries failed ({detail}); {why} - uploading "
+            f"stops, {len(waiting)} file(s) stay in python/pdfs for `uv run main.py --upload` @ {_stamp()}",
+            flush=True,
+        )
+        self.problem("upload", f"{UPLOAD_TRIES} tries failed ({detail}). {why[0].upper()}{why[1:]}, so uploading stopped.")
         return False
 
 

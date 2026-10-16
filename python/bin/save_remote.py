@@ -41,14 +41,19 @@ import sys
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import NoReturn
+
+from disk_floor import DISK_FLOOR, disk_tight, size_text
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 ENV_FILE = REPO_ROOT / ".env"
 UPLOAD_LEDGER = REPO_ROOT / "scan" / "uploaded-host.txt"
 SSH_BIN = "ssh"
-RETRY_ATTEMPTS = 5
-RETRY_DELAY = 20.0
+# Upload retries (owner): after a failed try (connection timeout, ssh error,
+# sha256 mismatch) wait 15 s, 30 s, 45 s, 1 min, 1 min 30 s, 2 min, 2 min 30 s,
+# 3 min. When the try after the 3-minute wait fails too, uploading gives up -
+# no endless loop - and the caller applies the 5 GB rule.
+UPLOAD_WAITS = (15.0, 30.0, 45.0, 60.0, 90.0, 120.0, 150.0, 180.0)
+UPLOAD_TRIES = len(UPLOAD_WAITS) + 1
 PROGRESS_STEP = 5 * 1024 * 1024
 PROGRESS_SECONDS = 5.0
 PROGRESS_FILES = 5
@@ -59,6 +64,27 @@ HASH_TIMEOUT = 600
 
 class RemoteError(ValueError):
     """Remote archive misconfigured or unreachable (main.py reports it)."""
+
+
+class UploadGaveUp(RemoteError):
+    """A file still failed after every UPLOAD_WAITS retry: uploading stops."""
+
+    def __init__(self, file: Path, detail: str) -> None:
+        super().__init__(f"{file.name}: {UPLOAD_TRIES} tries failed ({detail})")
+        self.file = file
+        self.detail = detail
+
+
+def wait_text(seconds: float) -> str:
+    if seconds < 60:
+        return f"{seconds:g}s"
+    minutes, rest = divmod(int(round(seconds)), 60)
+    return f"{minutes}m" + (f" {rest}s" if rest else "")
+
+
+def _sleep(seconds: float) -> bool:
+    time.sleep(seconds)
+    return True
 
 
 @dataclass(frozen=True)
@@ -393,8 +419,13 @@ def push_file(
     timeline=None,
     log=_console_log,
     remote_name: str | None = None,
+    wait=_sleep,
 ) -> PushOutcome:
     """Push one saved file, verify it remotely, then delete the local copy.
+
+    A failed try is retried after each UPLOAD_WAITS gap (``wait(seconds)``;
+    it returns False when the caller is stopping, which ends the retries);
+    after the last one the outcome is not ok and the local copy stays.
 
     ``remote_name`` keeps sub-directory structure when the local tree has
     depth (the drain walks pdfs/ recursively); it defaults to the file name.
@@ -417,33 +448,33 @@ def push_file(
     if digest is None:
         digest = sha256_file(path)
     known = entries.by_digest.get(digest)
-    if (
-        known
-        and remote_size(config, known) == size
-        and remote_sha256(config, known) == digest
-    ):
-        log(f"[push-skip] {name} already archived and verified @ {_stamp()}")
-        deleted = _delete_local(path, timeline, log)
-        return PushOutcome(
-            True,
-            "already archived, sha256 verified",
-            remote_path=known,
-            skipped=True,
-            deleted=deleted,
-        )
-    if known:
-        log(
-            f"[push-warn] {name} is in uploaded-host.txt but not verified on "
-            f"the host; re-uploading @ {_stamp()}"
-        )
-    ensure_dir(config, remote_parent)
 
     resumed = False
     verified_existing = False
     last_error = "unknown"
     attempt = 0
-    for attempt in range(1, RETRY_ATTEMPTS + 1):
+    for attempt in range(1, UPLOAD_TRIES + 1):
         try:
+            if (
+                known
+                and remote_size(config, known) == size
+                and remote_sha256(config, known) == digest
+            ):
+                log(f"[push-skip] {name} already archived and verified @ {_stamp()}")
+                deleted = _delete_local(path, timeline, log)
+                return PushOutcome(
+                    True,
+                    "already archived, sha256 verified",
+                    remote_path=known,
+                    skipped=True,
+                    deleted=deleted,
+                )
+            if known and attempt == 1:
+                log(
+                    f"[push-warn] {name} is in uploaded-host.txt but not verified on "
+                    f"the host; re-uploading @ {_stamp()}"
+                )
+            ensure_dir(config, remote_parent)
             current = remote_size(config, remote_path)
             if current is None:
                 offset = 0
@@ -478,17 +509,18 @@ def push_file(
             break
         except RemoteError as error:
             last_error = str(error)
-            if attempt >= RETRY_ATTEMPTS:
+            if attempt >= UPLOAD_TRIES:
                 break
+            gap = UPLOAD_WAITS[attempt - 1]
             log(
-                f"[push] {name} attempt {attempt} failed: {last_error}; "
-                f"retrying in {RETRY_DELAY:.0f}s"
+                f"[push-retry] {name}: {last_error}; try {attempt + 1}/{UPLOAD_TRIES} "
+                f"in {wait_text(gap)} @ {_stamp()}"
             )
-            time.sleep(RETRY_DELAY)
+            if not wait(gap):
+                break
     if last_error:
-        detail = f"{last_error} (after {attempt} attempt(s))"
-        log(f"[push-fail] {name}: {detail} (local copy kept) @ {_stamp()}")
-        return PushOutcome(False, detail)
+        log(f"[push-fail] {name}: {last_error} (after {attempt} of {UPLOAD_TRIES} tries; local copy kept) @ {_stamp()}")
+        return PushOutcome(False, last_error)
 
     remember_uploaded(digest, name, remote_path, size, ledger)
     if timeline is not None:
@@ -542,7 +574,8 @@ def drain_backlog(
     verify-then-delete rule as push_file, so this doubles as the standalone
     watcher's single step. Staged temps (.download-*.tmp), dotfiles and
     dot-directories are never touched. Returns (archived, failed, bytes
-    freed locally); files that fail stay on disk for the next pass.
+    freed locally). A file that still fails after every UPLOAD_WAITS retry
+    stops the pass with UploadGaveUp (the rest stay on disk).
     """
     root = Path(output_dir)
     files = pending_files(root)
@@ -577,8 +610,8 @@ def drain_backlog(
             archived += 1
             if outcome.deleted:
                 freed += size
-        else:
-            failed += 1
+        elif file.exists():
+            raise UploadGaveUp(file, outcome.detail)
         if completed % PROGRESS_FILES == 0 or completed == len(files):
             elapsed = max(time.monotonic() - started, 0.001)
             log(
@@ -617,17 +650,41 @@ def start_remote(local: Path) -> RemoteConfig:
     return config
 
 
-def watch(local: Path, interval: float) -> NoReturn:
-    """Archive ``local`` forever: drain, sleep ``interval`` seconds, drain again.
+def watch(local: Path, interval: float) -> list[str]:
+    """Archive ``local``: drain, sleep ``interval`` seconds, drain again.
 
     Every pass uses drain_backlog's verify-then-delete rule, so a file only
-    leaves the disk after its bytes are verified on the host. Ctrl+C
-    (KeyboardInterrupt) and RemoteError propagate to the caller.
+    leaves the disk after its bytes are verified on the host. When a file
+    still fails after every UPLOAD_WAITS retry, uploading stops (owner's
+    rule): under the 5 GB kept for the system it raises RemoteError (exit
+    with an error); with room it returns the lines for the finished email.
+    Ctrl+C (KeyboardInterrupt) propagates to the caller.
     """
     config = start_remote(local)
     total_freed = 0
     while True:
-        archived, failed, freed = drain_backlog(local, config, timeline=timeline_row)
+        try:
+            archived, failed, freed = drain_backlog(local, config, timeline=timeline_row)
+        except UploadGaveUp as gave_up:
+            left = len(pending_files(local))
+            tight, free = disk_tight(local)
+            if tight:
+                raise RemoteError(
+                    f"Uploads failed {UPLOAD_TRIES} tries ({gave_up.detail}) while the disk was tight "
+                    f"({size_text(free)} free, under the {size_text(DISK_FLOOR)} kept for the system): "
+                    f"uploading stopped, {left} file(s) stay in {local.name}/."
+                ) from None
+            print(
+                f"[upload-stop] {gave_up}; the disk has room ({size_text(free)} free) - uploading "
+                f"stops, {left} file(s) stay in {local.name}/ @ {_stamp()}",
+                flush=True,
+            )
+            return [
+                f"⚠️ Uploading stopped: {gave_up}. The disk has room ({size_text(free)} free), "
+                f"so it stopped instead of retrying; {left} file(s) stay in python/pdfs.",
+                "",
+                "▶ Send them later: uv run main.py --upload",
+            ]
         total_freed += freed
         if archived or failed:
             print(

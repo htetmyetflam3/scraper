@@ -64,6 +64,11 @@ done) listing every problem with its part and time; nothing in between unless
 it quits with an error (the disk under 5 GB free): that failed email goes
 right away, with the problems so far.
 
+upload (--upload, --process): a file that fails is retried after 15 s, 30 s,
+45 s, 1 min, 1 min 30 s, 2 min, 2 min 30 s and 3 min (UPLOAD_WAITS in
+python/bin/save_remote.py); then uploading stops instead of looping: with an
+error when under 5 GB is free, else the files stay in python/pdfs.
+
 disk: 5 GB is kept free for the system. Every download command (--main,
 --download, --process, --scribd, --phatmal) checks it before each file and
 quits with an error under it; free space (e.g. uv run main.py --upload), then
@@ -143,7 +148,10 @@ def build_parser() -> argparse.ArgumentParser:
         help=(
             "Push every file in python/pdfs to the SSH host (SSH_* in .env), "
             "verify its sha256, then delete the local copy; checks again "
-            "every -i seconds until Ctrl+C."
+            "every -i seconds until Ctrl+C. A file that fails is retried "
+            "after 15 s, 30 s, 45 s, 1 min, 1 min 30 s, 2 min, 2 min 30 s "
+            "and 3 min; then uploading stops: with an error when under 5 GB "
+            "is free, else normally (the files stay in python/pdfs)."
         ),
     )
     command.add_argument(
@@ -287,7 +295,7 @@ def main(argv: list[str] | None = None) -> int:
             details = _download_details(download_entries(source, download_limit=limit))
         elif args.upload:
             part = "upload"
-            watch(OUTPUT_DIR, args.interval or DEFAULT_INTERVAL)
+            details = watch(OUTPUT_DIR, args.interval or DEFAULT_INTERVAL)
         elif args.process:
             if not ENTRY_FILE.is_file():
                 raise FileNotFoundError(
