@@ -311,3 +311,8 @@
 
 ## 2026-10-13 — Exclude app-download sites (shared guard)
 - New `APP_DOMAINS` in `domain_guard.py`, honored by both crawlers: apple.com, appstore.com, softonic.com, apkpure.com, uptodown.com, apkmirror.com, aptoide.com, f-droid.org, filehippo.com, softpedia.com, apps.microsoft.com (subdomains included). play.google.com was already excluded via the google-label rule.
+## 2026-10-16 — SSH-independent systemd runs on Debian 12
+- Added `deploy/install_service.py`: installs `scraper.service` using the current checkout, resolved uv executable, and literal main.py flags. Refuses to overwrite an active job; does not start or enable boot startup implicitly.
+- Runs under the system manager as root with journal logs and no terminal input; no automatic restart after completion/failure. Stop sends SIGINT with a 120-second grace period.
+- Added `deploy/README.md` with start, status, logs, stop, flag changes, optional boot startup, and removal commands. Existing CLI and night-run logic unchanged.
+- Verified generated unit using `systemd-analyze verify`; mocked installation verified argument escaping, daemon reload, and active-job refusal. Actual VPS execution and SSH disconnect survival cannot be verified in this sandbox.
