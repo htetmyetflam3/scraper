@@ -308,9 +308,12 @@ def report_message(
     mark: str,
     details: list[str] | tuple[str, ...] = (),
     problems: list[tuple[datetime, str, str]] | tuple = (),
+    source: str = "",
 ) -> tuple[str, str]:
     """The one mail at the end of main.py --process: at the mark (wake-up
-    time) or when everything finished earlier. problems = (when, part, text)."""
+    time) or when everything finished earlier. problems = (when, part, text).
+    source is the site URL when the run was given one, else "" for
+    scan/entry.txt."""
     parts = list(dict.fromkeys(part for _when, part, _text in problems))
     local_hour = ended.astimezone(MYANMAR_TIME).hour
     if reached_mark:
@@ -330,9 +333,14 @@ def report_message(
             subject = f"⚠️ Your little scraper finished with problems: {', '.join(parts)} · {clock(ended)}"
         else:
             subject = f"✅ Your little scraper finished · {clock(ended)}"
+        done = (
+            f"everything on {source} is done."
+            if source
+            else "everything in scan/entry.txt is done."
+        )
         when_line = (
             f"Your little scraper finished at {clock(ended)}, {_date(ended)} (Myanmar time): "
-            "everything in scan/entry.txt is done."
+            f"{done}"
         )
         art = NIGHT_FINISHED if is_night(ended) else DAY_FINISHED
     rows = _problem_lines(problems) if problems else ["✔ No problems."]
@@ -415,6 +423,7 @@ class RunMail:
         mark: str,
         details: list[str] | tuple[str, ...] = (),
         problems: list[tuple[datetime, str, str]] | tuple = (),
+        source: str = "",
     ) -> None:
         self._deliver(
             "report",
@@ -426,5 +435,6 @@ class RunMail:
                 mark=mark,
                 details=details,
                 problems=problems,
+                source=source,
             ),
         )

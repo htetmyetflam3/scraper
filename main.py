@@ -45,7 +45,8 @@ examples:
   uv run main.py --download my-entries.txt
   uv run main.py --upload -i 60
   uv run main.py --process
-  uv run main.py --process -i 60 -l 5
+  uv run main.py --process https://example.com
+  uv run main.py --process https://example.com -i 60 -l 5
   uv run main.py --scribd
   uv run main.py --scribd https://www.scribd.com/document/123/title
   uv run main.py --scribd my-scribd-links.txt
@@ -156,10 +157,14 @@ def build_parser() -> argparse.ArgumentParser:
     )
     command.add_argument(
         "--process",
-        action="store_true",
+        nargs="?",
+        const=USE_ENTRY_FILE,
+        default=None,
+        metavar="URL",
         help=(
-            "Night run in one terminal: download from scan/entry.txt while "
-            "uploading to the SSH host (checked every -i seconds). Pages and "
+            "Night run in one terminal: download from scan/entry.txt, or from "
+            "URL (one site URL: no scan/entry.txt needed), while uploading to "
+            "the SSH host (checked every -i seconds). Pages and "
             "files that fail or can't be reached are skipped and recorded like "
             f"--download; stops at the {NIGHT_HOURS:g}-hour mark "
             "(NIGHT_HOURS at the top of main.py) and mails "
@@ -248,16 +253,26 @@ def _download_details(summary) -> list[str]:
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
-    if args.limit is not None and not (args.main or args.download is not None or args.process):
+    if args.limit is not None and not (
+        args.main or args.download is not None or args.process is not None
+    ):
         parser.error("-l works with --download, --main or --process")
-    if args.interval is not None and not (args.upload or args.process):
+    if args.interval is not None and not (args.upload or args.process is not None):
         parser.error("-i works with --upload or --process")
+    if (
+        args.process is not None
+        and args.process is not USE_ENTRY_FILE
+        and not _is_url(args.process)
+    ):
+        parser.error(
+            "--process takes one site URL (http/https); leave it out to use scan/entry.txt"
+        )
     if (
         args.findentry is None
         and not args.main
         and args.download is None
         and not args.upload
-        and not args.process
+        and args.process is None
         and args.scribd is None
         and args.phatmal is None
     ):
@@ -276,7 +291,7 @@ def main(argv: list[str] | None = None) -> int:
                     f"🕕 Night run: downloads + uploads until the {NIGHT_HOURS:g}-hour "
                     "mark, then one report (no mail in between unless it fails)."
                 ]
-                if args.process
+                if args.process is not None
                 else []
             )
         if args.findentry is not None:
@@ -296,8 +311,9 @@ def main(argv: list[str] | None = None) -> int:
         elif args.upload:
             part = "upload"
             details = watch(OUTPUT_DIR, args.interval or DEFAULT_INTERVAL)
-        elif args.process:
-            if not ENTRY_FILE.is_file():
+        elif args.process is not None:
+            source = ENTRY_FILE if args.process is USE_ENTRY_FILE else args.process
+            if args.process is USE_ENTRY_FILE and not ENTRY_FILE.is_file():
                 raise FileNotFoundError(
                     f"No entry file at {ENTRY_FILE}; run main.py --findentry first."
                 )
@@ -305,7 +321,13 @@ def main(argv: list[str] | None = None) -> int:
             OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
             config = start_remote(OUTPUT_DIR)  # checked now, while you are awake
             part = "download"
-            report = run_process(config, args.interval or DEFAULT_INTERVAL, limit, hours=NIGHT_HOURS)
+            report = run_process(
+                config,
+                args.interval or DEFAULT_INTERVAL,
+                limit,
+                hours=NIGHT_HOURS,
+                entry_file=source,
+            )
         elif args.scribd is not None:
             part = "scribd download"
             links = _scribd_links(args.scribd)
@@ -347,7 +369,7 @@ def main(argv: list[str] | None = None) -> int:
                 "\n[paused] watcher stopped; unarchived files stay local. "
                 f"@ {time.strftime('%H:%M:%S')}"
             )
-        elif args.process:
+        elif args.process is not None:
             print(
                 "\n[paused] interrupted; downloads are journaled and unsent files "
                 f"stay in python/pdfs - rerun to resume. @ {note_pause()}"
@@ -368,6 +390,7 @@ def main(argv: list[str] | None = None) -> int:
             mark=f"the {NIGHT_HOURS:g}-hour mark",
             details=report.details(),
             problems=report.problem_rows(),
+            source=report.source,
         )
     elif mail is not None:
         mail.send_finished(details)
