@@ -172,11 +172,3 @@ def fetch_results(
         flush=True,
     )
     return merged
-
-
-if __name__ == "__main__":
-    try:
-        saved = fetch_results()
-    except (SerpApiError, OSError, ValueError) as error:
-        raise SystemExit(str(error)) from error
-    print(f"Saved {len(saved)} total result(s) in {OUTPUT_FILE}")

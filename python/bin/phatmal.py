@@ -8,21 +8,23 @@ credentials returns a Bearer JWT, which authorizes every later API call.
 
 from __future__ import annotations
 
-import asyncio
 import io
 import os
 import re
+import urllib.parse
 import zipfile
 from pathlib import Path
 
 import httpx
 
+from disk_floor import check_disk
 from mediafire import is_docx
 from pdf_support import is_pdf
 from site_login import load_dotenv_values
 
 API_BASE = "https://api.phatmal.com/api"
 REFERER = "https://phatmal.com/"
+BOOK_HOSTS = frozenset({"phatmal.com", "www.phatmal.com"})
 USER_AGENT = (
     "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 "
     "(KHTML, like Gecko) Chrome/126.0.0.0 Mobile Safari/537.36"
@@ -169,93 +171,27 @@ async def api_me(
     return payload
 
 
-async def login_and_verify() -> bool:
-    """Log in with the configured credentials and prove the session works."""
-    config = load_api_config()
-    if config is None:
-        return False
-    email, password, api_key = config
-    async with httpx.AsyncClient(follow_redirects=True) as client:
-        token = await api_login(client, email, password, api_key)
-        if token is None:
-            return False
-        return await api_me(client, api_key, token) is not None
 
-
-# --- content probing -----------------------------------------------------------
-# The book-list/detail endpoints are still unknown (mobile network capture
-# is impractical), so --phatmal-probe tries the likely REST paths with the
-# real session and prints each answer's SHAPE (keys, not values). One run
-# reveals the contract; then the real crawl gets built on top.
-
-DETAIL_PATH_TEMPLATES = (
-    "ebooks/{slug}",
-    "ebook/{slug}",
-    "books/{slug}",
-    "book/{slug}",
-    "library/{slug}",
-    "novels/{slug}",
-)
-LIST_PATHS = ("ebooks", "books", "library", "ebooks/list")
-
-_SECRET_KEY_HINTS = (
-    "token",
-    "password",
-    "secret",
-    "passwd",
-    "pwd",
-    "authorization",
-    "cookie",
-    "session",
-)
-
-
-def slug_from_input(value: str) -> str:
-    """Book slug from a bare slug or a full /ebook/<slug> URL."""
-    text = value.strip()
-    if "://" in text:
-        text = text.split("?", 1)[0].split("#", 1)[0].rstrip("/").rsplit("/", 1)[-1]
-    text = text.strip().strip("/")
-    if not text or not all(char.isalnum() or char in "-_.~%" for char in text):
-        return ""
-    return text
-
-
-def describe_shape(value: object, _depth: int = 0) -> str:
-    """Compact structure summary: keys and scalar previews, secrets redacted."""
-    if _depth > 3:
-        return "…"
-    if value is None:
-        return "null"
-    if value is True:
-        return "true"
-    if value is False:
-        return "false"
-    if isinstance(value, (int, float)):
-        return str(value)
-    if isinstance(value, str):
-        if len(value) <= 48:
-            return repr(value)
-        return f"{value[:44]!r}…[{len(value)}]"
-    if isinstance(value, list):
-        if not value:
-            return "[]"
-        head = describe_shape(value[0], _depth + 1)
-        return f"[{head} x{len(value)}]" if len(value) > 1 else f"[{head}]"
-    if isinstance(value, dict):
-        if not value:
-            return "{}"
-        parts = []
-        for key in list(value)[:8]:
-            name = str(key)
-            if any(hint in name.lower() for hint in _SECRET_KEY_HINTS):
-                parts.append(f"{name}: <redacted>")
-            else:
-                parts.append(f"{name}: {describe_shape(value[key], _depth + 1)}")
-        if len(value) > 8:
-            parts.append(f"+{len(value) - 8} more")
-        return "{" + ", ".join(parts) + "}"
-    return type(value).__name__
+def slug_from_url(url: str) -> str:
+    """Book slug from a phatmal.com /ebook/<slug> URL; anything else raises ValueError."""
+    try:
+        parts = urllib.parse.urlsplit(url.strip())
+        host = (parts.hostname or "").rstrip(".").lower()
+    except ValueError:
+        parts, host = None, ""
+    segments = [segment for segment in parts.path.split("/") if segment] if parts else []
+    slug = segments[1] if len(segments) == 2 and segments[0] == "ebook" else ""
+    if (
+        parts is None
+        or parts.scheme.lower() not in {"http", "https"}
+        or host not in BOOK_HOSTS
+        or not slug
+        or not all(char.isalnum() or char in "-_.~%" for char in slug)
+    ):
+        raise ValueError(
+            f"not a phatmal book URL (https://phatmal.com/ebook/<slug>): {url}"
+        )
+    return slug
 
 
 async def api_get_json(
@@ -278,36 +214,6 @@ async def api_get_json(
     except ValueError:
         print(f"[phatmal] GET {path} answered non-JSON")
         return 200, None
-
-
-async def probe_content(slug: str) -> bool:
-    """Try the likely content endpoints with a fresh session; log shapes."""
-    config = load_api_config()
-    if config is None:
-        return False
-    email, password, api_key = config
-    async with httpx.AsyncClient(follow_redirects=True) as client:
-        token = await api_login(client, email, password, api_key)
-        if token is None:
-            return False
-        me = await api_me(client, api_key, token)
-        if me is None:
-            return False
-        print(f"[phatmal] me shape: {describe_shape(me)[:800]}")
-        hits: list[str] = []
-        probes = [t.format(slug=slug) for t in DETAIL_PATH_TEMPLATES] + list(LIST_PATHS)
-        for path in probes:
-            status, payload = await api_get_json(client, api_key, token, path)
-            if status == 200 and payload is not None:
-                hits.append(path)
-                print(f"[phatmal] HIT {path}: {describe_shape(payload)[:1500]}")
-            else:
-                print(f"[phatmal] miss {path} (HTTP {status})")
-    if hits:
-        print(f"[phatmal] probe found {len(hits)} endpoint(s): {', '.join(hits)}")
-        return True
-    print("[phatmal] probe found nothing; paste this log for the next step")
-    return False
 
 
 # --- library crawl ---------------------------------------------------------------
@@ -512,6 +418,7 @@ async def download_book(
         print(f"[phatmal] [skip] {title}: no file link in API data")
         return "skipped"
     url, _kind = picked
+    check_disk(output_dir)  # under the 5 GB kept for the system every command quits
     print(f"[phatmal] [download] {title}", flush=True)
     data = await _download_file(client, url)
     if data is None:
@@ -564,13 +471,8 @@ async def crawl_library(output_dir: Path | None = None) -> dict[str, int]:
     return stats
 
 
-async def download_single(
-    slug_or_url: str, output_dir: Path | None = None
-) -> bool:
-    slug = slug_from_input(slug_or_url)
-    if not slug:
-        print("error: need a slug or /ebook/<slug> URL")
-        return False
+async def download_single(url: str, output_dir: Path | None = None) -> bool:
+    slug = slug_from_url(url)
     config = load_api_config()
     if config is None:
         return False
@@ -593,15 +495,13 @@ async def download_single(
 async def run_phatmal(
     target: str | None, output_dir: Path | None = None
 ) -> bool:
-    """None crawls the whole library; else one slug/URL. False only when
+    """None crawls the whole library; else one phatmal.com/ebook/<slug> URL
+    (any other URL raises ValueError before logging in). False only when
     nothing was saved and something failed (or the list came back empty)."""
+    check_disk(output_dir or OUTPUT_DIR)  # before logging in: no room, no run
     if target is None:
         stats = await crawl_library(output_dir)
         return stats["saved"] > 0 or (
             stats["failed"] == 0 and stats["total"] > 0
         )
     return await download_single(target, output_dir)
-
-
-if __name__ == "__main__":
-    raise SystemExit(0 if asyncio.run(login_and_verify()) else 1)
