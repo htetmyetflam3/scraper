@@ -272,7 +272,7 @@ def load_sidecar_map(path=None):
     """
     import json
     from pathlib import Path
-    p = Path(path) if path else Path(__file__).resolve().parent.parent.parent / "map" / "cipher-map.json"
+    p = Path(path) if path else Path(__file__).resolve().parent.parent / "map" / "cipher-map.json"
     if not p.is_file():
         return {}
     try:

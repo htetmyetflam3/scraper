@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 
 MODULE_DIR = Path(__file__).resolve().parent
-REPO_ROOT = MODULE_DIR.parent.parent
+REPO_ROOT = MODULE_DIR.parent
 MAP_DIR = REPO_ROOT / "map"
 DEFAULT_MODEL_PATH = REPO_ROOT / "model" / "zawgyiUnicodeModel.dat"
 

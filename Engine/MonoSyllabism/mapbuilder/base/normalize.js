@@ -1,5 +1,5 @@
 import { debugLogInit } from "../../../Bridge/logen.js";
-import { isLowerOrUpperAZ } from "./_function.js";
+import { isLowerOrUpperAZ } from "./function.js";
 import {
 	Priority,
 	Glue,

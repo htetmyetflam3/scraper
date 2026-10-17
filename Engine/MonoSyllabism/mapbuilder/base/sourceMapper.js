@@ -5,7 +5,7 @@ import {
 	decompose,
 	burmeseTokenToAscii,
 	asciiTokenToBurmese,
-} from "./_function.js";
+} from "./function.js";
 const _mmToAscii = new Map();
 const _asciiToMm = new Map();
 function _pair(mmArr, ascArr) {

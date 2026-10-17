@@ -10,7 +10,7 @@ import time
 import urllib.parse
 from pathlib import Path
 
-BIN_DIR = Path(__file__).resolve().parent / "python" / "bin"
+BIN_DIR = Path(__file__).resolve().parent / "crawler" / "bin"
 sys.path.insert(0, str(BIN_DIR))
 
 from Dcrawler import ENTRY_FILE, OUTPUT_DIR, download_entries, note_pause, retry_line  # noqa: E402

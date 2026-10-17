@@ -41,7 +41,7 @@ import time
 from dataclasses import dataclass, field
 from pathlib import Path
 
-_PRASER = Path(__file__).resolve().parents[1] / "praser"
+_PRASER = Path(__file__).resolve().parents[2] / "praser"
 if str(_PRASER) not in sys.path:
     sys.path.insert(0, str(_PRASER))
 
