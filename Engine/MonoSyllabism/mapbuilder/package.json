@@ -1,0 +1,10 @@
+{
+  "name": "mapbuilder",
+  "private": true,
+  "type": "module",
+  "description": "Build deps for MonoSyllabism/mapbuilder (obfuscator.js + encrypt.json.js). Lockfile intentionally untracked — repo convention is --no-package-lock installs.",
+  "dependencies": {
+    "bytenode": "^1.7.0",
+    "javascript-obfuscator": "^5.7.0"
+  }
+}

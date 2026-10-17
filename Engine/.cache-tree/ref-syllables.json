@@ -1,0 +1,12627 @@
+[
+  {
+    "original": "အ",
+    "mapped": "¶",
+    "id": "¶000"
+  },
+  {
+    "original": "ဠ",
+    "mapped": "®",
+    "id": "®000"
+  },
+  {
+    "original": "ဟ",
+    "mapped": "Z",
+    "id": "Z000"
+  },
+  {
+    "original": "ဿ",
+    "mapped": "ª",
+    "id": "ª000"
+  },
+  {
+    "original": "သ",
+    "mapped": "Y",
+    "id": "Y000"
+  },
+  {
+    "original": "ဝ",
+    "mapped": "§",
+    "id": "§000"
+  },
+  {
+    "original": "လ",
+    "mapped": "X",
+    "id": "X000"
+  },
+  {
+    "original": "ရ",
+    "mapped": "W",
+    "id": "W000"
+  },
+  {
+    "original": "ယ",
+    "mapped": "V",
+    "id": "V000"
+  },
+  {
+    "original": "မ",
+    "mapped": "U",
+    "id": "U000"
+  },
+  {
+    "original": "ဘ",
+    "mapped": "T",
+    "id": "T000"
+  },
+  {
+    "original": "ဗ",
+    "mapped": "S",
+    "id": "S000"
+  },
+  {
+    "original": "ဖ",
+    "mapped": "R",
+    "id": "R000"
+  },
+  {
+    "original": "ပ",
+    "mapped": "Q",
+    "id": "Q000"
+  },
+  {
+    "original": "န",
+    "mapped": "P",
+    "id": "P000"
+  },
+  {
+    "original": "ဓ",
+    "mapped": "¨",
+    "id": "¨000"
+  },
+  {
+    "original": "ဒ",
+    "mapped": "O",
+    "id": "O000"
+  },
+  {
+    "original": "ထ",
+    "mapped": "N",
+    "id": "N000"
+  },
+  {
+    "original": "တ",
+    "mapped": "M",
+    "id": "M000"
+  },
+  {
+    "original": "ဎ",
+    "mapped": "±",
+    "id": "±000"
+  },
+  {
+    "original": "ဍ",
+    "mapped": "K",
+    "id": "K000"
+  },
+  {
+    "original": "ဌ",
+    "mapped": "¯",
+    "id": "¯000"
+  },
+  {
+    "original": "ည",
+    "mapped": "H",
+    "id": "H000"
+  },
+  {
+    "original": "ဉ",
+    "mapped": "J",
+    "id": "J000"
+  },
+  {
+    "original": "ဈ",
+    "mapped": "¦",
+    "id": "¦000"
+  },
+  {
+    "original": "ဇ",
+    "mapped": "G",
+    "id": "G000"
+  },
+  {
+    "original": "ဆ",
+    "mapped": "°",
+    "id": "°000"
+  },
+  {
+    "original": "စ",
+    "mapped": "F",
+    "id": "F000"
+  },
+  {
+    "original": "င",
+    "mapped": "e",
+    "id": "e000"
+  },
+  {
+    "original": "င",
+    "mapped": "E",
+    "id": "E000"
+  },
+  {
+    "original": "ဃ",
+    "mapped": "D",
+    "id": "D000"
+  },
+  {
+    "original": "ဂ",
+    "mapped": "C",
+    "id": "C000"
+  },
+  {
+    "original": "ခ",
+    "mapped": "B",
+    "id": "B000"
+  },
+  {
+    "original": "ဋ",
+    "mapped": "I",
+    "id": "I000"
+  },
+  {
+    "original": "ဏ",
+    "mapped": "L",
+    "id": "L000"
+  },
+  {
+    "original": "က",
+    "mapped": "A",
+    "id": "A000"
+  },
+  {
+    "original": "၎",
+    "mapped": "³",
+    "id": "³000"
+  },
+  {
+    "original": "၎င်း",
+    "mapped": "³e_",
+    "id": "³001"
+  },
+  {
+    "original": "ကီ",
+    "mapped": "AÞ",
+    "id": "A002"
+  },
+  {
+    "original": "ကု",
+    "mapped": "Að",
+    "id": "A003"
+  },
+  {
+    "original": "ကူ",
+    "mapped": "Aþ",
+    "id": "A004"
+  },
+  {
+    "original": "ကဲ",
+    "mapped": "Aß",
+    "id": "A005"
+  },
+  {
+    "original": "ကံ",
+    "mapped": "A¾",
+    "id": "A006"
+  },
+  {
+    "original": "ကျ",
+    "mapped": "A*",
+    "id": "A007"
+  },
+  {
+    "original": "ဏော",
+    "mapped": "L∆¼",
+    "id": "L008"
+  },
+  {
+    "original": "ဋော",
+    "mapped": "I∆¼",
+    "id": "I008"
+  },
+  {
+    "original": "ကြ",
+    "mapped": "A¢",
+    "id": "A009"
+  },
+  {
+    "original": "ကွ",
+    "mapped": "A¤",
+    "id": "A010"
+  },
+  {
+    "original": "ကာ",
+    "mapped": "A¼",
+    "id": "A011"
+  },
+  {
+    "original": "ကိ",
+    "mapped": "AÐ",
+    "id": "A012"
+  },
+  {
+    "original": "ကေ",
+    "mapped": "A∆",
+    "id": "A013"
+  },
+  {
+    "original": "ကျီ",
+    "mapped": "A*Þ",
+    "id": "A014"
+  },
+  {
+    "original": "ကျာ",
+    "mapped": "A*¼",
+    "id": "A015"
+  },
+  {
+    "original": "ကြေ",
+    "mapped": "A¢∆",
+    "id": "A016"
+  },
+  {
+    "original": "ကြာ",
+    "mapped": "A¢¼",
+    "id": "A017"
+  },
+  {
+    "original": "ကေး",
+    "mapped": "A∆_",
+    "id": "A018"
+  },
+  {
+    "original": "ကုံ",
+    "mapped": "Að¾",
+    "id": "A019"
+  },
+  {
+    "original": "ကူး",
+    "mapped": "Aþ_",
+    "id": "A020"
+  },
+  {
+    "original": "ကော",
+    "mapped": "A∆¼",
+    "id": "A008"
+  },
+  {
+    "original": "ကဲ့",
+    "mapped": "Aß¿",
+    "id": "A021"
+  },
+  {
+    "original": "ကံ့",
+    "mapped": "A¾¿",
+    "id": "A022"
+  },
+  {
+    "original": "ကျိ",
+    "mapped": "A*Ð",
+    "id": "A023"
+  },
+  {
+    "original": "ကျူ",
+    "mapped": "A*þ",
+    "id": "A024"
+  },
+  {
+    "original": "ကျေ",
+    "mapped": "A*∆",
+    "id": "A025"
+  },
+  {
+    "original": "ကျဲ",
+    "mapped": "A*ß",
+    "id": "A026"
+  },
+  {
+    "original": "ကျံ",
+    "mapped": "A*¾",
+    "id": "A027"
+  },
+  {
+    "original": "ကြူ",
+    "mapped": "A¢þ",
+    "id": "A028"
+  },
+  {
+    "original": "ကြဲ",
+    "mapped": "A¢ß",
+    "id": "A029"
+  },
+  {
+    "original": "ကြွ",
+    "mapped": "A¢¤",
+    "id": "A030"
+  },
+  {
+    "original": "ကွာ",
+    "mapped": "A¤¼",
+    "id": "A031"
+  },
+  {
+    "original": "ကွီ",
+    "mapped": "A¤Þ",
+    "id": "A032"
+  },
+  {
+    "original": "ကွဲ",
+    "mapped": "A¤ß",
+    "id": "A033"
+  },
+  {
+    "original": "ကို",
+    "mapped": "AÐð",
+    "id": "A034"
+  },
+  {
+    "original": "ကက်",
+    "mapped": "Aa",
+    "id": "A035"
+  },
+  {
+    "original": "ကင်",
+    "mapped": "Ae",
+    "id": "A036"
+  },
+  {
+    "original": "ကစ်",
+    "mapped": "Af",
+    "id": "A037"
+  },
+  {
+    "original": "ကဋ်",
+    "mapped": "Ai",
+    "id": "A038"
+  },
+  {
+    "original": "ကဏ်",
+    "mapped": "Al",
+    "id": "A039"
+  },
+  {
+    "original": "ကတ်",
+    "mapped": "Am",
+    "id": "A040"
+  },
+  {
+    "original": "ကန်",
+    "mapped": "Ap",
+    "id": "A041"
+  },
+  {
+    "original": "ကပ်",
+    "mapped": "Aq",
+    "id": "A042"
+  },
+  {
+    "original": "ကမ်",
+    "mapped": "Au",
+    "id": "A043"
+  },
+  {
+    "original": "ကယ်",
+    "mapped": "Av",
+    "id": "A044"
+  },
+  {
+    "original": "ကား",
+    "mapped": "A¼_",
+    "id": "A045"
+  },
+  {
+    "original": "ကြံ",
+    "mapped": "A¢¾",
+    "id": "A046"
+  },
+  {
+    "original": "ကွေ",
+    "mapped": "A¤∆",
+    "id": "A047"
+  },
+  {
+    "original": "ကျု",
+    "mapped": "A*ð",
+    "id": "A048"
+  },
+  {
+    "original": "ကြိ",
+    "mapped": "A¢Ð",
+    "id": "A049"
+  },
+  {
+    "original": "ကြီး",
+    "mapped": "A¢Þ_",
+    "id": "A050"
+  },
+  {
+    "original": "ကုက်",
+    "mapped": "Aða",
+    "id": "A051"
+  },
+  {
+    "original": "ကုဋ်",
+    "mapped": "Aði",
+    "id": "A052"
+  },
+  {
+    "original": "ကုတ်",
+    "mapped": "Aðm",
+    "id": "A053"
+  },
+  {
+    "original": "ကုန်",
+    "mapped": "Aðp",
+    "id": "A054"
+  },
+  {
+    "original": "ကုပ်",
+    "mapped": "Aðq",
+    "id": "A055"
+  },
+  {
+    "original": "ကုဗ်",
+    "mapped": "Aðs",
+    "id": "A056"
+  },
+  {
+    "original": "ကုမ်",
+    "mapped": "Aðu",
+    "id": "A057"
+  },
+  {
+    "original": "ကုံး",
+    "mapped": "Að¾_",
+    "id": "A058"
+  },
+  {
+    "original": "ကော့",
+    "mapped": "A∆¼¿",
+    "id": "A059"
+  },
+  {
+    "original": "ကော်",
+    "mapped": "A∆¼^",
+    "id": "A060"
+  },
+  {
+    "original": "ကျက်",
+    "mapped": "A*a",
+    "id": "A061"
+  },
+  {
+    "original": "ကျင်",
+    "mapped": "A*e",
+    "id": "A062"
+  },
+  {
+    "original": "ကျစ်",
+    "mapped": "A*f",
+    "id": "A063"
+  },
+  {
+    "original": "ကျဉ်",
+    "mapped": "A*j",
+    "id": "A064"
+  },
+  {
+    "original": "ကျည်",
+    "mapped": "A*h",
+    "id": "A065"
+  },
+  {
+    "original": "ကျတ်",
+    "mapped": "A*m",
+    "id": "A066"
+  },
+  {
+    "original": "ကျန်",
+    "mapped": "A*p",
+    "id": "A067"
+  },
+  {
+    "original": "ကျပ်",
+    "mapped": "A*q",
+    "id": "A068"
+  },
+  {
+    "original": "ကျယ်",
+    "mapped": "A*v",
+    "id": "A069"
+  },
+  {
+    "original": "ကျား",
+    "mapped": "A*¼_",
+    "id": "A070"
+  },
+  {
+    "original": "ကျိီ",
+    "mapped": "A*ÐÞ",
+    "id": "A071"
+  },
+  {
+    "original": "ကျို",
+    "mapped": "A*Ðð",
+    "id": "A072"
+  },
+  {
+    "original": "ကျီး",
+    "mapped": "A*Þ_",
+    "id": "A073"
+  },
+  {
+    "original": "ကျုံ",
+    "mapped": "A*ð¾",
+    "id": "A074"
+  },
+  {
+    "original": "ကျူး",
+    "mapped": "A*þ_",
+    "id": "A075"
+  },
+  {
+    "original": "ကျော",
+    "mapped": "A*∆¼",
+    "id": "A076"
+  },
+  {
+    "original": "ကျေး",
+    "mapped": "A*∆_",
+    "id": "A077"
+  },
+  {
+    "original": "ကျွဲ",
+    "mapped": "A*¤ß",
+    "id": "A078"
+  },
+  {
+    "original": "ကျွံ",
+    "mapped": "A*¤¾",
+    "id": "A079"
+  },
+  {
+    "original": "ကြက်",
+    "mapped": "A¢a",
+    "id": "A080"
+  },
+  {
+    "original": "ကြင်",
+    "mapped": "A¢e",
+    "id": "A081"
+  },
+  {
+    "original": "ကြစ်",
+    "mapped": "A¢f",
+    "id": "A082"
+  },
+  {
+    "original": "ကြဉ်",
+    "mapped": "A¢j",
+    "id": "A083"
+  },
+  {
+    "original": "ကြည်",
+    "mapped": "A¢h",
+    "id": "A084"
+  },
+  {
+    "original": "ကြတ်",
+    "mapped": "A¢m",
+    "id": "A085"
+  },
+  {
+    "original": "ကြန်",
+    "mapped": "A¢p",
+    "id": "A086"
+  },
+  {
+    "original": "ကြပ်",
+    "mapped": "A¢q",
+    "id": "A087"
+  },
+  {
+    "original": "ကြမ်",
+    "mapped": "A¢u",
+    "id": "A088"
+  },
+  {
+    "original": "ကြယ်",
+    "mapped": "A¢v",
+    "id": "A089"
+  },
+  {
+    "original": "ကြား",
+    "mapped": "A¢¼_",
+    "id": "A090"
+  },
+  {
+    "original": "ကြို",
+    "mapped": "A¢Ðð",
+    "id": "A091"
+  },
+  {
+    "original": "ကြုံ",
+    "mapped": "A¢ð¾",
+    "id": "A092"
+  },
+  {
+    "original": "ကြူး",
+    "mapped": "A¢þ_",
+    "id": "A093"
+  },
+  {
+    "original": "ကြော",
+    "mapped": "A¢∆¼",
+    "id": "A094"
+  },
+  {
+    "original": "ကြေး",
+    "mapped": "A¢∆_",
+    "id": "A095"
+  },
+  {
+    "original": "ကြံ့",
+    "mapped": "A¢¾¿",
+    "id": "A096"
+  },
+  {
+    "original": "ကြွေ",
+    "mapped": "A¢¤∆",
+    "id": "A097"
+  },
+  {
+    "original": "ကွက်",
+    "mapped": "A¤a",
+    "id": "A098"
+  },
+  {
+    "original": "ကွတ်",
+    "mapped": "A¤m",
+    "id": "A099"
+  },
+  {
+    "original": "ကွန်",
+    "mapped": "A¤p",
+    "id": "A100"
+  },
+  {
+    "original": "ကွပ်",
+    "mapped": "A¤q",
+    "id": "A101"
+  },
+  {
+    "original": "ကွမ်",
+    "mapped": "A¤u",
+    "id": "A102"
+  },
+  {
+    "original": "ကွယ်",
+    "mapped": "A¤v",
+    "id": "A103"
+  },
+  {
+    "original": "ကွေ့",
+    "mapped": "A¤∆¿",
+    "id": "A104"
+  },
+  {
+    "original": "ကွေး",
+    "mapped": "A¤∆_",
+    "id": "A105"
+  },
+  {
+    "original": "ကွဲ့",
+    "mapped": "A¤ß¿",
+    "id": "A106"
+  },
+  {
+    "original": "ကန့်",
+    "mapped": "AP¿^",
+    "id": "A107"
+  },
+  {
+    "original": "ကန်း",
+    "mapped": "Ap_",
+    "id": "A108"
+  },
+  {
+    "original": "ကမ်း",
+    "mapped": "Au_",
+    "id": "A109"
+  },
+  {
+    "original": "ကရ်း",
+    "mapped": "Aw_",
+    "id": "A110"
+  },
+  {
+    "original": "ကာယ်",
+    "mapped": "A¼v",
+    "id": "A111"
+  },
+  {
+    "original": "ကိစ်",
+    "mapped": "AÐf",
+    "id": "A112"
+  },
+  {
+    "original": "ကိတ်",
+    "mapped": "AÐm",
+    "id": "A113"
+  },
+  {
+    "original": "ကိန်",
+    "mapped": "AÐp",
+    "id": "A114"
+  },
+  {
+    "original": "ကင်း",
+    "mapped": "Ae_",
+    "id": "A001"
+  },
+  {
+    "original": "ကိုး",
+    "mapped": "AÐð_",
+    "id": "A115"
+  },
+  {
+    "original": "ကျံ့",
+    "mapped": "A*¾¿",
+    "id": "A116"
+  },
+  {
+    "original": "ကိုယ်",
+    "mapped": "AÐðv",
+    "id": "A117"
+  },
+  {
+    "original": "ကြိုး",
+    "mapped": "A¢Ðð_",
+    "id": "A118"
+  },
+  {
+    "original": "ကျွေး",
+    "mapped": "A*¤∆_",
+    "id": "A119"
+  },
+  {
+    "original": "ကုန်း",
+    "mapped": "Aðp_",
+    "id": "A120"
+  },
+  {
+    "original": "ကောက်",
+    "mapped": "A∆¼a",
+    "id": "A121"
+  },
+  {
+    "original": "ကောင်",
+    "mapped": "A∆¼e",
+    "id": "A122"
+  },
+  {
+    "original": "ကျင့်",
+    "mapped": "A*E¿^",
+    "id": "A123"
+  },
+  {
+    "original": "ကျဉ်း",
+    "mapped": "A*j_",
+    "id": "A124"
+  },
+  {
+    "original": "ကျည်း",
+    "mapped": "A*h_",
+    "id": "A125"
+  },
+  {
+    "original": "ကျန်း",
+    "mapped": "A*p_",
+    "id": "A126"
+  },
+  {
+    "original": "ကျမ်း",
+    "mapped": "A*u_",
+    "id": "A127"
+  },
+  {
+    "original": "ကျိန်",
+    "mapped": "A*Ðp",
+    "id": "A128"
+  },
+  {
+    "original": "ကျိပ်",
+    "mapped": "A*Ðq",
+    "id": "A129"
+  },
+  {
+    "original": "ကျို့",
+    "mapped": "A*Ðð¿",
+    "id": "A130"
+  },
+  {
+    "original": "ကျုတ်",
+    "mapped": "A*ðm",
+    "id": "A131"
+  },
+  {
+    "original": "ကျုပ်",
+    "mapped": "A*ðq",
+    "id": "A132"
+  },
+  {
+    "original": "ကျုံ့",
+    "mapped": "A*ð¾¿",
+    "id": "A133"
+  },
+  {
+    "original": "ကျုံး",
+    "mapped": "A*ð¾_",
+    "id": "A134"
+  },
+  {
+    "original": "ကျော့",
+    "mapped": "A*∆¼¿",
+    "id": "A135"
+  },
+  {
+    "original": "ကျွက်",
+    "mapped": "A*¤a",
+    "id": "A136"
+  },
+  {
+    "original": "ကျွတ်",
+    "mapped": "A*¤m",
+    "id": "A137"
+  },
+  {
+    "original": "ကျွန်",
+    "mapped": "A*¤p",
+    "id": "A138"
+  },
+  {
+    "original": "ကြင့်",
+    "mapped": "A¢E¿^",
+    "id": "A139"
+  },
+  {
+    "original": "ကြဉ်း",
+    "mapped": "A¢j_",
+    "id": "A140"
+  },
+  {
+    "original": "ကြည့်",
+    "mapped": "A¢H¿^",
+    "id": "A141"
+  },
+  {
+    "original": "ကြည်း",
+    "mapped": "A¢h_",
+    "id": "A142"
+  },
+  {
+    "original": "ကြန့်",
+    "mapped": "A¢P¿^",
+    "id": "A143"
+  },
+  {
+    "original": "ကြမ်း",
+    "mapped": "A¢u_",
+    "id": "A144"
+  },
+  {
+    "original": "ကြိတ်",
+    "mapped": "A¢Ðm",
+    "id": "A145"
+  },
+  {
+    "original": "ကြိမ်",
+    "mapped": "A¢Ðu",
+    "id": "A146"
+  },
+  {
+    "original": "ကြို့",
+    "mapped": "A¢Ðð¿",
+    "id": "A147"
+  },
+  {
+    "original": "ကြုတ်",
+    "mapped": "A¢ðm",
+    "id": "A148"
+  },
+  {
+    "original": "ကြုံး",
+    "mapped": "A¢ð¾_",
+    "id": "A149"
+  },
+  {
+    "original": "ကြော့",
+    "mapped": "A¢∆¼¿",
+    "id": "A150"
+  },
+  {
+    "original": "ကြော်",
+    "mapped": "A¢∆¼^",
+    "id": "A151"
+  },
+  {
+    "original": "ကြွက်",
+    "mapped": "A¢¤a",
+    "id": "A152"
+  },
+  {
+    "original": "ကြွပ်",
+    "mapped": "A¢¤q",
+    "id": "A153"
+  },
+  {
+    "original": "ကြွယ်",
+    "mapped": "A¢¤v",
+    "id": "A154"
+  },
+  {
+    "original": "ကြွား",
+    "mapped": "A¢¤¼_",
+    "id": "A155"
+  },
+  {
+    "original": "ကြွေ့",
+    "mapped": "A¢¤∆¿",
+    "id": "A156"
+  },
+  {
+    "original": "ကြွေး",
+    "mapped": "A¢¤∆_",
+    "id": "A157"
+  },
+  {
+    "original": "ကွန့်",
+    "mapped": "A¤P¿^",
+    "id": "A158"
+  },
+  {
+    "original": "ကွန်း",
+    "mapped": "A¤p_",
+    "id": "A159"
+  },
+  {
+    "original": "ကွမ်း",
+    "mapped": "A¤u_",
+    "id": "A160"
+  },
+  {
+    "original": "ကိန်း",
+    "mapped": "AÐp_",
+    "id": "A161"
+  },
+  {
+    "original": "ကိုင်",
+    "mapped": "AÐðe",
+    "id": "A162"
+  },
+  {
+    "original": "ကျင်း",
+    "mapped": "A*e_",
+    "id": "A163"
+  },
+  {
+    "original": "ကိုလ်",
+    "mapped": "AÐðx",
+    "id": "A164"
+  },
+  {
+    "original": "ကျော်",
+    "mapped": "A*∆¼^",
+    "id": "A165"
+  },
+  {
+    "original": "ကျိုး",
+    "mapped": "A*Ðð_",
+    "id": "A166"
+  },
+  {
+    "original": "ကောဋိ",
+    "mapped": "A∆¼IÐ",
+    "id": "A167"
+  },
+  {
+    "original": "ကိုက်",
+    "mapped": "AÐða",
+    "id": "A168"
+  },
+  {
+    "original": "ကျိတ်",
+    "mapped": "A*Ðm",
+    "id": "A169"
+  },
+  {
+    "original": "ကြင်း",
+    "mapped": "A¢e_",
+    "id": "A170"
+  },
+  {
+    "original": "ကြုပ်",
+    "mapped": "A¢ðq",
+    "id": "A171"
+  },
+  {
+    "original": "ကွင်း",
+    "mapped": "A¤e_",
+    "id": "A172"
+  },
+  {
+    "original": "ကျိန်း",
+    "mapped": "A*Ðp_",
+    "id": "A173"
+  },
+  {
+    "original": "ကျိုက်",
+    "mapped": "A*Ðða",
+    "id": "A174"
+  },
+  {
+    "original": "ကျိုတ်",
+    "mapped": "A*Ððm",
+    "id": "A175"
+  },
+  {
+    "original": "ကျောက်",
+    "mapped": "A*∆¼a",
+    "id": "A176"
+  },
+  {
+    "original": "ကျွန်း",
+    "mapped": "A*¤p_",
+    "id": "A177"
+  },
+  {
+    "original": "ကျွမ်း",
+    "mapped": "A*¤u_",
+    "id": "A178"
+  },
+  {
+    "original": "ကြိမ်း",
+    "mapped": "A¢Ðu_",
+    "id": "A179"
+  },
+  {
+    "original": "ကြိုက်",
+    "mapped": "A¢Ðða",
+    "id": "A180"
+  },
+  {
+    "original": "ကြိုင်",
+    "mapped": "A¢Ððe",
+    "id": "A181"
+  },
+  {
+    "original": "ကြောက်",
+    "mapped": "A¢∆¼a",
+    "id": "A182"
+  },
+  {
+    "original": "ကြောင်",
+    "mapped": "A¢∆¼e",
+    "id": "A183"
+  },
+  {
+    "original": "ကိုင်း",
+    "mapped": "AÐðe_",
+    "id": "A184"
+  },
+  {
+    "original": "ကိုယ့်",
+    "mapped": "AÐðV¿^",
+    "id": "A185"
+  },
+  {
+    "original": "ကောင်း",
+    "mapped": "A∆¼e_",
+    "id": "A186"
+  },
+  {
+    "original": "ကြွင်း",
+    "mapped": "A¢¤e_",
+    "id": "A187"
+  },
+  {
+    "original": "ကျုန်း",
+    "mapped": "A*ðp_",
+    "id": "A188"
+  },
+  {
+    "original": "ကြွမ်း",
+    "mapped": "A¢¤u_",
+    "id": "A189"
+  },
+  {
+    "original": "ကိုယ့်",
+    "mapped": "AÐðV¿^",
+    "id": "A185"
+  },
+  {
+    "original": "ကြောင့်",
+    "mapped": "A¢∆¼E¿^",
+    "id": "A190"
+  },
+  {
+    "original": "ကြောင်း",
+    "mapped": "A¢∆¼e_",
+    "id": "A191"
+  },
+  {
+    "original": "ကျောင်း",
+    "mapped": "A*∆¼e_",
+    "id": "A192"
+  },
+  {
+    "original": "ခွ",
+    "mapped": "B¤",
+    "id": "B010"
+  },
+  {
+    "original": "ခဲ",
+    "mapped": "Bß",
+    "id": "B005"
+  },
+  {
+    "original": "ခါ",
+    "mapped": "B½",
+    "id": "B193"
+  },
+  {
+    "original": "ခီ",
+    "mapped": "BÞ",
+    "id": "B002"
+  },
+  {
+    "original": "ခု",
+    "mapped": "Bð",
+    "id": "B003"
+  },
+  {
+    "original": "ခူ",
+    "mapped": "Bþ",
+    "id": "B004"
+  },
+  {
+    "original": "ခေ",
+    "mapped": "B∆",
+    "id": "B013"
+  },
+  {
+    "original": "ခံ",
+    "mapped": "B¾",
+    "id": "B006"
+  },
+  {
+    "original": "ချ",
+    "mapped": "B*",
+    "id": "B007"
+  },
+  {
+    "original": "ခြ",
+    "mapped": "B¢",
+    "id": "B009"
+  },
+  {
+    "original": "ခိ",
+    "mapped": "BÐ",
+    "id": "B012"
+  },
+  {
+    "original": "ခ့",
+    "mapped": "B¿",
+    "id": "B194"
+  },
+  {
+    "original": "ခို",
+    "mapped": "BÐð",
+    "id": "B034"
+  },
+  {
+    "original": "ခြေ",
+    "mapped": "B¢∆",
+    "id": "B016"
+  },
+  {
+    "original": "ခုံ",
+    "mapped": "Bð¾",
+    "id": "B019"
+  },
+  {
+    "original": "ခါး",
+    "mapped": "B½_",
+    "id": "B195"
+  },
+  {
+    "original": "ခူး",
+    "mapped": "Bþ_",
+    "id": "B020"
+  },
+  {
+    "original": "ခဲ့",
+    "mapped": "Bß¿",
+    "id": "B021"
+  },
+  {
+    "original": "ခံ့",
+    "mapped": "B¾¿",
+    "id": "B022"
+  },
+  {
+    "original": "ချာ",
+    "mapped": "B*¼",
+    "id": "B015"
+  },
+  {
+    "original": "ချူ",
+    "mapped": "B*þ",
+    "id": "B024"
+  },
+  {
+    "original": "ချေ",
+    "mapped": "B*∆",
+    "id": "B025"
+  },
+  {
+    "original": "ခြာ",
+    "mapped": "B¢¼",
+    "id": "B017"
+  },
+  {
+    "original": "ခြွ",
+    "mapped": "B¢¤",
+    "id": "B030"
+  },
+  {
+    "original": "ခွာ",
+    "mapped": "B¤¼",
+    "id": "B031"
+  },
+  {
+    "original": "ခွဲ",
+    "mapped": "B¤ß",
+    "id": "B033"
+  },
+  {
+    "original": "ခက်",
+    "mapped": "Ba",
+    "id": "B035"
+  },
+  {
+    "original": "ခင်",
+    "mapped": "Be",
+    "id": "B036"
+  },
+  {
+    "original": "ခတ်",
+    "mapped": "Bm",
+    "id": "B040"
+  },
+  {
+    "original": "ခန်",
+    "mapped": "Bp",
+    "id": "B041"
+  },
+  {
+    "original": "ခပ်",
+    "mapped": "Bq",
+    "id": "B042"
+  },
+  {
+    "original": "ခယ်",
+    "mapped": "Bv",
+    "id": "B044"
+  },
+  {
+    "original": "ခြံ",
+    "mapped": "B¢¾",
+    "id": "B046"
+  },
+  {
+    "original": "ခွေ",
+    "mapped": "B¤∆",
+    "id": "B047"
+  },
+  {
+    "original": "ခီး",
+    "mapped": "BÞ_",
+    "id": "B196"
+  },
+  {
+    "original": "ခေါ",
+    "mapped": "B∆½",
+    "id": "B197"
+  },
+  {
+    "original": "ချီ",
+    "mapped": "B*Þ",
+    "id": "B014"
+  },
+  {
+    "original": "ခွံ",
+    "mapped": "B¤¾",
+    "id": "B198"
+  },
+  {
+    "original": "ခွါ",
+    "mapped": "B¤½",
+    "id": "B199"
+  },
+  {
+    "original": "ချိ",
+    "mapped": "B*Ð",
+    "id": "B023"
+  },
+  {
+    "original": "ချဲ",
+    "mapped": "B*ß",
+    "id": "B026"
+  },
+  {
+    "original": "ချီး",
+    "mapped": "B*Þ_",
+    "id": "B073"
+  },
+  {
+    "original": "ခိုး",
+    "mapped": "BÐð_",
+    "id": "B115"
+  },
+  {
+    "original": "ခုတ်",
+    "mapped": "Bðm",
+    "id": "B053"
+  },
+  {
+    "original": "ခုန်",
+    "mapped": "Bðp",
+    "id": "B054"
+  },
+  {
+    "original": "ခုပ်",
+    "mapped": "Bðq",
+    "id": "B055"
+  },
+  {
+    "original": "ခုံး",
+    "mapped": "Bð¾_",
+    "id": "B058"
+  },
+  {
+    "original": "ချက်",
+    "mapped": "B*a",
+    "id": "B061"
+  },
+  {
+    "original": "ချင်",
+    "mapped": "B*e",
+    "id": "B062"
+  },
+  {
+    "original": "ချစ်",
+    "mapped": "B*f",
+    "id": "B063"
+  },
+  {
+    "original": "ချဉ်",
+    "mapped": "B*j",
+    "id": "B064"
+  },
+  {
+    "original": "ချည်",
+    "mapped": "B*h",
+    "id": "B065"
+  },
+  {
+    "original": "ချန်",
+    "mapped": "B*p",
+    "id": "B067"
+  },
+  {
+    "original": "ချပ်",
+    "mapped": "B*q",
+    "id": "B068"
+  },
+  {
+    "original": "ချယ်",
+    "mapped": "B*v",
+    "id": "B069"
+  },
+  {
+    "original": "ချား",
+    "mapped": "B*¼_",
+    "id": "B070"
+  },
+  {
+    "original": "ချို",
+    "mapped": "B*Ðð",
+    "id": "B072"
+  },
+  {
+    "original": "ချုံ",
+    "mapped": "B*ð¾",
+    "id": "B074"
+  },
+  {
+    "original": "ချော",
+    "mapped": "B*∆¼",
+    "id": "B076"
+  },
+  {
+    "original": "ချေး",
+    "mapped": "B*∆_",
+    "id": "B077"
+  },
+  {
+    "original": "ချွဲ",
+    "mapped": "B*¤ß",
+    "id": "B078"
+  },
+  {
+    "original": "ချွံ",
+    "mapped": "B*¤¾",
+    "id": "B079"
+  },
+  {
+    "original": "ခြင်",
+    "mapped": "B¢e",
+    "id": "B081"
+  },
+  {
+    "original": "ခြစ်",
+    "mapped": "B¢f",
+    "id": "B082"
+  },
+  {
+    "original": "ခြည်",
+    "mapped": "B¢h",
+    "id": "B084"
+  },
+  {
+    "original": "ခြယ်",
+    "mapped": "B¢v",
+    "id": "B089"
+  },
+  {
+    "original": "ခြား",
+    "mapped": "B¢¼_",
+    "id": "B090"
+  },
+  {
+    "original": "ခြီး",
+    "mapped": "B¢Þ_",
+    "id": "B050"
+  },
+  {
+    "original": "ခြုံ",
+    "mapped": "B¢ð¾",
+    "id": "B092"
+  },
+  {
+    "original": "ခြူး",
+    "mapped": "B¢þ_",
+    "id": "B093"
+  },
+  {
+    "original": "ခြော",
+    "mapped": "B¢∆¼",
+    "id": "B094"
+  },
+  {
+    "original": "ခြွေ",
+    "mapped": "B¢¤∆",
+    "id": "B097"
+  },
+  {
+    "original": "ခွက်",
+    "mapped": "B¤a",
+    "id": "B098"
+  },
+  {
+    "original": "ခွတ်",
+    "mapped": "B¤m",
+    "id": "B099"
+  },
+  {
+    "original": "ခွန်",
+    "mapped": "B¤p",
+    "id": "B100"
+  },
+  {
+    "original": "ခွပ်",
+    "mapped": "B¤q",
+    "id": "B101"
+  },
+  {
+    "original": "ခွေ့",
+    "mapped": "B¤∆¿",
+    "id": "B104"
+  },
+  {
+    "original": "ခွေး",
+    "mapped": "B¤∆_",
+    "id": "B105"
+  },
+  {
+    "original": "ခန့်",
+    "mapped": "BP¿^",
+    "id": "B107"
+  },
+  {
+    "original": "ခန်း",
+    "mapped": "Bp_",
+    "id": "B108"
+  },
+  {
+    "original": "ခမ်း",
+    "mapped": "Bu_",
+    "id": "B109"
+  },
+  {
+    "original": "ခင်း",
+    "mapped": "Be_",
+    "id": "B001"
+  },
+  {
+    "original": "ခိပ်",
+    "mapped": "BÐq",
+    "id": "B200"
+  },
+  {
+    "original": "ခေတ်",
+    "mapped": "B∆m",
+    "id": "B201"
+  },
+  {
+    "original": "ချုး",
+    "mapped": "B*ð_",
+    "id": "B202"
+  },
+  {
+    "original": "ချဲ့",
+    "mapped": "B*ß¿",
+    "id": "B203"
+  },
+  {
+    "original": "ချွု",
+    "mapped": "B*¤ð",
+    "id": "B204"
+  },
+  {
+    "original": "ချွေ",
+    "mapped": "B*¤∆",
+    "id": "B205"
+  },
+  {
+    "original": "ခွင်",
+    "mapped": "B¤e",
+    "id": "B206"
+  },
+  {
+    "original": "ခွံ့",
+    "mapped": "B¤¾¿",
+    "id": "B207"
+  },
+  {
+    "original": "ခေါ်",
+    "mapped": "B∆½^",
+    "id": "B208"
+  },
+  {
+    "original": "ချင့်",
+    "mapped": "B*E¿^",
+    "id": "B123"
+  },
+  {
+    "original": "ချဉ်း",
+    "mapped": "B*j_",
+    "id": "B124"
+  },
+  {
+    "original": "ချည်း",
+    "mapped": "B*h_",
+    "id": "B125"
+  },
+  {
+    "original": "ချန်း",
+    "mapped": "B*p_",
+    "id": "B126"
+  },
+  {
+    "original": "ချမ်း",
+    "mapped": "B*u_",
+    "id": "B127"
+  },
+  {
+    "original": "ချိန်",
+    "mapped": "B*Ðp",
+    "id": "B128"
+  },
+  {
+    "original": "ချိပ်",
+    "mapped": "B*Ðq",
+    "id": "B129"
+  },
+  {
+    "original": "ချို့",
+    "mapped": "B*Ðð¿",
+    "id": "B130"
+  },
+  {
+    "original": "ချုတ်",
+    "mapped": "B*ðm",
+    "id": "B131"
+  },
+  {
+    "original": "ချုပ်",
+    "mapped": "B*ðq",
+    "id": "B132"
+  },
+  {
+    "original": "ချုံ့",
+    "mapped": "B*ð¾¿",
+    "id": "B133"
+  },
+  {
+    "original": "ချုံး",
+    "mapped": "B*ð¾_",
+    "id": "B134"
+  },
+  {
+    "original": "ချော့",
+    "mapped": "B*∆¼¿",
+    "id": "B135"
+  },
+  {
+    "original": "ချွတ်",
+    "mapped": "B*¤m",
+    "id": "B137"
+  },
+  {
+    "original": "ချွန်",
+    "mapped": "B*¤p",
+    "id": "B138"
+  },
+  {
+    "original": "ချွေး",
+    "mapped": "B*¤∆_",
+    "id": "B119"
+  },
+  {
+    "original": "ခြမ်း",
+    "mapped": "B¢u_",
+    "id": "B144"
+  },
+  {
+    "original": "ခြိုး",
+    "mapped": "B¢Ðð_",
+    "id": "B118"
+  },
+  {
+    "original": "ခြုတ်",
+    "mapped": "B¢ðm",
+    "id": "B148"
+  },
+  {
+    "original": "ခွန့်",
+    "mapped": "B¤P¿^",
+    "id": "B158"
+  },
+  {
+    "original": "ခွန်း",
+    "mapped": "B¤p_",
+    "id": "B159"
+  },
+  {
+    "original": "ခိုင်",
+    "mapped": "BÐðe",
+    "id": "B162"
+  },
+  {
+    "original": "ချင်း",
+    "mapped": "B*e_",
+    "id": "B163"
+  },
+  {
+    "original": "ချော်",
+    "mapped": "B*∆¼^",
+    "id": "B165"
+  },
+  {
+    "original": "ချိုး",
+    "mapped": "B*Ðð_",
+    "id": "B166"
+  },
+  {
+    "original": "ခိုက်",
+    "mapped": "BÐða",
+    "id": "B168"
+  },
+  {
+    "original": "ခေါက်",
+    "mapped": "B∆½a",
+    "id": "B209"
+  },
+  {
+    "original": "ခေါင်",
+    "mapped": "B∆½e",
+    "id": "B210"
+  },
+  {
+    "original": "ချဉ့်",
+    "mapped": "B*J¿^",
+    "id": "B211"
+  },
+  {
+    "original": "ချည့်",
+    "mapped": "B*H¿^",
+    "id": "B212"
+  },
+  {
+    "original": "ချာတ်",
+    "mapped": "B*¼m",
+    "id": "B213"
+  },
+  {
+    "original": "ချိတ်",
+    "mapped": "B*Ðm",
+    "id": "B169"
+  },
+  {
+    "original": "ချွေ့",
+    "mapped": "B*¤∆¿",
+    "id": "B214"
+  },
+  {
+    "original": "ခြုပ်",
+    "mapped": "B¢ðq",
+    "id": "B171"
+  },
+  {
+    "original": "ခွင့်",
+    "mapped": "B¤E¿^",
+    "id": "B215"
+  },
+  {
+    "original": "ခြင်း",
+    "mapped": "B¢e_",
+    "id": "B170"
+  },
+  {
+    "original": "ခြည်း",
+    "mapped": "B¢h_",
+    "id": "B142"
+  },
+  {
+    "original": "ခွင်း",
+    "mapped": "B¤e_",
+    "id": "B172"
+  },
+  {
+    "original": "ချိန်း",
+    "mapped": "B*Ðp_",
+    "id": "B173"
+  },
+  {
+    "original": "ချောက်",
+    "mapped": "B*∆¼a",
+    "id": "B176"
+  },
+  {
+    "original": "ချွန်း",
+    "mapped": "B*¤p_",
+    "id": "B177"
+  },
+  {
+    "original": "ခြိမ်း",
+    "mapped": "B¢Ðu_",
+    "id": "B179"
+  },
+  {
+    "original": "ခြိုက်",
+    "mapped": "B¢Ðða",
+    "id": "B180"
+  },
+  {
+    "original": "ခြောက်",
+    "mapped": "B¢∆¼a",
+    "id": "B182"
+  },
+  {
+    "original": "ခြွင်း",
+    "mapped": "B¢¤e_",
+    "id": "B187"
+  },
+  {
+    "original": "ချုန်း",
+    "mapped": "B*ðp_",
+    "id": "B188"
+  },
+  {
+    "original": "ခေါင့်",
+    "mapped": "B∆½E¿^",
+    "id": "B216"
+  },
+  {
+    "original": "ချိမ့်",
+    "mapped": "B*ÐU¿^",
+    "id": "B217"
+  },
+  {
+    "original": "ချိုင်",
+    "mapped": "B*Ððe",
+    "id": "B218"
+  },
+  {
+    "original": "ချောင်",
+    "mapped": "B*∆¼e",
+    "id": "B219"
+  },
+  {
+    "original": "ခြိမ့်",
+    "mapped": "B¢ÐU¿^",
+    "id": "B220"
+  },
+  {
+    "original": "ခြွမ်း",
+    "mapped": "B¢¤u_",
+    "id": "B189"
+  },
+  {
+    "original": "ခေါင်း",
+    "mapped": "B∆½e_",
+    "id": "B221"
+  },
+  {
+    "original": "ခိုင်း",
+    "mapped": "BÐðe_",
+    "id": "B184"
+  },
+  {
+    "original": "ချိမ့်",
+    "mapped": "B*ÐU¿^",
+    "id": "B217"
+  },
+  {
+    "original": "ချောင်း",
+    "mapped": "B*∆¼e_",
+    "id": "B192"
+  },
+  {
+    "original": "ချိုင့်",
+    "mapped": "B*ÐðE¿^",
+    "id": "B222"
+  },
+  {
+    "original": "ချိုင်း",
+    "mapped": "B*Ððe_",
+    "id": "B223"
+  },
+  {
+    "original": "ခြောင်း",
+    "mapped": "B¢∆¼e_",
+    "id": "B191"
+  },
+  {
+    "original": "ဂီ",
+    "mapped": "CÞ",
+    "id": "C002"
+  },
+  {
+    "original": "ဂု",
+    "mapped": "Cð",
+    "id": "C003"
+  },
+  {
+    "original": "ဂူ",
+    "mapped": "Cþ",
+    "id": "C004"
+  },
+  {
+    "original": "ဂေ",
+    "mapped": "C∆",
+    "id": "C013"
+  },
+  {
+    "original": "ဂံ",
+    "mapped": "C¾",
+    "id": "C006"
+  },
+  {
+    "original": "ဂျ",
+    "mapped": "C*",
+    "id": "C007"
+  },
+  {
+    "original": "ဂွ",
+    "mapped": "C¤",
+    "id": "C010"
+  },
+  {
+    "original": "ဂိ",
+    "mapped": "CÐ",
+    "id": "C012"
+  },
+  {
+    "original": "ဂါ",
+    "mapped": "C½",
+    "id": "C193"
+  },
+  {
+    "original": "ဂုံ",
+    "mapped": "Cð¾",
+    "id": "C019"
+  },
+  {
+    "original": "ဂေး",
+    "mapped": "C∆_",
+    "id": "C018"
+  },
+  {
+    "original": "ဂျာ",
+    "mapped": "C*¼",
+    "id": "C015"
+  },
+  {
+    "original": "ဂျူ",
+    "mapped": "C*þ",
+    "id": "C024"
+  },
+  {
+    "original": "ဂွာ",
+    "mapped": "C¤¼",
+    "id": "C031"
+  },
+  {
+    "original": "ဂို",
+    "mapped": "CÐð",
+    "id": "C034"
+  },
+  {
+    "original": "ဂင်",
+    "mapped": "Ce",
+    "id": "C036"
+  },
+  {
+    "original": "ဂစ်",
+    "mapped": "Cf",
+    "id": "C037"
+  },
+  {
+    "original": "ဂတ်",
+    "mapped": "Cm",
+    "id": "C040"
+  },
+  {
+    "original": "ဂန်",
+    "mapped": "Cp",
+    "id": "C041"
+  },
+  {
+    "original": "ဂမ်",
+    "mapped": "Cu",
+    "id": "C043"
+  },
+  {
+    "original": "ဂါး",
+    "mapped": "C½_",
+    "id": "C195"
+  },
+  {
+    "original": "ဂေါ",
+    "mapped": "C∆½",
+    "id": "C197"
+  },
+  {
+    "original": "ဂျီ",
+    "mapped": "C*Þ",
+    "id": "C014"
+  },
+  {
+    "original": "ဂြော",
+    "mapped": "C¢∆¼",
+    "id": "C094"
+  },
+  {
+    "original": "ဂျုံ",
+    "mapped": "C*ð¾",
+    "id": "C074"
+  },
+  {
+    "original": "ဂုတ်",
+    "mapped": "Cðm",
+    "id": "C053"
+  },
+  {
+    "original": "ဂုန်",
+    "mapped": "Cðp",
+    "id": "C054"
+  },
+  {
+    "original": "ဂုံး",
+    "mapped": "Cð¾_",
+    "id": "C058"
+  },
+  {
+    "original": "ဂျက်",
+    "mapped": "C*a",
+    "id": "C061"
+  },
+  {
+    "original": "ဂျင်",
+    "mapped": "C*e",
+    "id": "C062"
+  },
+  {
+    "original": "ဂျစ်",
+    "mapped": "C*f",
+    "id": "C063"
+  },
+  {
+    "original": "ဂျတ်",
+    "mapped": "C*m",
+    "id": "C066"
+  },
+  {
+    "original": "ဂျပ်",
+    "mapped": "C*q",
+    "id": "C068"
+  },
+  {
+    "original": "ဂျီး",
+    "mapped": "C*Þ_",
+    "id": "C073"
+  },
+  {
+    "original": "ဂျူး",
+    "mapped": "C*þ_",
+    "id": "C075"
+  },
+  {
+    "original": "ဂျွံ",
+    "mapped": "C*¤¾",
+    "id": "C079"
+  },
+  {
+    "original": "ဂွန်",
+    "mapped": "C¤p",
+    "id": "C100"
+  },
+  {
+    "original": "ဂွေး",
+    "mapped": "C¤∆_",
+    "id": "C105"
+  },
+  {
+    "original": "ဂိတ်",
+    "mapped": "CÐm",
+    "id": "C113"
+  },
+  {
+    "original": "ဂိုး",
+    "mapped": "CÐð_",
+    "id": "C115"
+  },
+  {
+    "original": "ဂွင်",
+    "mapped": "C¤e",
+    "id": "C206"
+  },
+  {
+    "original": "ဂေါ်",
+    "mapped": "C∆½^",
+    "id": "C208"
+  },
+  {
+    "original": "ဂါတ်",
+    "mapped": "C½m",
+    "id": "C224"
+  },
+  {
+    "original": "ဂါမ်",
+    "mapped": "C½u",
+    "id": "C225"
+  },
+  {
+    "original": "ဂိဇ်",
+    "mapped": "CÐg",
+    "id": "C226"
+  },
+  {
+    "original": "ဂုဏ်",
+    "mapped": "Cðl",
+    "id": "C227"
+  },
+  {
+    "original": "ဂေါ့",
+    "mapped": "C∆½¿",
+    "id": "C228"
+  },
+  {
+    "original": "ဂန်း",
+    "mapped": "Cp_",
+    "id": "C108"
+  },
+  {
+    "original": "ဂျွန်",
+    "mapped": "C*¤p",
+    "id": "C138"
+  },
+  {
+    "original": "ဂျမ်း",
+    "mapped": "C*u_",
+    "id": "C127"
+  },
+  {
+    "original": "ဂျုတ်",
+    "mapped": "C*ðm",
+    "id": "C131"
+  },
+  {
+    "original": "ဂျွတ်",
+    "mapped": "C*¤m",
+    "id": "C137"
+  },
+  {
+    "original": "ဂွမ်း",
+    "mapped": "C¤u_",
+    "id": "C160"
+  },
+  {
+    "original": "ဂျော်",
+    "mapped": "C*∆¼^",
+    "id": "C165"
+  },
+  {
+    "original": "ဂိုက်",
+    "mapped": "CÐða",
+    "id": "C168"
+  },
+  {
+    "original": "ဂေါက်",
+    "mapped": "C∆½a",
+    "id": "C209"
+  },
+  {
+    "original": "ဂျိန်း",
+    "mapped": "C*Ðp_",
+    "id": "C173"
+  },
+  {
+    "original": "ဂျိုက်",
+    "mapped": "C*Ðða",
+    "id": "C174"
+  },
+  {
+    "original": "ဂျောက်",
+    "mapped": "C*∆¼a",
+    "id": "C176"
+  },
+  {
+    "original": "ဂျွမ်း",
+    "mapped": "C*¤u_",
+    "id": "C178"
+  },
+  {
+    "original": "ဂိုဏ်း",
+    "mapped": "CÐðl_",
+    "id": "C229"
+  },
+  {
+    "original": "ဂြိုဟ်",
+    "mapped": "C¢Ððz",
+    "id": "C230"
+  },
+  {
+    "original": "ဂိုင်း",
+    "mapped": "CÐðe_",
+    "id": "C184"
+  },
+  {
+    "original": "ဃံ",
+    "mapped": "D¾",
+    "id": "D006"
+  },
+  {
+    "original": "ဃူ",
+    "mapped": "Dþ",
+    "id": "D004"
+  },
+  {
+    "original": "ဃု",
+    "mapped": "Dð",
+    "id": "D003"
+  },
+  {
+    "original": "ဃီ",
+    "mapped": "DÞ",
+    "id": "D002"
+  },
+  {
+    "original": "ဃျ",
+    "mapped": "D*",
+    "id": "D007"
+  },
+  {
+    "original": "ဃေ",
+    "mapped": "D∆",
+    "id": "D013"
+  },
+  {
+    "original": "ဃာ",
+    "mapped": "D¼",
+    "id": "D011"
+  },
+  {
+    "original": "ဃိ",
+    "mapped": "DÐ",
+    "id": "D012"
+  },
+  {
+    "original": "ဃျံ",
+    "mapped": "D*¾",
+    "id": "D027"
+  },
+  {
+    "original": "ဃော",
+    "mapped": "D∆¼",
+    "id": "D008"
+  },
+  {
+    "original": "ဃာ့",
+    "mapped": "D¼¿",
+    "id": "D231"
+  },
+  {
+    "original": "ဃာတ်",
+    "mapped": "D¼m",
+    "id": "D232"
+  },
+  {
+    "original": "ငံ",
+    "mapped": "E¾",
+    "id": "E006"
+  },
+  {
+    "original": "င့",
+    "mapped": "E¿",
+    "id": "E194"
+  },
+  {
+    "original": "ငီ",
+    "mapped": "EÞ",
+    "id": "E002"
+  },
+  {
+    "original": "ငု",
+    "mapped": "Eð",
+    "id": "E003"
+  },
+  {
+    "original": "ငူ",
+    "mapped": "Eþ",
+    "id": "E004"
+  },
+  {
+    "original": "ငေ",
+    "mapped": "E∆",
+    "id": "E013"
+  },
+  {
+    "original": "ငဲ",
+    "mapped": "Eß",
+    "id": "E005"
+  },
+  {
+    "original": "ငျ",
+    "mapped": "E*",
+    "id": "E007"
+  },
+  {
+    "original": "ငြ",
+    "mapped": "E¢",
+    "id": "E009"
+  },
+  {
+    "original": "ငာ",
+    "mapped": "E¼",
+    "id": "E011"
+  },
+  {
+    "original": "ငိ",
+    "mapped": "EÐ",
+    "id": "E012"
+  },
+  {
+    "original": "ငါ",
+    "mapped": "E½",
+    "id": "E193"
+  },
+  {
+    "original": "ငှ",
+    "mapped": "Eµ",
+    "id": "E233"
+  },
+  {
+    "original": "ငွိ",
+    "mapped": "E¤Ð",
+    "id": "E234"
+  },
+  {
+    "original": "ငွေ",
+    "mapped": "E¤∆",
+    "id": "E047"
+  },
+  {
+    "original": "ငါး",
+    "mapped": "E½_",
+    "id": "E195"
+  },
+  {
+    "original": "ငေ့",
+    "mapped": "E∆¿",
+    "id": "E235"
+  },
+  {
+    "original": "ငုံ",
+    "mapped": "Eð¾",
+    "id": "E019"
+  },
+  {
+    "original": "ငူး",
+    "mapped": "Eþ_",
+    "id": "E020"
+  },
+  {
+    "original": "ငော",
+    "mapped": "E∆¼",
+    "id": "E008"
+  },
+  {
+    "original": "ငေး",
+    "mapped": "E∆_",
+    "id": "E018"
+  },
+  {
+    "original": "ငဲ့",
+    "mapped": "Eß¿",
+    "id": "E021"
+  },
+  {
+    "original": "ငံ့",
+    "mapped": "E¾¿",
+    "id": "E022"
+  },
+  {
+    "original": "ငြာ",
+    "mapped": "E¢¼",
+    "id": "E017"
+  },
+  {
+    "original": "ငြူ",
+    "mapped": "E¢þ",
+    "id": "E028"
+  },
+  {
+    "original": "ငို",
+    "mapped": "EÐð",
+    "id": "E034"
+  },
+  {
+    "original": "ငက်",
+    "mapped": "Ea",
+    "id": "E035"
+  },
+  {
+    "original": "ငင်",
+    "mapped": "Ee",
+    "id": "E036"
+  },
+  {
+    "original": "ငတ်",
+    "mapped": "Em",
+    "id": "E040"
+  },
+  {
+    "original": "ငန်",
+    "mapped": "Ep",
+    "id": "E041"
+  },
+  {
+    "original": "ငပ်",
+    "mapped": "Eq",
+    "id": "E042"
+  },
+  {
+    "original": "ငယ်",
+    "mapped": "Ev",
+    "id": "E044"
+  },
+  {
+    "original": "ငေါ",
+    "mapped": "E∆½",
+    "id": "E197"
+  },
+  {
+    "original": "ငါ့",
+    "mapped": "E½¿",
+    "id": "E236"
+  },
+  {
+    "original": "ငြိ",
+    "mapped": "E¢Ð",
+    "id": "E049"
+  },
+  {
+    "original": "ငှါ",
+    "mapped": "Eµ½",
+    "id": "E237"
+  },
+  {
+    "original": "ငှာ",
+    "mapped": "Eµ¼",
+    "id": "E238"
+  },
+  {
+    "original": "င်း",
+    "mapped": "e_",
+    "id": "e239"
+  },
+  {
+    "original": "ငီူ့",
+    "mapped": "EÞþ¿",
+    "id": "E240"
+  },
+  {
+    "original": "ငုတ်",
+    "mapped": "Eðm",
+    "id": "E053"
+  },
+  {
+    "original": "ငုပ်",
+    "mapped": "Eðq",
+    "id": "E055"
+  },
+  {
+    "original": "ငုံး",
+    "mapped": "Eð¾_",
+    "id": "E058"
+  },
+  {
+    "original": "ငော့",
+    "mapped": "E∆¼¿",
+    "id": "E059"
+  },
+  {
+    "original": "ငြင်",
+    "mapped": "E¢e",
+    "id": "E081"
+  },
+  {
+    "original": "ငြစ်",
+    "mapped": "E¢f",
+    "id": "E082"
+  },
+  {
+    "original": "ငြား",
+    "mapped": "E¢¼_",
+    "id": "E090"
+  },
+  {
+    "original": "ငြို",
+    "mapped": "E¢Ðð",
+    "id": "E091"
+  },
+  {
+    "original": "ငြီး",
+    "mapped": "E¢Þ_",
+    "id": "E050"
+  },
+  {
+    "original": "ငွေ့",
+    "mapped": "E¤∆¿",
+    "id": "E104"
+  },
+  {
+    "original": "ငန်း",
+    "mapped": "Ep_",
+    "id": "E108"
+  },
+  {
+    "original": "ငမ်း",
+    "mapped": "Eu_",
+    "id": "E109"
+  },
+  {
+    "original": "ငိုး",
+    "mapped": "EÐð_",
+    "id": "E115"
+  },
+  {
+    "original": "ငေါ်",
+    "mapped": "E∆½^",
+    "id": "E208"
+  },
+  {
+    "original": "ငေါ့",
+    "mapped": "E∆½¿",
+    "id": "E228"
+  },
+  {
+    "original": "ငင့်",
+    "mapped": "EE¿^",
+    "id": "E241"
+  },
+  {
+    "original": "ငို့",
+    "mapped": "EÐð¿",
+    "id": "E242"
+  },
+  {
+    "original": "ငုံ့",
+    "mapped": "Eð¾¿",
+    "id": "E243"
+  },
+  {
+    "original": "ငွား",
+    "mapped": "E¤¼_",
+    "id": "E244"
+  },
+  {
+    "original": "ငှက်",
+    "mapped": "Eµa",
+    "id": "E245"
+  },
+  {
+    "original": "ငှား",
+    "mapped": "Eµ¼_",
+    "id": "E246"
+  },
+  {
+    "original": "ငှဲ့",
+    "mapped": "Eµß¿",
+    "id": "E247"
+  },
+  {
+    "original": "ငင်း",
+    "mapped": "Ee_",
+    "id": "E001"
+  },
+  {
+    "original": "ငှါး",
+    "mapped": "Eµ½_",
+    "id": "E248"
+  },
+  {
+    "original": "ငြမ်း",
+    "mapped": "E¢u_",
+    "id": "E144"
+  },
+  {
+    "original": "ငြိမ်",
+    "mapped": "E¢Ðu",
+    "id": "E146"
+  },
+  {
+    "original": "ငြိုး",
+    "mapped": "E¢Ðð_",
+    "id": "E118"
+  },
+  {
+    "original": "ငိုင်",
+    "mapped": "EÐðe",
+    "id": "E162"
+  },
+  {
+    "original": "ငိုက်",
+    "mapped": "EÐða",
+    "id": "E168"
+  },
+  {
+    "original": "ငေါက်",
+    "mapped": "E∆½a",
+    "id": "E209"
+  },
+  {
+    "original": "ငြင်း",
+    "mapped": "E¢e_",
+    "id": "E170"
+  },
+  {
+    "original": "ငှန်း",
+    "mapped": "Eµp_",
+    "id": "E249"
+  },
+  {
+    "original": "ငြိမ်း",
+    "mapped": "E¢Ðu_",
+    "id": "E179"
+  },
+  {
+    "original": "ငြိမ့်",
+    "mapped": "E¢ÐU¿^",
+    "id": "E220"
+  },
+  {
+    "original": "ငေါင်း",
+    "mapped": "E∆½e_",
+    "id": "E221"
+  },
+  {
+    "original": "ငြောင့်",
+    "mapped": "E¢∆¼E¿^",
+    "id": "E190"
+  },
+  {
+    "original": "ငြှိမ်း",
+    "mapped": "E¢µÐu_",
+    "id": "E250"
+  },
+  {
+    "original": "စီ",
+    "mapped": "FÞ",
+    "id": "F002"
+  },
+  {
+    "original": "စု",
+    "mapped": "Fð",
+    "id": "F003"
+  },
+  {
+    "original": "စူ",
+    "mapped": "Fþ",
+    "id": "F004"
+  },
+  {
+    "original": "စေ",
+    "mapped": "F∆",
+    "id": "F013"
+  },
+  {
+    "original": "စဲ",
+    "mapped": "Fß",
+    "id": "F005"
+  },
+  {
+    "original": "စံ",
+    "mapped": "F¾",
+    "id": "F006"
+  },
+  {
+    "original": "စြ",
+    "mapped": "F¢",
+    "id": "F009"
+  },
+  {
+    "original": "စွ",
+    "mapped": "F¤",
+    "id": "F010"
+  },
+  {
+    "original": "စာ",
+    "mapped": "F¼",
+    "id": "F011"
+  },
+  {
+    "original": "စိ",
+    "mapped": "FÐ",
+    "id": "F012"
+  },
+  {
+    "original": "စ့",
+    "mapped": "F¿",
+    "id": "F194"
+  },
+  {
+    "original": "စား",
+    "mapped": "F¼_",
+    "id": "F045"
+  },
+  {
+    "original": "စုံ",
+    "mapped": "Fð¾",
+    "id": "F019"
+  },
+  {
+    "original": "စူး",
+    "mapped": "Fþ_",
+    "id": "F020"
+  },
+  {
+    "original": "စော",
+    "mapped": "F∆¼",
+    "id": "F008"
+  },
+  {
+    "original": "စေး",
+    "mapped": "F∆_",
+    "id": "F018"
+  },
+  {
+    "original": "စံ့",
+    "mapped": "F¾¿",
+    "id": "F022"
+  },
+  {
+    "original": "စွာ",
+    "mapped": "F¤¼",
+    "id": "F031"
+  },
+  {
+    "original": "စွဲ",
+    "mapped": "F¤ß",
+    "id": "F033"
+  },
+  {
+    "original": "စို",
+    "mapped": "FÐð",
+    "id": "F034"
+  },
+  {
+    "original": "စက်",
+    "mapped": "Fa",
+    "id": "F035"
+  },
+  {
+    "original": "စင်",
+    "mapped": "Fe",
+    "id": "F036"
+  },
+  {
+    "original": "စစ်",
+    "mapped": "Ff",
+    "id": "F037"
+  },
+  {
+    "original": "စဏ်",
+    "mapped": "Fl",
+    "id": "F039"
+  },
+  {
+    "original": "စန်",
+    "mapped": "Fp",
+    "id": "F041"
+  },
+  {
+    "original": "စပ်",
+    "mapped": "Fq",
+    "id": "F042"
+  },
+  {
+    "original": "စမ်",
+    "mapped": "Fu",
+    "id": "F043"
+  },
+  {
+    "original": "စယ်",
+    "mapped": "Fv",
+    "id": "F044"
+  },
+  {
+    "original": "စွေ",
+    "mapped": "F¤∆",
+    "id": "F047"
+  },
+  {
+    "original": "စီး",
+    "mapped": "FÞ_",
+    "id": "F196"
+  },
+  {
+    "original": "စွံ",
+    "mapped": "F¤¾",
+    "id": "F198"
+  },
+  {
+    "original": "စဉ်",
+    "mapped": "Fj",
+    "id": "F251"
+  },
+  {
+    "original": "စည်",
+    "mapped": "Fh",
+    "id": "F252"
+  },
+  {
+    "original": "စေ့",
+    "mapped": "F∆¿",
+    "id": "F235"
+  },
+  {
+    "original": "စုတ်",
+    "mapped": "Fðm",
+    "id": "F053"
+  },
+  {
+    "original": "စုန်",
+    "mapped": "Fðp",
+    "id": "F054"
+  },
+  {
+    "original": "စုပ်",
+    "mapped": "Fðq",
+    "id": "F055"
+  },
+  {
+    "original": "စုံး",
+    "mapped": "Fð¾_",
+    "id": "F058"
+  },
+  {
+    "original": "စော့",
+    "mapped": "F∆¼¿",
+    "id": "F059"
+  },
+  {
+    "original": "စော်",
+    "mapped": "F∆¼^",
+    "id": "F060"
+  },
+  {
+    "original": "စွက်",
+    "mapped": "F¤a",
+    "id": "F098"
+  },
+  {
+    "original": "စွတ်",
+    "mapped": "F¤m",
+    "id": "F099"
+  },
+  {
+    "original": "စွန်",
+    "mapped": "F¤p",
+    "id": "F100"
+  },
+  {
+    "original": "စွပ်",
+    "mapped": "F¤q",
+    "id": "F101"
+  },
+  {
+    "original": "စွယ်",
+    "mapped": "F¤v",
+    "id": "F103"
+  },
+  {
+    "original": "စွေ့",
+    "mapped": "F¤∆¿",
+    "id": "F104"
+  },
+  {
+    "original": "စွေး",
+    "mapped": "F¤∆_",
+    "id": "F105"
+  },
+  {
+    "original": "စန့်",
+    "mapped": "FP¿^",
+    "id": "F107"
+  },
+  {
+    "original": "စန်း",
+    "mapped": "Fp_",
+    "id": "F108"
+  },
+  {
+    "original": "စမ်း",
+    "mapped": "Fu_",
+    "id": "F109"
+  },
+  {
+    "original": "စိတ်",
+    "mapped": "FÐm",
+    "id": "F113"
+  },
+  {
+    "original": "စိန်",
+    "mapped": "FÐp",
+    "id": "F114"
+  },
+  {
+    "original": "စိုး",
+    "mapped": "FÐð_",
+    "id": "F115"
+  },
+  {
+    "original": "စိပ်",
+    "mapped": "FÐq",
+    "id": "F200"
+  },
+  {
+    "original": "စို့",
+    "mapped": "FÐð¿",
+    "id": "F242"
+  },
+  {
+    "original": "စဉ့်",
+    "mapped": "FJ¿^",
+    "id": "F253"
+  },
+  {
+    "original": "စဉ်း",
+    "mapped": "Fj_",
+    "id": "F254"
+  },
+  {
+    "original": "စည့်",
+    "mapped": "FH¿^",
+    "id": "F255"
+  },
+  {
+    "original": "စည်း",
+    "mapped": "Fh_",
+    "id": "F256"
+  },
+  {
+    "original": "စိမ်",
+    "mapped": "FÐu",
+    "id": "F257"
+  },
+  {
+    "original": "စင်း",
+    "mapped": "Fe_",
+    "id": "F001"
+  },
+  {
+    "original": "စျေး",
+    "mapped": "F*∆_",
+    "id": "F077"
+  },
+  {
+    "original": "စုန်း",
+    "mapped": "Fðp_",
+    "id": "F120"
+  },
+  {
+    "original": "စောက်",
+    "mapped": "F∆¼a",
+    "id": "F121"
+  },
+  {
+    "original": "စောင်",
+    "mapped": "F∆¼e",
+    "id": "F122"
+  },
+  {
+    "original": "စွန့်",
+    "mapped": "F¤P¿^",
+    "id": "F158"
+  },
+  {
+    "original": "စွန်း",
+    "mapped": "F¤p_",
+    "id": "F159"
+  },
+  {
+    "original": "စွမ်း",
+    "mapped": "F¤u_",
+    "id": "F160"
+  },
+  {
+    "original": "စိန်း",
+    "mapped": "FÐp_",
+    "id": "F161"
+  },
+  {
+    "original": "စိုင်",
+    "mapped": "FÐðe",
+    "id": "F162"
+  },
+  {
+    "original": "စိုက်",
+    "mapped": "FÐða",
+    "id": "F168"
+  },
+  {
+    "original": "စွင့်",
+    "mapped": "F¤E¿^",
+    "id": "F215"
+  },
+  {
+    "original": "စိမ့်",
+    "mapped": "FÐU¿^",
+    "id": "F258"
+  },
+  {
+    "original": "စိမ်း",
+    "mapped": "FÐu_",
+    "id": "F259"
+  },
+  {
+    "original": "စိုရ်",
+    "mapped": "FÐðw",
+    "id": "F260"
+  },
+  {
+    "original": "စုန့်",
+    "mapped": "FðP¿^",
+    "id": "F261"
+  },
+  {
+    "original": "စိမ့်",
+    "mapped": "FÐU¿^",
+    "id": "F258"
+  },
+  {
+    "original": "စောင့်",
+    "mapped": "F∆¼E¿^",
+    "id": "F262"
+  },
+  {
+    "original": "စိုင်း",
+    "mapped": "FÐðe_",
+    "id": "F184"
+  },
+  {
+    "original": "စောင်း",
+    "mapped": "F∆¼e_",
+    "id": "F186"
+  },
+  {
+    "original": "ဆေ",
+    "mapped": "°∆",
+    "id": "°013"
+  },
+  {
+    "original": "ဆိ",
+    "mapped": "°Ð",
+    "id": "°012"
+  },
+  {
+    "original": "ဆု",
+    "mapped": "°ð",
+    "id": "°003"
+  },
+  {
+    "original": "ဆီ",
+    "mapped": "°Þ",
+    "id": "°002"
+  },
+  {
+    "original": "ဆူ",
+    "mapped": "°þ",
+    "id": "°004"
+  },
+  {
+    "original": "ဆဲ",
+    "mapped": "°ß",
+    "id": "°005"
+  },
+  {
+    "original": "ဆံ",
+    "mapped": "°¾",
+    "id": "°006"
+  },
+  {
+    "original": "ဆွ",
+    "mapped": "°¤",
+    "id": "°010"
+  },
+  {
+    "original": "ဆာ",
+    "mapped": "°¼",
+    "id": "°011"
+  },
+  {
+    "original": "ဆေး",
+    "mapped": "°∆_",
+    "id": "°018"
+  },
+  {
+    "original": "ဆုံ",
+    "mapped": "°ð¾",
+    "id": "°019"
+  },
+  {
+    "original": "ဆူး",
+    "mapped": "°þ_",
+    "id": "°020"
+  },
+  {
+    "original": "ဆော",
+    "mapped": "°∆¼",
+    "id": "°008"
+  },
+  {
+    "original": "ဆံ့",
+    "mapped": "°¾¿",
+    "id": "°022"
+  },
+  {
+    "original": "ဆွဲ",
+    "mapped": "°¤ß",
+    "id": "°033"
+  },
+  {
+    "original": "ဆို",
+    "mapped": "°Ðð",
+    "id": "°034"
+  },
+  {
+    "original": "ဆက်",
+    "mapped": "°a",
+    "id": "°035"
+  },
+  {
+    "original": "ဆင်",
+    "mapped": "°e",
+    "id": "°036"
+  },
+  {
+    "original": "ဆစ်",
+    "mapped": "°f",
+    "id": "°037"
+  },
+  {
+    "original": "ဆဋ်",
+    "mapped": "°i",
+    "id": "°038"
+  },
+  {
+    "original": "ဆတ်",
+    "mapped": "°m",
+    "id": "°040"
+  },
+  {
+    "original": "ဆန်",
+    "mapped": "°p",
+    "id": "°041"
+  },
+  {
+    "original": "ဆပ်",
+    "mapped": "°q",
+    "id": "°042"
+  },
+  {
+    "original": "ဆယ်",
+    "mapped": "°v",
+    "id": "°044"
+  },
+  {
+    "original": "ဆား",
+    "mapped": "°¼_",
+    "id": "°045"
+  },
+  {
+    "original": "ဆွေ",
+    "mapped": "°¤∆",
+    "id": "°047"
+  },
+  {
+    "original": "ဆီး",
+    "mapped": "°Þ_",
+    "id": "°196"
+  },
+  {
+    "original": "ဆွံ",
+    "mapped": "°¤¾",
+    "id": "°198"
+  },
+  {
+    "original": "ဆည်",
+    "mapped": "°h",
+    "id": "°252"
+  },
+  {
+    "original": "ဆဒ်",
+    "mapped": "°o",
+    "id": "°263"
+  },
+  {
+    "original": "ဆွေး",
+    "mapped": "°¤∆_",
+    "id": "°105"
+  },
+  {
+    "original": "ဆုတ်",
+    "mapped": "°ðm",
+    "id": "°053"
+  },
+  {
+    "original": "ဆုပ်",
+    "mapped": "°ðq",
+    "id": "°055"
+  },
+  {
+    "original": "ဆုံး",
+    "mapped": "°ð¾_",
+    "id": "°058"
+  },
+  {
+    "original": "ဆော့",
+    "mapped": "°∆¼¿",
+    "id": "°059"
+  },
+  {
+    "original": "ဆော်",
+    "mapped": "°∆¼^",
+    "id": "°060"
+  },
+  {
+    "original": "ဆွတ်",
+    "mapped": "°¤m",
+    "id": "°099"
+  },
+  {
+    "original": "ဆွပ်",
+    "mapped": "°¤q",
+    "id": "°101"
+  },
+  {
+    "original": "ဆွယ်",
+    "mapped": "°¤v",
+    "id": "°103"
+  },
+  {
+    "original": "ဆွေ့",
+    "mapped": "°¤∆¿",
+    "id": "°104"
+  },
+  {
+    "original": "ဆန့်",
+    "mapped": "°P¿^",
+    "id": "°107"
+  },
+  {
+    "original": "ဆန်း",
+    "mapped": "°p_",
+    "id": "°108"
+  },
+  {
+    "original": "ဆမ်း",
+    "mapped": "°u_",
+    "id": "°109"
+  },
+  {
+    "original": "ဆိတ်",
+    "mapped": "°Ðm",
+    "id": "°113"
+  },
+  {
+    "original": "ဆိန်",
+    "mapped": "°Ðp",
+    "id": "°114"
+  },
+  {
+    "original": "ဆင်း",
+    "mapped": "°e_",
+    "id": "°001"
+  },
+  {
+    "original": "ဆိုး",
+    "mapped": "°Ðð_",
+    "id": "°115"
+  },
+  {
+    "original": "ဆိပ်",
+    "mapped": "°Ðq",
+    "id": "°200"
+  },
+  {
+    "original": "ဆွံ့",
+    "mapped": "°¤¾¿",
+    "id": "°207"
+  },
+  {
+    "original": "ဆင့်",
+    "mapped": "°E¿^",
+    "id": "°241"
+  },
+  {
+    "original": "ဆို့",
+    "mapped": "°Ðð¿",
+    "id": "°242"
+  },
+  {
+    "original": "ဆုံ့",
+    "mapped": "°ð¾¿",
+    "id": "°243"
+  },
+  {
+    "original": "ဆည်း",
+    "mapped": "°h_",
+    "id": "°256"
+  },
+  {
+    "original": "ဆယ့်",
+    "mapped": "°V¿^",
+    "id": "°264"
+  },
+  {
+    "original": "ဆွစ်",
+    "mapped": "°¤f",
+    "id": "°265"
+  },
+  {
+    "original": "ဆယ့်",
+    "mapped": "°V¿^",
+    "id": "°264"
+  },
+  {
+    "original": "ဆုန်း",
+    "mapped": "°ðp_",
+    "id": "°120"
+  },
+  {
+    "original": "ဆောက်",
+    "mapped": "°∆¼a",
+    "id": "°121"
+  },
+  {
+    "original": "ဆောင်",
+    "mapped": "°∆¼e",
+    "id": "°122"
+  },
+  {
+    "original": "ဆွန့်",
+    "mapped": "°¤P¿^",
+    "id": "°158"
+  },
+  {
+    "original": "ဆွမ်း",
+    "mapped": "°¤u_",
+    "id": "°160"
+  },
+  {
+    "original": "ဆိုင်",
+    "mapped": "°Ððe",
+    "id": "°162"
+  },
+  {
+    "original": "ဆိုက်",
+    "mapped": "°Ðða",
+    "id": "°168"
+  },
+  {
+    "original": "ဆိမ့်",
+    "mapped": "°ÐU¿^",
+    "id": "°258"
+  },
+  {
+    "original": "ဆွန်း",
+    "mapped": "°¤p_",
+    "id": "°159"
+  },
+  {
+    "original": "ဆိုင်း",
+    "mapped": "°Ððe_",
+    "id": "°184"
+  },
+  {
+    "original": "ဆောင့်",
+    "mapped": "°∆¼E¿^",
+    "id": "°262"
+  },
+  {
+    "original": "ဆောင်း",
+    "mapped": "°∆¼e_",
+    "id": "°186"
+  },
+  {
+    "original": "ဇံ",
+    "mapped": "G¾",
+    "id": "G006"
+  },
+  {
+    "original": "ဇု",
+    "mapped": "Gð",
+    "id": "G003"
+  },
+  {
+    "original": "ဇူ",
+    "mapped": "Gþ",
+    "id": "G004"
+  },
+  {
+    "original": "ဇေ",
+    "mapped": "G∆",
+    "id": "G013"
+  },
+  {
+    "original": "ဇာ",
+    "mapped": "G¼",
+    "id": "G011"
+  },
+  {
+    "original": "ဇိ",
+    "mapped": "GÐ",
+    "id": "G012"
+  },
+  {
+    "original": "ဇီ",
+    "mapped": "GÞ",
+    "id": "G002"
+  },
+  {
+    "original": "ဇျာ",
+    "mapped": "G*¼",
+    "id": "G015"
+  },
+  {
+    "original": "ဇုံ",
+    "mapped": "Gð¾",
+    "id": "G019"
+  },
+  {
+    "original": "ဇီး",
+    "mapped": "GÞ_",
+    "id": "G196"
+  },
+  {
+    "original": "ဇူး",
+    "mapped": "Gþ_",
+    "id": "G020"
+  },
+  {
+    "original": "ဇော",
+    "mapped": "G∆¼",
+    "id": "G008"
+  },
+  {
+    "original": "ဇွာ",
+    "mapped": "G¤¼",
+    "id": "G031"
+  },
+  {
+    "original": "ဇွဲ",
+    "mapped": "G¤ß",
+    "id": "G033"
+  },
+  {
+    "original": "ဇို",
+    "mapped": "GÐð",
+    "id": "G034"
+  },
+  {
+    "original": "ဇက်",
+    "mapped": "Ga",
+    "id": "G035"
+  },
+  {
+    "original": "ဇင်",
+    "mapped": "Ge",
+    "id": "G036"
+  },
+  {
+    "original": "ဇစ်",
+    "mapped": "Gf",
+    "id": "G037"
+  },
+  {
+    "original": "ဇန်",
+    "mapped": "Gp",
+    "id": "G041"
+  },
+  {
+    "original": "ဇမ်",
+    "mapped": "Gu",
+    "id": "G043"
+  },
+  {
+    "original": "ဇယ်",
+    "mapped": "Gv",
+    "id": "G044"
+  },
+  {
+    "original": "ဇဉ်",
+    "mapped": "Gj",
+    "id": "G251"
+  },
+  {
+    "original": "ဇတ်",
+    "mapped": "Gm",
+    "id": "G040"
+  },
+  {
+    "original": "ဇုန်",
+    "mapped": "Gðp",
+    "id": "G054"
+  },
+  {
+    "original": "ဇော်",
+    "mapped": "G∆¼^",
+    "id": "G060"
+  },
+  {
+    "original": "ဇွတ်",
+    "mapped": "G¤m",
+    "id": "G099"
+  },
+  {
+    "original": "ဇွန်",
+    "mapped": "G¤p",
+    "id": "G100"
+  },
+  {
+    "original": "ဇွေ့",
+    "mapped": "G¤∆¿",
+    "id": "G104"
+  },
+  {
+    "original": "ဇိန်",
+    "mapped": "GÐp",
+    "id": "G114"
+  },
+  {
+    "original": "ဇင်း",
+    "mapped": "Ge_",
+    "id": "G001"
+  },
+  {
+    "original": "ဇိုး",
+    "mapped": "GÐð_",
+    "id": "G115"
+  },
+  {
+    "original": "ဇာတ်",
+    "mapped": "G¼m",
+    "id": "G232"
+  },
+  {
+    "original": "ဇင့်",
+    "mapped": "GE¿^",
+    "id": "G241"
+  },
+  {
+    "original": "ဇိမ်",
+    "mapped": "GÐu",
+    "id": "G257"
+  },
+  {
+    "original": "ဇာစ်",
+    "mapped": "G¼f",
+    "id": "G266"
+  },
+  {
+    "original": "ဇေဋ်",
+    "mapped": "G∆i",
+    "id": "G267"
+  },
+  {
+    "original": "ဇောက်",
+    "mapped": "G∆¼a",
+    "id": "G121"
+  },
+  {
+    "original": "ဇွန်း",
+    "mapped": "G¤p_",
+    "id": "G159"
+  },
+  {
+    "original": "ဇုမ်း",
+    "mapped": "Gðu_",
+    "id": "G268"
+  },
+  {
+    "original": "ဇုန်း",
+    "mapped": "Gðp_",
+    "id": "G120"
+  },
+  {
+    "original": "ဇိုင်း",
+    "mapped": "GÐðe_",
+    "id": "G184"
+  },
+  {
+    "original": "ဇောင်း",
+    "mapped": "G∆¼e_",
+    "id": "G186"
+  },
+  {
+    "original": "ဈီ",
+    "mapped": "¦Þ",
+    "id": "¦002"
+  },
+  {
+    "original": "ဈေ",
+    "mapped": "¦∆",
+    "id": "¦013"
+  },
+  {
+    "original": "ဈာ",
+    "mapped": "¦¼",
+    "id": "¦011"
+  },
+  {
+    "original": "ဈိ",
+    "mapped": "¦Ð",
+    "id": "¦012"
+  },
+  {
+    "original": "ဈေး",
+    "mapped": "¦∆_",
+    "id": "¦018"
+  },
+  {
+    "original": "ဈာန်",
+    "mapped": "¦¼p",
+    "id": "¦269"
+  },
+  {
+    "original": "ဉေ",
+    "mapped": "J∆",
+    "id": "J013"
+  },
+  {
+    "original": "ဉူ",
+    "mapped": "Jþ",
+    "id": "J004"
+  },
+  {
+    "original": "ဉှ",
+    "mapped": "Jµ",
+    "id": "J233"
+  },
+  {
+    "original": "ဉာ",
+    "mapped": "J¼",
+    "id": "J011"
+  },
+  {
+    "original": "ဉှိ",
+    "mapped": "JµÐ",
+    "id": "J270"
+  },
+  {
+    "original": "ဉတ်",
+    "mapped": "Jm",
+    "id": "J040"
+  },
+  {
+    "original": "ဉှာ",
+    "mapped": "Jµ¼",
+    "id": "J238"
+  },
+  {
+    "original": "ဉှော",
+    "mapped": "Jµ∆¼",
+    "id": "J271"
+  },
+  {
+    "original": "ဉာဉ်",
+    "mapped": "J¼j",
+    "id": "J272"
+  },
+  {
+    "original": "ဉာဏ်",
+    "mapped": "J¼l",
+    "id": "J273"
+  },
+  {
+    "original": "ဉာသ်",
+    "mapped": "J¼y",
+    "id": "J274"
+  },
+  {
+    "original": "ည့",
+    "mapped": "H¿",
+    "id": "H194"
+  },
+  {
+    "original": "ညီ",
+    "mapped": "HÞ",
+    "id": "H002"
+  },
+  {
+    "original": "ညု",
+    "mapped": "Hð",
+    "id": "H003"
+  },
+  {
+    "original": "ညူ",
+    "mapped": "Hþ",
+    "id": "H004"
+  },
+  {
+    "original": "ညေ",
+    "mapped": "H∆",
+    "id": "H013"
+  },
+  {
+    "original": "ညဲ",
+    "mapped": "Hß",
+    "id": "H005"
+  },
+  {
+    "original": "ညံ",
+    "mapped": "H¾",
+    "id": "H006"
+  },
+  {
+    "original": "ညြ",
+    "mapped": "H¢",
+    "id": "H009"
+  },
+  {
+    "original": "ညာ",
+    "mapped": "H¼",
+    "id": "H011"
+  },
+  {
+    "original": "ညိ",
+    "mapped": "HÐ",
+    "id": "H012"
+  },
+  {
+    "original": "ညှ",
+    "mapped": "Hµ",
+    "id": "H233"
+  },
+  {
+    "original": "ညူး",
+    "mapped": "Hþ_",
+    "id": "H020"
+  },
+  {
+    "original": "ညော",
+    "mapped": "H∆¼",
+    "id": "H008"
+  },
+  {
+    "original": "ညံ့",
+    "mapped": "H¾¿",
+    "id": "H022"
+  },
+  {
+    "original": "ညို",
+    "mapped": "HÐð",
+    "id": "H034"
+  },
+  {
+    "original": "ညက်",
+    "mapped": "Ha",
+    "id": "H035"
+  },
+  {
+    "original": "ညင်",
+    "mapped": "He",
+    "id": "H036"
+  },
+  {
+    "original": "ညစ်",
+    "mapped": "Hf",
+    "id": "H037"
+  },
+  {
+    "original": "ညတ်",
+    "mapped": "Hm",
+    "id": "H040"
+  },
+  {
+    "original": "ညန်",
+    "mapped": "Hp",
+    "id": "H041"
+  },
+  {
+    "original": "ညပ်",
+    "mapped": "Hq",
+    "id": "H042"
+  },
+  {
+    "original": "ညား",
+    "mapped": "H¼_",
+    "id": "H045"
+  },
+  {
+    "original": "ညီး",
+    "mapped": "HÞ_",
+    "id": "H196"
+  },
+  {
+    "original": "ညှာ",
+    "mapped": "Hµ¼",
+    "id": "H238"
+  },
+  {
+    "original": "ညေ့",
+    "mapped": "H∆¿",
+    "id": "H235"
+  },
+  {
+    "original": "ညှီ",
+    "mapped": "HµÞ",
+    "id": "H275"
+  },
+  {
+    "original": "ညြု",
+    "mapped": "H¢ð",
+    "id": "H276"
+  },
+  {
+    "original": "ညှိ",
+    "mapped": "HµÐ",
+    "id": "H270"
+  },
+  {
+    "original": "ညျော",
+    "mapped": "H*∆¼",
+    "id": "H076"
+  },
+  {
+    "original": "ညွတ်",
+    "mapped": "H¤m",
+    "id": "H099"
+  },
+  {
+    "original": "ညွန်",
+    "mapped": "H¤p",
+    "id": "H100"
+  },
+  {
+    "original": "ညမ်း",
+    "mapped": "Hu_",
+    "id": "H109"
+  },
+  {
+    "original": "ညိတ်",
+    "mapped": "HÐm",
+    "id": "H113"
+  },
+  {
+    "original": "ညိုး",
+    "mapped": "HÐð_",
+    "id": "H115"
+  },
+  {
+    "original": "ညို့",
+    "mapped": "HÐð¿",
+    "id": "H242"
+  },
+  {
+    "original": "ညှက်",
+    "mapped": "Hµa",
+    "id": "H245"
+  },
+  {
+    "original": "ညဉ့်",
+    "mapped": "HJ¿^",
+    "id": "H253"
+  },
+  {
+    "original": "ညည့်",
+    "mapped": "HH¿^",
+    "id": "H255"
+  },
+  {
+    "original": "ညည်း",
+    "mapped": "Hh_",
+    "id": "H256"
+  },
+  {
+    "original": "ညာဉ်",
+    "mapped": "H¼j",
+    "id": "H272"
+  },
+  {
+    "original": "ညှစ်",
+    "mapped": "Hµf",
+    "id": "H277"
+  },
+  {
+    "original": "ညှပ်",
+    "mapped": "Hµq",
+    "id": "H278"
+  },
+  {
+    "original": "ညင်း",
+    "mapped": "He_",
+    "id": "H001"
+  },
+  {
+    "original": "ညုန်း",
+    "mapped": "Hðp_",
+    "id": "H120"
+  },
+  {
+    "original": "ညောင်",
+    "mapped": "H∆¼e",
+    "id": "H122"
+  },
+  {
+    "original": "ညွန့်",
+    "mapped": "H¤P¿^",
+    "id": "H158"
+  },
+  {
+    "original": "ညွန်း",
+    "mapped": "H¤p_",
+    "id": "H159"
+  },
+  {
+    "original": "ညွှတ်",
+    "mapped": "H¤µm",
+    "id": "H279"
+  },
+  {
+    "original": "ညွှန်",
+    "mapped": "H¤µp",
+    "id": "H280"
+  },
+  {
+    "original": "ညှဉ်း",
+    "mapped": "Hµj_",
+    "id": "H281"
+  },
+  {
+    "original": "ညှို့",
+    "mapped": "HµÐð¿",
+    "id": "H282"
+  },
+  {
+    "original": "ညှိုး",
+    "mapped": "HµÐð_",
+    "id": "H283"
+  },
+  {
+    "original": "ညှော်",
+    "mapped": "Hµ∆¼^",
+    "id": "H284"
+  },
+  {
+    "original": "ညှင်း",
+    "mapped": "Hµe_",
+    "id": "H285"
+  },
+  {
+    "original": "ညွှန့်",
+    "mapped": "H¤µP¿^",
+    "id": "H286"
+  },
+  {
+    "original": "ညှောက်",
+    "mapped": "Hµ∆¼a",
+    "id": "H287"
+  },
+  {
+    "original": "ညွှန်း",
+    "mapped": "H¤µp_",
+    "id": "H288"
+  },
+  {
+    "original": "ညောင်း",
+    "mapped": "H∆¼e_",
+    "id": "H186"
+  },
+  {
+    "original": "ညှောင့်",
+    "mapped": "Hµ∆¼E¿^",
+    "id": "H289"
+  },
+  {
+    "original": "ဋံ",
+    "mapped": "I¾",
+    "id": "I006"
+  },
+  {
+    "original": "ဋူ",
+    "mapped": "Iþ",
+    "id": "I004"
+  },
+  {
+    "original": "ဋျ",
+    "mapped": "I*",
+    "id": "I007"
+  },
+  {
+    "original": "ဋီ",
+    "mapped": "IÞ",
+    "id": "I002"
+  },
+  {
+    "original": "ဋေ",
+    "mapped": "I∆",
+    "id": "I013"
+  },
+  {
+    "original": "ဋာ",
+    "mapped": "I¼",
+    "id": "I011"
+  },
+  {
+    "original": "ဋိ",
+    "mapped": "IÐ",
+    "id": "I012"
+  },
+  {
+    "original": "ဋု",
+    "mapped": "Ið",
+    "id": "I003"
+  },
+  {
+    "original": "ဋျံ",
+    "mapped": "I*¾",
+    "id": "I027"
+  },
+  {
+    "original": "ဋုက်",
+    "mapped": "Iða",
+    "id": "I051"
+  },
+  {
+    "original": "ဌေ",
+    "mapped": "¯∆",
+    "id": "¯013"
+  },
+  {
+    "original": "ဌု",
+    "mapped": "¯ð",
+    "id": "¯003"
+  },
+  {
+    "original": "ဌံ",
+    "mapped": "¯¾",
+    "id": "¯006"
+  },
+  {
+    "original": "ဌီ",
+    "mapped": "¯Þ",
+    "id": "¯002"
+  },
+  {
+    "original": "ဌာ",
+    "mapped": "¯¼",
+    "id": "¯011"
+  },
+  {
+    "original": "ဌိ",
+    "mapped": "¯Ð",
+    "id": "¯012"
+  },
+  {
+    "original": "ဌော",
+    "mapped": "¯∆¼",
+    "id": "¯008"
+  },
+  {
+    "original": "ဌေး",
+    "mapped": "¯∆_",
+    "id": "¯018"
+  },
+  {
+    "original": "ဌာန်",
+    "mapped": "¯¼p",
+    "id": "¯269"
+  },
+  {
+    "original": "ဌာန်း",
+    "mapped": "¯¼p_",
+    "id": "¯290"
+  },
+  {
+    "original": "ဍိ",
+    "mapped": "KÐ",
+    "id": "K012"
+  },
+  {
+    "original": "ဍူ",
+    "mapped": "Kþ",
+    "id": "K004"
+  },
+  {
+    "original": "ဍံ",
+    "mapped": "K¾",
+    "id": "K006"
+  },
+  {
+    "original": "ဍေ",
+    "mapped": "K∆",
+    "id": "K013"
+  },
+  {
+    "original": "ဍီ",
+    "mapped": "KÞ",
+    "id": "K002"
+  },
+  {
+    "original": "ဍာ",
+    "mapped": "K¼",
+    "id": "K011"
+  },
+  {
+    "original": "ဍု",
+    "mapped": "Kð",
+    "id": "K003"
+  },
+  {
+    "original": "ဍော",
+    "mapped": "K∆¼",
+    "id": "K008"
+  },
+  {
+    "original": "ဍို",
+    "mapped": "KÐð",
+    "id": "K034"
+  },
+  {
+    "original": "ဍုက်",
+    "mapped": "Kða",
+    "id": "K051"
+  },
+  {
+    "original": "ဍိတ်",
+    "mapped": "KÐm",
+    "id": "K113"
+  },
+  {
+    "original": "ဍိုင်",
+    "mapped": "KÐðe",
+    "id": "K162"
+  },
+  {
+    "original": "ဎူ",
+    "mapped": "±þ",
+    "id": "±004"
+  },
+  {
+    "original": "ဎျ",
+    "mapped": "±*",
+    "id": "±007"
+  },
+  {
+    "original": "ဎိ",
+    "mapped": "±Ð",
+    "id": "±012"
+  },
+  {
+    "original": "ဎျော",
+    "mapped": "±*∆¼",
+    "id": "±076"
+  },
+  {
+    "original": "ဏူ",
+    "mapped": "Lþ",
+    "id": "L004"
+  },
+  {
+    "original": "ဏံ",
+    "mapped": "L¾",
+    "id": "L006"
+  },
+  {
+    "original": "ဏျ",
+    "mapped": "L*",
+    "id": "L007"
+  },
+  {
+    "original": "ဏီ",
+    "mapped": "LÞ",
+    "id": "L002"
+  },
+  {
+    "original": "ဏု",
+    "mapped": "Lð",
+    "id": "L003"
+  },
+  {
+    "original": "ဏေ",
+    "mapped": "L∆",
+    "id": "L013"
+  },
+  {
+    "original": "ဏာ",
+    "mapped": "L¼",
+    "id": "L011"
+  },
+  {
+    "original": "ဏိ",
+    "mapped": "LÐ",
+    "id": "L012"
+  },
+  {
+    "original": "ဏှ",
+    "mapped": "Lµ",
+    "id": "L233"
+  },
+  {
+    "original": "ဏျာ",
+    "mapped": "L*¼",
+    "id": "L015"
+  },
+  {
+    "original": "ဏွိ",
+    "mapped": "L¤Ð",
+    "id": "L234"
+  },
+  {
+    "original": "ဏျံ",
+    "mapped": "L*¾",
+    "id": "L027"
+  },
+  {
+    "original": "ဏှာ",
+    "mapped": "Lµ¼",
+    "id": "L238"
+  },
+  {
+    "original": "ဏှီ",
+    "mapped": "LµÞ",
+    "id": "L275"
+  },
+  {
+    "original": "ဏှိ",
+    "mapped": "LµÐ",
+    "id": "L270"
+  },
+  {
+    "original": "ဏျော",
+    "mapped": "L*∆¼",
+    "id": "L076"
+  },
+  {
+    "original": "ဏန်း",
+    "mapped": "Lp_",
+    "id": "L108"
+  },
+  {
+    "original": "ဏှဏှာဏှီဏှိ",
+    "mapped": "LµLµ¼LµÞLµÐ",
+    "id": "L291"
+  },
+  {
+    "original": "တြ",
+    "mapped": "M¢",
+    "id": "M009"
+  },
+  {
+    "original": "တျ",
+    "mapped": "M*",
+    "id": "M007"
+  },
+  {
+    "original": "တု",
+    "mapped": "Mð",
+    "id": "M003"
+  },
+  {
+    "original": "တ့",
+    "mapped": "M¿",
+    "id": "M194"
+  },
+  {
+    "original": "တီ",
+    "mapped": "MÞ",
+    "id": "M002"
+  },
+  {
+    "original": "တူ",
+    "mapped": "Mþ",
+    "id": "M004"
+  },
+  {
+    "original": "တေ",
+    "mapped": "M∆",
+    "id": "M013"
+  },
+  {
+    "original": "တဲ",
+    "mapped": "Mß",
+    "id": "M005"
+  },
+  {
+    "original": "တံ",
+    "mapped": "M¾",
+    "id": "M006"
+  },
+  {
+    "original": "တွ",
+    "mapped": "M¤",
+    "id": "M010"
+  },
+  {
+    "original": "တာ",
+    "mapped": "M¼",
+    "id": "M011"
+  },
+  {
+    "original": "တိ",
+    "mapped": "MÐ",
+    "id": "M012"
+  },
+  {
+    "original": "တြေ",
+    "mapped": "M¢∆",
+    "id": "M016"
+  },
+  {
+    "original": "တြူ",
+    "mapped": "M¢þ",
+    "id": "M028"
+  },
+  {
+    "original": "တြု",
+    "mapped": "M¢ð",
+    "id": "M276"
+  },
+  {
+    "original": "တျူ",
+    "mapped": "M*þ",
+    "id": "M024"
+  },
+  {
+    "original": "တျံ",
+    "mapped": "M*¾",
+    "id": "M027"
+  },
+  {
+    "original": "တြံ",
+    "mapped": "M¢¾",
+    "id": "M046"
+  },
+  {
+    "original": "တား",
+    "mapped": "M¼_",
+    "id": "M045"
+  },
+  {
+    "original": "တုံ",
+    "mapped": "Mð¾",
+    "id": "M019"
+  },
+  {
+    "original": "တူး",
+    "mapped": "Mþ_",
+    "id": "M020"
+  },
+  {
+    "original": "တော",
+    "mapped": "M∆¼",
+    "id": "M008"
+  },
+  {
+    "original": "တေး",
+    "mapped": "M∆_",
+    "id": "M018"
+  },
+  {
+    "original": "တဲ့",
+    "mapped": "Mß¿",
+    "id": "M021"
+  },
+  {
+    "original": "တံ့",
+    "mapped": "M¾¿",
+    "id": "M022"
+  },
+  {
+    "original": "တျာ",
+    "mapped": "M*¼",
+    "id": "M015"
+  },
+  {
+    "original": "တြာ",
+    "mapped": "M¢¼",
+    "id": "M017"
+  },
+  {
+    "original": "တွဲ",
+    "mapped": "M¤ß",
+    "id": "M033"
+  },
+  {
+    "original": "တို",
+    "mapped": "MÐð",
+    "id": "M034"
+  },
+  {
+    "original": "တက်",
+    "mapped": "Ma",
+    "id": "M035"
+  },
+  {
+    "original": "တင်",
+    "mapped": "Me",
+    "id": "M036"
+  },
+  {
+    "original": "တစ်",
+    "mapped": "Mf",
+    "id": "M037"
+  },
+  {
+    "original": "တတ်",
+    "mapped": "Mm",
+    "id": "M040"
+  },
+  {
+    "original": "တန်",
+    "mapped": "Mp",
+    "id": "M041"
+  },
+  {
+    "original": "တပ်",
+    "mapped": "Mq",
+    "id": "M042"
+  },
+  {
+    "original": "တမ်",
+    "mapped": "Mu",
+    "id": "M043"
+  },
+  {
+    "original": "တယ်",
+    "mapped": "Mv",
+    "id": "M044"
+  },
+  {
+    "original": "တွေ",
+    "mapped": "M¤∆",
+    "id": "M047"
+  },
+  {
+    "original": "တီး",
+    "mapped": "MÞ_",
+    "id": "M196"
+  },
+  {
+    "original": "တွံ",
+    "mapped": "M¤¾",
+    "id": "M198"
+  },
+  {
+    "original": "တြိ",
+    "mapped": "M¢Ð",
+    "id": "M049"
+  },
+  {
+    "original": "တည်",
+    "mapped": "Mh",
+    "id": "M252"
+  },
+  {
+    "original": "တေ့",
+    "mapped": "M∆¿",
+    "id": "M235"
+  },
+  {
+    "original": "တိံ",
+    "mapped": "MÐ¾",
+    "id": "M292"
+  },
+  {
+    "original": "တြီ",
+    "mapped": "M¢Þ",
+    "id": "M293"
+  },
+  {
+    "original": "တွာ",
+    "mapped": "M¤¼",
+    "id": "M031"
+  },
+  {
+    "original": "တြော",
+    "mapped": "M¢∆¼",
+    "id": "M094"
+  },
+  {
+    "original": "တုံ့",
+    "mapped": "Mð¾¿",
+    "id": "M243"
+  },
+  {
+    "original": "တုတ်",
+    "mapped": "Mðm",
+    "id": "M053"
+  },
+  {
+    "original": "တုန်",
+    "mapped": "Mðp",
+    "id": "M054"
+  },
+  {
+    "original": "တုပ်",
+    "mapped": "Mðq",
+    "id": "M055"
+  },
+  {
+    "original": "တုံး",
+    "mapped": "Mð¾_",
+    "id": "M058"
+  },
+  {
+    "original": "တော့",
+    "mapped": "M∆¼¿",
+    "id": "M059"
+  },
+  {
+    "original": "တော်",
+    "mapped": "M∆¼^",
+    "id": "M060"
+  },
+  {
+    "original": "တျော",
+    "mapped": "M*∆¼",
+    "id": "M076"
+  },
+  {
+    "original": "တြီး",
+    "mapped": "M¢Þ_",
+    "id": "M050"
+  },
+  {
+    "original": "တွက်",
+    "mapped": "M¤a",
+    "id": "M098"
+  },
+  {
+    "original": "တွတ်",
+    "mapped": "M¤m",
+    "id": "M099"
+  },
+  {
+    "original": "တွန်",
+    "mapped": "M¤p",
+    "id": "M100"
+  },
+  {
+    "original": "တွပ်",
+    "mapped": "M¤q",
+    "id": "M101"
+  },
+  {
+    "original": "တွယ်",
+    "mapped": "M¤v",
+    "id": "M103"
+  },
+  {
+    "original": "တွေ့",
+    "mapped": "M¤∆¿",
+    "id": "M104"
+  },
+  {
+    "original": "တွေး",
+    "mapped": "M¤∆_",
+    "id": "M105"
+  },
+  {
+    "original": "တွဲ့",
+    "mapped": "M¤ß¿",
+    "id": "M106"
+  },
+  {
+    "original": "တန့်",
+    "mapped": "MP¿^",
+    "id": "M107"
+  },
+  {
+    "original": "တန်း",
+    "mapped": "Mp_",
+    "id": "M108"
+  },
+  {
+    "original": "တမ်း",
+    "mapped": "Mu_",
+    "id": "M109"
+  },
+  {
+    "original": "တိတ်",
+    "mapped": "MÐm",
+    "id": "M113"
+  },
+  {
+    "original": "တိန်",
+    "mapped": "MÐp",
+    "id": "M114"
+  },
+  {
+    "original": "တင်း",
+    "mapped": "Me_",
+    "id": "M001"
+  },
+  {
+    "original": "တိုး",
+    "mapped": "MÐð_",
+    "id": "M115"
+  },
+  {
+    "original": "တိပ်",
+    "mapped": "MÐq",
+    "id": "M200"
+  },
+  {
+    "original": "တွင်",
+    "mapped": "M¤e",
+    "id": "M206"
+  },
+  {
+    "original": "တင့်",
+    "mapped": "ME¿^",
+    "id": "M241"
+  },
+  {
+    "original": "တို့",
+    "mapped": "MÐð¿",
+    "id": "M242"
+  },
+  {
+    "original": "တွား",
+    "mapped": "M¤¼_",
+    "id": "M244"
+  },
+  {
+    "original": "တဉ်း",
+    "mapped": "Mj_",
+    "id": "M254"
+  },
+  {
+    "original": "တည့်",
+    "mapped": "MH¿^",
+    "id": "M255"
+  },
+  {
+    "original": "တည်း",
+    "mapped": "Mh_",
+    "id": "M256"
+  },
+  {
+    "original": "တိမ်",
+    "mapped": "MÐu",
+    "id": "M257"
+  },
+  {
+    "original": "တာန်",
+    "mapped": "M¼p",
+    "id": "M269"
+  },
+  {
+    "original": "တွဒ်",
+    "mapped": "M¤o",
+    "id": "M294"
+  },
+  {
+    "original": "တုန်း",
+    "mapped": "Mðp_",
+    "id": "M120"
+  },
+  {
+    "original": "တောက်",
+    "mapped": "M∆¼a",
+    "id": "M121"
+  },
+  {
+    "original": "တောင်",
+    "mapped": "M∆¼e",
+    "id": "M122"
+  },
+  {
+    "original": "တြိတ်",
+    "mapped": "M¢Ðm",
+    "id": "M145"
+  },
+  {
+    "original": "တွန့်",
+    "mapped": "M¤P¿^",
+    "id": "M158"
+  },
+  {
+    "original": "တွန်း",
+    "mapped": "M¤p_",
+    "id": "M159"
+  },
+  {
+    "original": "တိန်း",
+    "mapped": "MÐp_",
+    "id": "M161"
+  },
+  {
+    "original": "တိုင်",
+    "mapped": "MÐðe",
+    "id": "M162"
+  },
+  {
+    "original": "တိုက်",
+    "mapped": "MÐða",
+    "id": "M168"
+  },
+  {
+    "original": "တြင်း",
+    "mapped": "M¢e_",
+    "id": "M170"
+  },
+  {
+    "original": "တိမ်း",
+    "mapped": "MÐu_",
+    "id": "M259"
+  },
+  {
+    "original": "တိုရ်",
+    "mapped": "MÐðw",
+    "id": "M260"
+  },
+  {
+    "original": "တွင်း",
+    "mapped": "M¤e_",
+    "id": "M172"
+  },
+  {
+    "original": "တိုင်း",
+    "mapped": "MÐðe_",
+    "id": "M184"
+  },
+  {
+    "original": "တောင်း",
+    "mapped": "M∆¼e_",
+    "id": "M186"
+  },
+  {
+    "original": "တောင့်",
+    "mapped": "M∆¼E¿^",
+    "id": "M262"
+  },
+  {
+    "original": "တွင်တော်",
+    "mapped": "M¤eM∆¼^",
+    "id": "M295"
+  },
+  {
+    "original": "ထျ",
+    "mapped": "N*",
+    "id": "N007"
+  },
+  {
+    "original": "ထီ",
+    "mapped": "NÞ",
+    "id": "N002"
+  },
+  {
+    "original": "ထု",
+    "mapped": "Nð",
+    "id": "N003"
+  },
+  {
+    "original": "ထူ",
+    "mapped": "Nþ",
+    "id": "N004"
+  },
+  {
+    "original": "ထေ",
+    "mapped": "N∆",
+    "id": "N013"
+  },
+  {
+    "original": "ထဲ",
+    "mapped": "Nß",
+    "id": "N005"
+  },
+  {
+    "original": "ထံ",
+    "mapped": "N¾",
+    "id": "N006"
+  },
+  {
+    "original": "ထာ",
+    "mapped": "N¼",
+    "id": "N011"
+  },
+  {
+    "original": "ထိ",
+    "mapped": "NÐ",
+    "id": "N012"
+  },
+  {
+    "original": "ထျာ",
+    "mapped": "N*¼",
+    "id": "N015"
+  },
+  {
+    "original": "ထုံ",
+    "mapped": "Nð¾",
+    "id": "N019"
+  },
+  {
+    "original": "ထူး",
+    "mapped": "Nþ_",
+    "id": "N020"
+  },
+  {
+    "original": "ထော",
+    "mapped": "N∆¼",
+    "id": "N008"
+  },
+  {
+    "original": "ထေး",
+    "mapped": "N∆_",
+    "id": "N018"
+  },
+  {
+    "original": "ထွာ",
+    "mapped": "N¤¼",
+    "id": "N031"
+  },
+  {
+    "original": "ထို",
+    "mapped": "NÐð",
+    "id": "N034"
+  },
+  {
+    "original": "ထက်",
+    "mapped": "Na",
+    "id": "N035"
+  },
+  {
+    "original": "ထင်",
+    "mapped": "Ne",
+    "id": "N036"
+  },
+  {
+    "original": "ထစ်",
+    "mapped": "Nf",
+    "id": "N037"
+  },
+  {
+    "original": "ထတ်",
+    "mapped": "Nm",
+    "id": "N040"
+  },
+  {
+    "original": "ထန်",
+    "mapped": "Np",
+    "id": "N041"
+  },
+  {
+    "original": "ထပ်",
+    "mapped": "Nq",
+    "id": "N042"
+  },
+  {
+    "original": "ထယ်",
+    "mapped": "Nv",
+    "id": "N044"
+  },
+  {
+    "original": "ထား",
+    "mapped": "N¼_",
+    "id": "N045"
+  },
+  {
+    "original": "ထွေ",
+    "mapped": "N¤∆",
+    "id": "N047"
+  },
+  {
+    "original": "ထီး",
+    "mapped": "NÞ_",
+    "id": "N196"
+  },
+  {
+    "original": "ထည်",
+    "mapped": "Nh",
+    "id": "N252"
+  },
+  {
+    "original": "ထေ့",
+    "mapped": "N∆¿",
+    "id": "N235"
+  },
+  {
+    "original": "ထိး",
+    "mapped": "NÐ_",
+    "id": "N296"
+  },
+  {
+    "original": "ထိုး",
+    "mapped": "NÐð_",
+    "id": "N115"
+  },
+  {
+    "original": "ထုတ်",
+    "mapped": "Nðm",
+    "id": "N053"
+  },
+  {
+    "original": "ထုန်",
+    "mapped": "Nðp",
+    "id": "N054"
+  },
+  {
+    "original": "ထုပ်",
+    "mapped": "Nðq",
+    "id": "N055"
+  },
+  {
+    "original": "ထုံး",
+    "mapped": "Nð¾_",
+    "id": "N058"
+  },
+  {
+    "original": "ထော့",
+    "mapped": "N∆¼¿",
+    "id": "N059"
+  },
+  {
+    "original": "ထော်",
+    "mapped": "N∆¼^",
+    "id": "N060"
+  },
+  {
+    "original": "ထြော",
+    "mapped": "N¢∆¼",
+    "id": "N094"
+  },
+  {
+    "original": "ထွက်",
+    "mapped": "N¤a",
+    "id": "N098"
+  },
+  {
+    "original": "ထွတ်",
+    "mapped": "N¤m",
+    "id": "N099"
+  },
+  {
+    "original": "ထွန်",
+    "mapped": "N¤p",
+    "id": "N100"
+  },
+  {
+    "original": "ထွေး",
+    "mapped": "N¤∆_",
+    "id": "N105"
+  },
+  {
+    "original": "ထန့်",
+    "mapped": "NP¿^",
+    "id": "N107"
+  },
+  {
+    "original": "ထန်း",
+    "mapped": "Np_",
+    "id": "N108"
+  },
+  {
+    "original": "ထမ်း",
+    "mapped": "Nu_",
+    "id": "N109"
+  },
+  {
+    "original": "ထိတ်",
+    "mapped": "NÐm",
+    "id": "N113"
+  },
+  {
+    "original": "ထိန်",
+    "mapped": "NÐp",
+    "id": "N114"
+  },
+  {
+    "original": "ထိပ်",
+    "mapped": "NÐq",
+    "id": "N200"
+  },
+  {
+    "original": "ထွင်",
+    "mapped": "N¤e",
+    "id": "N206"
+  },
+  {
+    "original": "ထင့်",
+    "mapped": "NE¿^",
+    "id": "N241"
+  },
+  {
+    "original": "ထို့",
+    "mapped": "NÐð¿",
+    "id": "N242"
+  },
+  {
+    "original": "ထုံ့",
+    "mapped": "Nð¾¿",
+    "id": "N243"
+  },
+  {
+    "original": "ထွား",
+    "mapped": "N¤¼_",
+    "id": "N244"
+  },
+  {
+    "original": "ထည့်",
+    "mapped": "NH¿^",
+    "id": "N255"
+  },
+  {
+    "original": "ထိမ်",
+    "mapped": "NÐu",
+    "id": "N257"
+  },
+  {
+    "original": "ထေရ်",
+    "mapped": "N∆w",
+    "id": "N297"
+  },
+  {
+    "original": "ထင်း",
+    "mapped": "Ne_",
+    "id": "N001"
+  },
+  {
+    "original": "ထည်း",
+    "mapped": "Nh_",
+    "id": "N256"
+  },
+  {
+    "original": "ထောက်",
+    "mapped": "N∆¼a",
+    "id": "N121"
+  },
+  {
+    "original": "ထောင်",
+    "mapped": "N∆¼e",
+    "id": "N122"
+  },
+  {
+    "original": "ထွန့်",
+    "mapped": "N¤P¿^",
+    "id": "N158"
+  },
+  {
+    "original": "ထွန်း",
+    "mapped": "N¤p_",
+    "id": "N159"
+  },
+  {
+    "original": "ထိန်း",
+    "mapped": "NÐp_",
+    "id": "N161"
+  },
+  {
+    "original": "ထိုင်",
+    "mapped": "NÐðe",
+    "id": "N162"
+  },
+  {
+    "original": "ထိုက်",
+    "mapped": "NÐða",
+    "id": "N168"
+  },
+  {
+    "original": "ထိမ်း",
+    "mapped": "NÐu_",
+    "id": "N259"
+  },
+  {
+    "original": "ထိန့်",
+    "mapped": "NÐP¿^",
+    "id": "N298"
+  },
+  {
+    "original": "ထွင်း",
+    "mapped": "N¤e_",
+    "id": "N172"
+  },
+  {
+    "original": "ထိုင်း",
+    "mapped": "NÐðe_",
+    "id": "N184"
+  },
+  {
+    "original": "ထောင့်",
+    "mapped": "N∆¼E¿^",
+    "id": "N262"
+  },
+  {
+    "original": "ထောင်း",
+    "mapped": "N∆¼e_",
+    "id": "N186"
+  },
+  {
+    "original": "ဒျ",
+    "mapped": "O*",
+    "id": "O007"
+  },
+  {
+    "original": "ဒ့",
+    "mapped": "O¿",
+    "id": "O194"
+  },
+  {
+    "original": "ဒီ",
+    "mapped": "OÞ",
+    "id": "O002"
+  },
+  {
+    "original": "ဒု",
+    "mapped": "Oð",
+    "id": "O003"
+  },
+  {
+    "original": "ဒူ",
+    "mapped": "Oþ",
+    "id": "O004"
+  },
+  {
+    "original": "ဒေ",
+    "mapped": "O∆",
+    "id": "O013"
+  },
+  {
+    "original": "ဒံ",
+    "mapped": "O¾",
+    "id": "O006"
+  },
+  {
+    "original": "ဒြ",
+    "mapped": "O¢",
+    "id": "O009"
+  },
+  {
+    "original": "ဒွ",
+    "mapped": "O¤",
+    "id": "O010"
+  },
+  {
+    "original": "ဒိ",
+    "mapped": "OÐ",
+    "id": "O012"
+  },
+  {
+    "original": "ဒါ",
+    "mapped": "O½",
+    "id": "O193"
+  },
+  {
+    "original": "ဒျာ",
+    "mapped": "O*¼",
+    "id": "O015"
+  },
+  {
+    "original": "ဒူး",
+    "mapped": "Oþ_",
+    "id": "O020"
+  },
+  {
+    "original": "ဒုံ",
+    "mapped": "Oð¾",
+    "id": "O019"
+  },
+  {
+    "original": "ဒေး",
+    "mapped": "O∆_",
+    "id": "O018"
+  },
+  {
+    "original": "ဒြာ",
+    "mapped": "O¢¼",
+    "id": "O017"
+  },
+  {
+    "original": "ဒို",
+    "mapped": "OÐð",
+    "id": "O034"
+  },
+  {
+    "original": "ဒက်",
+    "mapped": "Oa",
+    "id": "O035"
+  },
+  {
+    "original": "ဒင်",
+    "mapped": "Oe",
+    "id": "O036"
+  },
+  {
+    "original": "ဒစ်",
+    "mapped": "Of",
+    "id": "O037"
+  },
+  {
+    "original": "ဒဏ်",
+    "mapped": "Ol",
+    "id": "O039"
+  },
+  {
+    "original": "ဒတ်",
+    "mapped": "Om",
+    "id": "O040"
+  },
+  {
+    "original": "ဒန်",
+    "mapped": "Op",
+    "id": "O041"
+  },
+  {
+    "original": "ဒယ်",
+    "mapped": "Ov",
+    "id": "O044"
+  },
+  {
+    "original": "ဒါး",
+    "mapped": "O½_",
+    "id": "O195"
+  },
+  {
+    "original": "ဒီး",
+    "mapped": "OÞ_",
+    "id": "O196"
+  },
+  {
+    "original": "ဒေါ",
+    "mapped": "O∆½",
+    "id": "O197"
+  },
+  {
+    "original": "ဒွါ",
+    "mapped": "O¤½",
+    "id": "O199"
+  },
+  {
+    "original": "ဒဂ်",
+    "mapped": "Oc",
+    "id": "O299"
+  },
+  {
+    "original": "ဒွိ",
+    "mapped": "O¤Ð",
+    "id": "O234"
+  },
+  {
+    "original": "ဒဠှံ",
+    "mapped": "O®µ¾",
+    "id": "O300"
+  },
+  {
+    "original": "ဒုက်",
+    "mapped": "Oða",
+    "id": "O051"
+  },
+  {
+    "original": "ဒုတ်",
+    "mapped": "Oðm",
+    "id": "O053"
+  },
+  {
+    "original": "ဒုံး",
+    "mapped": "Oð¾_",
+    "id": "O058"
+  },
+  {
+    "original": "ဒြပ်",
+    "mapped": "O¢q",
+    "id": "O087"
+  },
+  {
+    "original": "ဒွန်",
+    "mapped": "O¤p",
+    "id": "O100"
+  },
+  {
+    "original": "ဒွေး",
+    "mapped": "O¤∆_",
+    "id": "O105"
+  },
+  {
+    "original": "ဒန့်",
+    "mapped": "OP¿^",
+    "id": "O107"
+  },
+  {
+    "original": "ဒန်း",
+    "mapped": "Op_",
+    "id": "O108"
+  },
+  {
+    "original": "ဒိတ်",
+    "mapped": "OÐm",
+    "id": "O113"
+  },
+  {
+    "original": "ဒိန်",
+    "mapped": "OÐp",
+    "id": "O114"
+  },
+  {
+    "original": "ဒိုး",
+    "mapped": "OÐð_",
+    "id": "O115"
+  },
+  {
+    "original": "ဒေါ်",
+    "mapped": "O∆½^",
+    "id": "O208"
+  },
+  {
+    "original": "ဒေါ့",
+    "mapped": "O∆½¿",
+    "id": "O228"
+  },
+  {
+    "original": "ဒို့",
+    "mapped": "OÐð¿",
+    "id": "O242"
+  },
+  {
+    "original": "ဒည်း",
+    "mapped": "Oh_",
+    "id": "O256"
+  },
+  {
+    "original": "ဒါန်",
+    "mapped": "O½p",
+    "id": "O301"
+  },
+  {
+    "original": "ဒိဋ်",
+    "mapped": "OÐi",
+    "id": "O302"
+  },
+  {
+    "original": "ဒုလ်",
+    "mapped": "Oðx",
+    "id": "O303"
+  },
+  {
+    "original": "ဒင်း",
+    "mapped": "Oe_",
+    "id": "O001"
+  },
+  {
+    "original": "ဒုန်း",
+    "mapped": "Oðp_",
+    "id": "O120"
+  },
+  {
+    "original": "ဒွန်း",
+    "mapped": "O¤p_",
+    "id": "O159"
+  },
+  {
+    "original": "ဒိန်း",
+    "mapped": "OÐp_",
+    "id": "O161"
+  },
+  {
+    "original": "ဒိုင်",
+    "mapped": "OÐðe",
+    "id": "O162"
+  },
+  {
+    "original": "ဒိုက်",
+    "mapped": "OÐða",
+    "id": "O168"
+  },
+  {
+    "original": "ဒေါက်",
+    "mapped": "O∆½a",
+    "id": "O209"
+  },
+  {
+    "original": "ဒေါင်",
+    "mapped": "O∆½e",
+    "id": "O210"
+  },
+  {
+    "original": "ဒိမ်း",
+    "mapped": "OÐu_",
+    "id": "O259"
+  },
+  {
+    "original": "ဒါန်း",
+    "mapped": "O½p_",
+    "id": "O304"
+  },
+  {
+    "original": "ဒျန့်",
+    "mapped": "O*P¿^",
+    "id": "O305"
+  },
+  {
+    "original": "ဒေါင့်",
+    "mapped": "O∆½E¿^",
+    "id": "O216"
+  },
+  {
+    "original": "ဒိုင်း",
+    "mapped": "OÐðe_",
+    "id": "O184"
+  },
+  {
+    "original": "ဒေါင်း",
+    "mapped": "O∆½e_",
+    "id": "O221"
+  },
+  {
+    "original": "ဓေ",
+    "mapped": "¨∆",
+    "id": "¨013"
+  },
+  {
+    "original": "ဓျ",
+    "mapped": "¨*",
+    "id": "¨007"
+  },
+  {
+    "original": "ဓီ",
+    "mapped": "¨Þ",
+    "id": "¨002"
+  },
+  {
+    "original": "ဓု",
+    "mapped": "¨ð",
+    "id": "¨003"
+  },
+  {
+    "original": "ဓူ",
+    "mapped": "¨þ",
+    "id": "¨004"
+  },
+  {
+    "original": "ဓံ",
+    "mapped": "¨¾",
+    "id": "¨006"
+  },
+  {
+    "original": "ဓာ",
+    "mapped": "¨¼",
+    "id": "¨011"
+  },
+  {
+    "original": "ဓိ",
+    "mapped": "¨Ð",
+    "id": "¨012"
+  },
+  {
+    "original": "ဓျု",
+    "mapped": "¨*ð",
+    "id": "¨048"
+  },
+  {
+    "original": "ဓွာ",
+    "mapped": "¨¤¼",
+    "id": "¨031"
+  },
+  {
+    "original": "ဓော",
+    "mapped": "¨∆¼",
+    "id": "¨008"
+  },
+  {
+    "original": "ဓမ်",
+    "mapped": "¨u",
+    "id": "¨043"
+  },
+  {
+    "original": "ဓား",
+    "mapped": "¨¼_",
+    "id": "¨045"
+  },
+  {
+    "original": "ဓျော",
+    "mapped": "¨*∆¼",
+    "id": "¨076"
+  },
+  {
+    "original": "ဓမ်း",
+    "mapped": "¨u_",
+    "id": "¨109"
+  },
+  {
+    "original": "ဓာတ်",
+    "mapped": "¨¼m",
+    "id": "¨232"
+  },
+  {
+    "original": "ဓာန်",
+    "mapped": "¨¼p",
+    "id": "¨269"
+  },
+  {
+    "original": "ဓွန့်",
+    "mapped": "¨¤P¿^",
+    "id": "¨158"
+  },
+  {
+    "original": "ဓိုရ်",
+    "mapped": "¨Ððw",
+    "id": "¨260"
+  },
+  {
+    "original": "ဓာတ်",
+    "mapped": "¨¼m",
+    "id": "¨232"
+  },
+  {
+    "original": "နျ",
+    "mapped": "P*",
+    "id": "P007"
+  },
+  {
+    "original": "နေ",
+    "mapped": "P∆",
+    "id": "P013"
+  },
+  {
+    "original": "နီ",
+    "mapped": "PÞ",
+    "id": "P002"
+  },
+  {
+    "original": "နု",
+    "mapped": "Pð",
+    "id": "P003"
+  },
+  {
+    "original": "နူ",
+    "mapped": "Pþ",
+    "id": "P004"
+  },
+  {
+    "original": "နဲ",
+    "mapped": "Pß",
+    "id": "P005"
+  },
+  {
+    "original": "နံ",
+    "mapped": "P¾",
+    "id": "P006"
+  },
+  {
+    "original": "နွ",
+    "mapped": "P¤",
+    "id": "P010"
+  },
+  {
+    "original": "နာ",
+    "mapped": "P¼",
+    "id": "P011"
+  },
+  {
+    "original": "နိ",
+    "mapped": "PÐ",
+    "id": "P012"
+  },
+  {
+    "original": "န့",
+    "mapped": "P¿",
+    "id": "P194"
+  },
+  {
+    "original": "နှ",
+    "mapped": "Pµ",
+    "id": "P233"
+  },
+  {
+    "original": "နား",
+    "mapped": "P¼_",
+    "id": "P045"
+  },
+  {
+    "original": "နုံ",
+    "mapped": "Pð¾",
+    "id": "P019"
+  },
+  {
+    "original": "နူး",
+    "mapped": "Pþ_",
+    "id": "P020"
+  },
+  {
+    "original": "နော",
+    "mapped": "P∆¼",
+    "id": "P008"
+  },
+  {
+    "original": "နဲ့",
+    "mapped": "Pß¿",
+    "id": "P021"
+  },
+  {
+    "original": "နံ့",
+    "mapped": "P¾¿",
+    "id": "P022"
+  },
+  {
+    "original": "နျာ",
+    "mapped": "P*¼",
+    "id": "P015"
+  },
+  {
+    "original": "နျူ",
+    "mapped": "P*þ",
+    "id": "P024"
+  },
+  {
+    "original": "နွာ",
+    "mapped": "P¤¼",
+    "id": "P031"
+  },
+  {
+    "original": "နွဲ",
+    "mapped": "P¤ß",
+    "id": "P033"
+  },
+  {
+    "original": "နို",
+    "mapped": "PÐð",
+    "id": "P034"
+  },
+  {
+    "original": "နက်",
+    "mapped": "Pa",
+    "id": "P035"
+  },
+  {
+    "original": "နင်",
+    "mapped": "Pe",
+    "id": "P036"
+  },
+  {
+    "original": "နစ်",
+    "mapped": "Pf",
+    "id": "P037"
+  },
+  {
+    "original": "နတ်",
+    "mapped": "Pm",
+    "id": "P040"
+  },
+  {
+    "original": "နန်",
+    "mapped": "Pp",
+    "id": "P041"
+  },
+  {
+    "original": "နပ်",
+    "mapped": "Pq",
+    "id": "P042"
+  },
+  {
+    "original": "နမ်",
+    "mapped": "Pu",
+    "id": "P043"
+  },
+  {
+    "original": "နယ်",
+    "mapped": "Pv",
+    "id": "P044"
+  },
+  {
+    "original": "နီး",
+    "mapped": "PÞ_",
+    "id": "P196"
+  },
+  {
+    "original": "နွံ",
+    "mapped": "P¤¾",
+    "id": "P198"
+  },
+  {
+    "original": "နာ့",
+    "mapped": "P¼¿",
+    "id": "P231"
+  },
+  {
+    "original": "နှာ",
+    "mapped": "Pµ¼",
+    "id": "P238"
+  },
+  {
+    "original": "နေ့",
+    "mapped": "P∆¿",
+    "id": "P235"
+  },
+  {
+    "original": "နှဲ",
+    "mapped": "Pµß",
+    "id": "P306"
+  },
+  {
+    "original": "နှံ",
+    "mapped": "Pµ¾",
+    "id": "P307"
+  },
+  {
+    "original": "နှီး",
+    "mapped": "PµÞ_",
+    "id": "P308"
+  },
+  {
+    "original": "နှော",
+    "mapped": "Pµ∆¼",
+    "id": "P271"
+  },
+  {
+    "original": "နို့",
+    "mapped": "PÐð¿",
+    "id": "P242"
+  },
+  {
+    "original": "နုတ်",
+    "mapped": "Pðm",
+    "id": "P053"
+  },
+  {
+    "original": "နုပ်",
+    "mapped": "Pðq",
+    "id": "P055"
+  },
+  {
+    "original": "နုံး",
+    "mapped": "Pð¾_",
+    "id": "P058"
+  },
+  {
+    "original": "နော့",
+    "mapped": "P∆¼¿",
+    "id": "P059"
+  },
+  {
+    "original": "နော်",
+    "mapped": "P∆¼^",
+    "id": "P060"
+  },
+  {
+    "original": "နြော",
+    "mapped": "P¢∆¼",
+    "id": "P094"
+  },
+  {
+    "original": "နွန်",
+    "mapped": "P¤p",
+    "id": "P100"
+  },
+  {
+    "original": "နွယ်",
+    "mapped": "P¤v",
+    "id": "P103"
+  },
+  {
+    "original": "နွေး",
+    "mapped": "P¤∆_",
+    "id": "P105"
+  },
+  {
+    "original": "နွဲ့",
+    "mapped": "P¤ß¿",
+    "id": "P106"
+  },
+  {
+    "original": "နန့်",
+    "mapped": "PP¿^",
+    "id": "P107"
+  },
+  {
+    "original": "နန်း",
+    "mapped": "Pp_",
+    "id": "P108"
+  },
+  {
+    "original": "နမ်း",
+    "mapped": "Pu_",
+    "id": "P109"
+  },
+  {
+    "original": "နိစ်",
+    "mapped": "PÐf",
+    "id": "P112"
+  },
+  {
+    "original": "နင်း",
+    "mapped": "Pe_",
+    "id": "P001"
+  },
+  {
+    "original": "နိုး",
+    "mapped": "PÐð_",
+    "id": "P115"
+  },
+  {
+    "original": "နိပ်",
+    "mapped": "PÐq",
+    "id": "P200"
+  },
+  {
+    "original": "နင့်",
+    "mapped": "PE¿^",
+    "id": "P241"
+  },
+  {
+    "original": "နုံ့",
+    "mapped": "Pð¾¿",
+    "id": "P243"
+  },
+  {
+    "original": "နွား",
+    "mapped": "P¤¼_",
+    "id": "P244"
+  },
+  {
+    "original": "နှက်",
+    "mapped": "Pµa",
+    "id": "P245"
+  },
+  {
+    "original": "နည်း",
+    "mapped": "Ph_",
+    "id": "P256"
+  },
+  {
+    "original": "နိမ်",
+    "mapped": "PÐu",
+    "id": "P257"
+  },
+  {
+    "original": "နှစ်",
+    "mapped": "Pµf",
+    "id": "P277"
+  },
+  {
+    "original": "နှပ်",
+    "mapped": "Pµq",
+    "id": "P278"
+  },
+  {
+    "original": "နိဋ်",
+    "mapped": "PÐi",
+    "id": "P302"
+  },
+  {
+    "original": "နာမ်",
+    "mapped": "P¼u",
+    "id": "P309"
+  },
+  {
+    "original": "နိက်",
+    "mapped": "PÐa",
+    "id": "P310"
+  },
+  {
+    "original": "နိဂ်",
+    "mapped": "PÐc",
+    "id": "P311"
+  },
+  {
+    "original": "နိင်",
+    "mapped": "PÐe",
+    "id": "P312"
+  },
+  {
+    "original": "နိသ်",
+    "mapped": "PÐy",
+    "id": "P313"
+  },
+  {
+    "original": "နိဗ်",
+    "mapped": "PÐs",
+    "id": "P314"
+  },
+  {
+    "original": "နွှာ",
+    "mapped": "P¤µ¼",
+    "id": "P315"
+  },
+  {
+    "original": "နွှဲ",
+    "mapped": "P¤µß",
+    "id": "P316"
+  },
+  {
+    "original": "နွှံ",
+    "mapped": "P¤µ¾",
+    "id": "P317"
+  },
+  {
+    "original": "နှင်",
+    "mapped": "Pµe",
+    "id": "P318"
+  },
+  {
+    "original": "နှတ်",
+    "mapped": "Pµm",
+    "id": "P319"
+  },
+  {
+    "original": "နှယ်",
+    "mapped": "Pµv",
+    "id": "P320"
+  },
+  {
+    "original": "နှူး",
+    "mapped": "Pµþ_",
+    "id": "P321"
+  },
+  {
+    "original": "နှေး",
+    "mapped": "Pµ∆_",
+    "id": "P322"
+  },
+  {
+    "original": "နှံ့",
+    "mapped": "Pµ¾¿",
+    "id": "P323"
+  },
+  {
+    "original": "နိတ်",
+    "mapped": "PÐm",
+    "id": "P113"
+  },
+  {
+    "original": "နှဲ့",
+    "mapped": "Pµß¿",
+    "id": "P247"
+  },
+  {
+    "original": "နုန်း",
+    "mapped": "Pðp_",
+    "id": "P120"
+  },
+  {
+    "original": "နောက်",
+    "mapped": "P∆¼a",
+    "id": "P121"
+  },
+  {
+    "original": "နောင်",
+    "mapped": "P∆¼e",
+    "id": "P122"
+  },
+  {
+    "original": "နွမ်း",
+    "mapped": "P¤u_",
+    "id": "P160"
+  },
+  {
+    "original": "နိုင်",
+    "mapped": "PÐðe",
+    "id": "P162"
+  },
+  {
+    "original": "နိမ့်",
+    "mapped": "PÐU¿^",
+    "id": "P258"
+  },
+  {
+    "original": "နုန့်",
+    "mapped": "PðP¿^",
+    "id": "P261"
+  },
+  {
+    "original": "နှိုး",
+    "mapped": "PµÐð_",
+    "id": "P283"
+  },
+  {
+    "original": "နိင့်",
+    "mapped": "PÐE¿^",
+    "id": "P324"
+  },
+  {
+    "original": "နွှင်",
+    "mapped": "P¤µe",
+    "id": "P325"
+  },
+  {
+    "original": "နွှယ်",
+    "mapped": "P¤µv",
+    "id": "P326"
+  },
+  {
+    "original": "နွှေး",
+    "mapped": "P¤µ∆_",
+    "id": "P327"
+  },
+  {
+    "original": "နှင့်",
+    "mapped": "PµE¿^",
+    "id": "P328"
+  },
+  {
+    "original": "နှင်း",
+    "mapped": "Pµe_",
+    "id": "P285"
+  },
+  {
+    "original": "နှန့်",
+    "mapped": "PµP¿^",
+    "id": "P329"
+  },
+  {
+    "original": "နှမ်း",
+    "mapped": "Pµu_",
+    "id": "P330"
+  },
+  {
+    "original": "နှိပ်",
+    "mapped": "PµÐq",
+    "id": "P331"
+  },
+  {
+    "original": "နှိမ်",
+    "mapped": "PµÐu",
+    "id": "P332"
+  },
+  {
+    "original": "နှုတ်",
+    "mapped": "Pµðm",
+    "id": "P333"
+  },
+  {
+    "original": "နိုင်း",
+    "mapped": "PÐðe_",
+    "id": "P184"
+  },
+  {
+    "original": "နောင့်",
+    "mapped": "P∆¼E¿^",
+    "id": "P262"
+  },
+  {
+    "original": "နှောက်",
+    "mapped": "Pµ∆¼a",
+    "id": "P287"
+  },
+  {
+    "original": "နှိမ့်",
+    "mapped": "PµÐU¿^",
+    "id": "P334"
+  },
+  {
+    "original": "နှိုက်",
+    "mapped": "PµÐða",
+    "id": "P335"
+  },
+  {
+    "original": "နှုန်း",
+    "mapped": "Pµðp_",
+    "id": "P336"
+  },
+  {
+    "original": "နှောင်",
+    "mapped": "Pµ∆¼e",
+    "id": "P337"
+  },
+  {
+    "original": "နောင်း",
+    "mapped": "P∆¼e_",
+    "id": "P186"
+  },
+  {
+    "original": "နှောင့်",
+    "mapped": "Pµ∆¼E¿^",
+    "id": "P289"
+  },
+  {
+    "original": "နှိုင်း",
+    "mapped": "PµÐðe_",
+    "id": "P338"
+  },
+  {
+    "original": "နှောင်း",
+    "mapped": "Pµ∆¼e_",
+    "id": "P339"
+  },
+  {
+    "original": "ပဲ",
+    "mapped": "Qß",
+    "id": "Q005"
+  },
+  {
+    "original": "ပါ",
+    "mapped": "Q½",
+    "id": "Q193"
+  },
+  {
+    "original": "ပြ",
+    "mapped": "Q¢",
+    "id": "Q009"
+  },
+  {
+    "original": "ပီ",
+    "mapped": "QÞ",
+    "id": "Q002"
+  },
+  {
+    "original": "ပု",
+    "mapped": "Qð",
+    "id": "Q003"
+  },
+  {
+    "original": "ပူ",
+    "mapped": "Qþ",
+    "id": "Q004"
+  },
+  {
+    "original": "ပေ",
+    "mapped": "Q∆",
+    "id": "Q013"
+  },
+  {
+    "original": "ပံ",
+    "mapped": "Q¾",
+    "id": "Q006"
+  },
+  {
+    "original": "ပျ",
+    "mapped": "Q*",
+    "id": "Q007"
+  },
+  {
+    "original": "ပွ",
+    "mapped": "Q¤",
+    "id": "Q010"
+  },
+  {
+    "original": "ပိ",
+    "mapped": "QÐ",
+    "id": "Q012"
+  },
+  {
+    "original": "ပွဲ",
+    "mapped": "Q¤ß",
+    "id": "Q033"
+  },
+  {
+    "original": "ပါး",
+    "mapped": "Q½_",
+    "id": "Q195"
+  },
+  {
+    "original": "ပြာ",
+    "mapped": "Q¢¼",
+    "id": "Q017"
+  },
+  {
+    "original": "ပြု",
+    "mapped": "Q¢ð",
+    "id": "Q276"
+  },
+  {
+    "original": "ပဥှ",
+    "mapped": "Q£µ",
+    "id": "Q340"
+  },
+  {
+    "original": "ပုံ",
+    "mapped": "Qð¾",
+    "id": "Q019"
+  },
+  {
+    "original": "ပူး",
+    "mapped": "Qþ_",
+    "id": "Q020"
+  },
+  {
+    "original": "ပေး",
+    "mapped": "Q∆_",
+    "id": "Q018"
+  },
+  {
+    "original": "ပဲ့",
+    "mapped": "Qß¿",
+    "id": "Q021"
+  },
+  {
+    "original": "ပံ့",
+    "mapped": "Q¾¿",
+    "id": "Q022"
+  },
+  {
+    "original": "ပျာ",
+    "mapped": "Q*¼",
+    "id": "Q015"
+  },
+  {
+    "original": "ပျူ",
+    "mapped": "Q*þ",
+    "id": "Q024"
+  },
+  {
+    "original": "ပျံ",
+    "mapped": "Q*¾",
+    "id": "Q027"
+  },
+  {
+    "original": "ပြူ",
+    "mapped": "Q¢þ",
+    "id": "Q028"
+  },
+  {
+    "original": "ပြေ",
+    "mapped": "Q¢∆",
+    "id": "Q016"
+  },
+  {
+    "original": "ပြဲ",
+    "mapped": "Q¢ß",
+    "id": "Q029"
+  },
+  {
+    "original": "ပို",
+    "mapped": "QÐð",
+    "id": "Q034"
+  },
+  {
+    "original": "ပက်",
+    "mapped": "Qa",
+    "id": "Q035"
+  },
+  {
+    "original": "ပင်",
+    "mapped": "Qe",
+    "id": "Q036"
+  },
+  {
+    "original": "ပစ်",
+    "mapped": "Qf",
+    "id": "Q037"
+  },
+  {
+    "original": "ပဋ်",
+    "mapped": "Qi",
+    "id": "Q038"
+  },
+  {
+    "original": "ပဏ်",
+    "mapped": "Ql",
+    "id": "Q039"
+  },
+  {
+    "original": "ပတ်",
+    "mapped": "Qm",
+    "id": "Q040"
+  },
+  {
+    "original": "ပန်",
+    "mapped": "Qp",
+    "id": "Q041"
+  },
+  {
+    "original": "ပပ်",
+    "mapped": "Qq",
+    "id": "Q042"
+  },
+  {
+    "original": "ပယ်",
+    "mapped": "Qv",
+    "id": "Q044"
+  },
+  {
+    "original": "ပွေ",
+    "mapped": "Q¤∆",
+    "id": "Q047"
+  },
+  {
+    "original": "ပီး",
+    "mapped": "QÞ_",
+    "id": "Q196"
+  },
+  {
+    "original": "ပေါ",
+    "mapped": "Q∆½",
+    "id": "Q197"
+  },
+  {
+    "original": "ပါ့",
+    "mapped": "Q½¿",
+    "id": "Q236"
+  },
+  {
+    "original": "ပဉ်",
+    "mapped": "Qj",
+    "id": "Q251"
+  },
+  {
+    "original": "ပေ့",
+    "mapped": "Q∆¿",
+    "id": "Q235"
+  },
+  {
+    "original": "ပဒ်",
+    "mapped": "Qo",
+    "id": "Q263"
+  },
+  {
+    "original": "ပြီ",
+    "mapped": "Q¢Þ",
+    "id": "Q293"
+  },
+  {
+    "original": "ပဇ်",
+    "mapped": "Qg",
+    "id": "Q341"
+  },
+  {
+    "original": "ပလ်",
+    "mapped": "Qx",
+    "id": "Q342"
+  },
+  {
+    "original": "ပဥှာ",
+    "mapped": "Q£µ¼",
+    "id": "Q343"
+  },
+  {
+    "original": "ပုတ်",
+    "mapped": "Qðm",
+    "id": "Q053"
+  },
+  {
+    "original": "ပုန်",
+    "mapped": "Qðp",
+    "id": "Q054"
+  },
+  {
+    "original": "ပုပ်",
+    "mapped": "Qðq",
+    "id": "Q055"
+  },
+  {
+    "original": "ပုဗ်",
+    "mapped": "Qðs",
+    "id": "Q056"
+  },
+  {
+    "original": "ပုံး",
+    "mapped": "Qð¾_",
+    "id": "Q058"
+  },
+  {
+    "original": "ပျက်",
+    "mapped": "Q*a",
+    "id": "Q061"
+  },
+  {
+    "original": "ပျစ်",
+    "mapped": "Q*f",
+    "id": "Q063"
+  },
+  {
+    "original": "ပျဉ်",
+    "mapped": "Q*j",
+    "id": "Q064"
+  },
+  {
+    "original": "ပျတ်",
+    "mapped": "Q*m",
+    "id": "Q066"
+  },
+  {
+    "original": "ပျပ်",
+    "mapped": "Q*q",
+    "id": "Q068"
+  },
+  {
+    "original": "ပျား",
+    "mapped": "Q*¼_",
+    "id": "Q070"
+  },
+  {
+    "original": "ပျို",
+    "mapped": "Q*Ðð",
+    "id": "Q072"
+  },
+  {
+    "original": "ပျော",
+    "mapped": "Q*∆¼",
+    "id": "Q076"
+  },
+  {
+    "original": "ပြက်",
+    "mapped": "Q¢a",
+    "id": "Q080"
+  },
+  {
+    "original": "ပြင်",
+    "mapped": "Q¢e",
+    "id": "Q081"
+  },
+  {
+    "original": "ပြစ်",
+    "mapped": "Q¢f",
+    "id": "Q082"
+  },
+  {
+    "original": "ပြည်",
+    "mapped": "Q¢h",
+    "id": "Q084"
+  },
+  {
+    "original": "ပြတ်",
+    "mapped": "Q¢m",
+    "id": "Q085"
+  },
+  {
+    "original": "ပြန်",
+    "mapped": "Q¢p",
+    "id": "Q086"
+  },
+  {
+    "original": "ပြယ်",
+    "mapped": "Q¢v",
+    "id": "Q089"
+  },
+  {
+    "original": "ပြား",
+    "mapped": "Q¢¼_",
+    "id": "Q090"
+  },
+  {
+    "original": "ပြို",
+    "mapped": "Q¢Ðð",
+    "id": "Q091"
+  },
+  {
+    "original": "ပြီး",
+    "mapped": "Q¢Þ_",
+    "id": "Q050"
+  },
+  {
+    "original": "ပြုံ",
+    "mapped": "Q¢ð¾",
+    "id": "Q092"
+  },
+  {
+    "original": "ပြူး",
+    "mapped": "Q¢þ_",
+    "id": "Q093"
+  },
+  {
+    "original": "ပြော",
+    "mapped": "Q¢∆¼",
+    "id": "Q094"
+  },
+  {
+    "original": "ပြေး",
+    "mapped": "Q¢∆_",
+    "id": "Q095"
+  },
+  {
+    "original": "ပွက်",
+    "mapped": "Q¤a",
+    "id": "Q098"
+  },
+  {
+    "original": "ပွတ်",
+    "mapped": "Q¤m",
+    "id": "Q099"
+  },
+  {
+    "original": "ပွန်",
+    "mapped": "Q¤p",
+    "id": "Q100"
+  },
+  {
+    "original": "ပွပ်",
+    "mapped": "Q¤q",
+    "id": "Q101"
+  },
+  {
+    "original": "ပွေ့",
+    "mapped": "Q¤∆¿",
+    "id": "Q104"
+  },
+  {
+    "original": "ပွေး",
+    "mapped": "Q¤∆_",
+    "id": "Q105"
+  },
+  {
+    "original": "ပွဲ့",
+    "mapped": "Q¤ß¿",
+    "id": "Q106"
+  },
+  {
+    "original": "ပန်း",
+    "mapped": "Qp_",
+    "id": "Q108"
+  },
+  {
+    "original": "ပမ်း",
+    "mapped": "Qu_",
+    "id": "Q109"
+  },
+  {
+    "original": "ပိတ်",
+    "mapped": "QÐm",
+    "id": "Q113"
+  },
+  {
+    "original": "ပိန်",
+    "mapped": "QÐp",
+    "id": "Q114"
+  },
+  {
+    "original": "ပင်း",
+    "mapped": "Qe_",
+    "id": "Q001"
+  },
+  {
+    "original": "ပိုး",
+    "mapped": "QÐð_",
+    "id": "Q115"
+  },
+  {
+    "original": "ပေါ်",
+    "mapped": "Q∆½^",
+    "id": "Q208"
+  },
+  {
+    "original": "ပါတ်",
+    "mapped": "Q½m",
+    "id": "Q224"
+  },
+  {
+    "original": "ပုဏ်",
+    "mapped": "Qðl",
+    "id": "Q227"
+  },
+  {
+    "original": "ပေါ့",
+    "mapped": "Q∆½¿",
+    "id": "Q228"
+  },
+  {
+    "original": "ပင့်",
+    "mapped": "QE¿^",
+    "id": "Q241"
+  },
+  {
+    "original": "ပို့",
+    "mapped": "QÐð¿",
+    "id": "Q242"
+  },
+  {
+    "original": "ပုံ့",
+    "mapped": "Qð¾¿",
+    "id": "Q243"
+  },
+  {
+    "original": "ပွား",
+    "mapped": "Q¤¼_",
+    "id": "Q244"
+  },
+  {
+    "original": "ပည့်",
+    "mapped": "QH¿^",
+    "id": "Q255"
+  },
+  {
+    "original": "ပည်း",
+    "mapped": "Qh_",
+    "id": "Q256"
+  },
+  {
+    "original": "ပုလ်",
+    "mapped": "Qðx",
+    "id": "Q303"
+  },
+  {
+    "original": "ပိသ်",
+    "mapped": "QÐy",
+    "id": "Q313"
+  },
+  {
+    "original": "ပါက်",
+    "mapped": "Q½a",
+    "id": "Q344"
+  },
+  {
+    "original": "ပါဌ်",
+    "mapped": "Q½¯^",
+    "id": "Q345"
+  },
+  {
+    "original": "ပါဒ်",
+    "mapped": "Q½o",
+    "id": "Q346"
+  },
+  {
+    "original": "ပါယ်",
+    "mapped": "Q½v",
+    "id": "Q347"
+  },
+  {
+    "original": "ပိဏ်",
+    "mapped": "QÐl",
+    "id": "Q348"
+  },
+  {
+    "original": "ပုဂ်",
+    "mapped": "Qðc",
+    "id": "Q349"
+  },
+  {
+    "original": "ပုစ်",
+    "mapped": "Qðf",
+    "id": "Q350"
+  },
+  {
+    "original": "ပုဒ်",
+    "mapped": "Qðo",
+    "id": "Q351"
+  },
+  {
+    "original": "ပုသ်",
+    "mapped": "Qðy",
+    "id": "Q352"
+  },
+  {
+    "original": "ပျမ်",
+    "mapped": "Q*u",
+    "id": "Q353"
+  },
+  {
+    "original": "ပျံ့",
+    "mapped": "Q*¾¿",
+    "id": "Q116"
+  },
+  {
+    "original": "ပြဋ်",
+    "mapped": "Q¢i",
+    "id": "Q354"
+  },
+  {
+    "original": "ပြသ်",
+    "mapped": "Q¢y",
+    "id": "Q355"
+  },
+  {
+    "original": "ပြဲ့",
+    "mapped": "Q¢ß¿",
+    "id": "Q356"
+  },
+  {
+    "original": "ပျူး",
+    "mapped": "Q*þ_",
+    "id": "Q075"
+  },
+  {
+    "original": "ပုန်း",
+    "mapped": "Qðp_",
+    "id": "Q120"
+  },
+  {
+    "original": "ပျဉ်း",
+    "mapped": "Q*j_",
+    "id": "Q124"
+  },
+  {
+    "original": "ပျမ်း",
+    "mapped": "Q*u_",
+    "id": "Q127"
+  },
+  {
+    "original": "ပျို့",
+    "mapped": "Q*Ðð¿",
+    "id": "Q130"
+  },
+  {
+    "original": "ပျော့",
+    "mapped": "Q*∆¼¿",
+    "id": "Q135"
+  },
+  {
+    "original": "ပြည့်",
+    "mapped": "Q¢H¿^",
+    "id": "Q141"
+  },
+  {
+    "original": "ပြန့်",
+    "mapped": "Q¢P¿^",
+    "id": "Q143"
+  },
+  {
+    "original": "ပြိတ်",
+    "mapped": "Q¢Ðm",
+    "id": "Q145"
+  },
+  {
+    "original": "ပြုတ်",
+    "mapped": "Q¢ðm",
+    "id": "Q148"
+  },
+  {
+    "original": "ပြုံး",
+    "mapped": "Q¢ð¾_",
+    "id": "Q149"
+  },
+  {
+    "original": "ပြော့",
+    "mapped": "Q¢∆¼¿",
+    "id": "Q150"
+  },
+  {
+    "original": "ပြွေ့",
+    "mapped": "Q¢¤∆¿",
+    "id": "Q156"
+  },
+  {
+    "original": "ပွန်း",
+    "mapped": "Q¤p_",
+    "id": "Q159"
+  },
+  {
+    "original": "ပိန်း",
+    "mapped": "QÐp_",
+    "id": "Q161"
+  },
+  {
+    "original": "ပိုင်",
+    "mapped": "QÐðe",
+    "id": "Q162"
+  },
+  {
+    "original": "ပျင်း",
+    "mapped": "Q*e_",
+    "id": "Q163"
+  },
+  {
+    "original": "ပိုလ်",
+    "mapped": "QÐðx",
+    "id": "Q164"
+  },
+  {
+    "original": "ပျော်",
+    "mapped": "Q*∆¼^",
+    "id": "Q165"
+  },
+  {
+    "original": "ပျိုး",
+    "mapped": "Q*Ðð_",
+    "id": "Q166"
+  },
+  {
+    "original": "ပိုက်",
+    "mapped": "QÐða",
+    "id": "Q168"
+  },
+  {
+    "original": "ပေါက်",
+    "mapped": "Q∆½a",
+    "id": "Q209"
+  },
+  {
+    "original": "ပေါင်",
+    "mapped": "Q∆½e",
+    "id": "Q210"
+  },
+  {
+    "original": "ပြုပ်",
+    "mapped": "Q¢ðq",
+    "id": "Q171"
+  },
+  {
+    "original": "ပွင့်",
+    "mapped": "Q¤E¿^",
+    "id": "Q215"
+  },
+  {
+    "original": "ပြင်း",
+    "mapped": "Q¢e_",
+    "id": "Q170"
+  },
+  {
+    "original": "ပိမ့်",
+    "mapped": "QÐU¿^",
+    "id": "Q258"
+  },
+  {
+    "original": "ပိုဏ်",
+    "mapped": "QÐðl",
+    "id": "Q357"
+  },
+  {
+    "original": "ပိုဒ်",
+    "mapped": "QÐðo",
+    "id": "Q358"
+  },
+  {
+    "original": "ပြိန်",
+    "mapped": "Q¢Ðp",
+    "id": "Q359"
+  },
+  {
+    "original": "ပြိသ်",
+    "mapped": "Q¢Ðy",
+    "id": "Q360"
+  },
+  {
+    "original": "ပြုဗ်",
+    "mapped": "Q¢ðs",
+    "id": "Q361"
+  },
+  {
+    "original": "ပြွတ်",
+    "mapped": "Q¢¤m",
+    "id": "Q362"
+  },
+  {
+    "original": "ပြွန်",
+    "mapped": "Q¢¤p",
+    "id": "Q363"
+  },
+  {
+    "original": "ပြည်း",
+    "mapped": "Q¢h_",
+    "id": "Q142"
+  },
+  {
+    "original": "ပိမ့်",
+    "mapped": "QÐU¿^",
+    "id": "Q258"
+  },
+  {
+    "original": "ပျောက်",
+    "mapped": "Q*∆¼a",
+    "id": "Q176"
+  },
+  {
+    "original": "ပြိုက်",
+    "mapped": "Q¢Ðða",
+    "id": "Q180"
+  },
+  {
+    "original": "ပြိုင်",
+    "mapped": "Q¢Ððe",
+    "id": "Q181"
+  },
+  {
+    "original": "ပြောက်",
+    "mapped": "Q¢∆¼a",
+    "id": "Q182"
+  },
+  {
+    "original": "ပြောင်",
+    "mapped": "Q¢∆¼e",
+    "id": "Q183"
+  },
+  {
+    "original": "ပိုင်း",
+    "mapped": "QÐðe_",
+    "id": "Q184"
+  },
+  {
+    "original": "ပြွမ်း",
+    "mapped": "Q¢¤u_",
+    "id": "Q189"
+  },
+  {
+    "original": "ပေါင်း",
+    "mapped": "Q∆½e_",
+    "id": "Q221"
+  },
+  {
+    "original": "ပိုင့်",
+    "mapped": "QÐðE¿^",
+    "id": "Q364"
+  },
+  {
+    "original": "ပြိန်း",
+    "mapped": "Q¢Ðp_",
+    "id": "Q365"
+  },
+  {
+    "original": "ပြုန်း",
+    "mapped": "Q¢ðp_",
+    "id": "Q366"
+  },
+  {
+    "original": "ပြောင်း",
+    "mapped": "Q¢∆¼e_",
+    "id": "Q191"
+  },
+  {
+    "original": "ပျောင်း",
+    "mapped": "Q*∆¼e_",
+    "id": "Q192"
+  },
+  {
+    "original": "ပွိုင့်",
+    "mapped": "Q¤ÐðE¿^",
+    "id": "Q367"
+  },
+  {
+    "original": "ပြိုင်း",
+    "mapped": "Q¢Ððe_",
+    "id": "Q368"
+  },
+  {
+    "original": "ဖံ",
+    "mapped": "R¾",
+    "id": "R006"
+  },
+  {
+    "original": "ဖီ",
+    "mapped": "RÞ",
+    "id": "R002"
+  },
+  {
+    "original": "ဖု",
+    "mapped": "Rð",
+    "id": "R003"
+  },
+  {
+    "original": "ဖူ",
+    "mapped": "Rþ",
+    "id": "R004"
+  },
+  {
+    "original": "ဖေ",
+    "mapped": "R∆",
+    "id": "R013"
+  },
+  {
+    "original": "ဖဲ",
+    "mapped": "Rß",
+    "id": "R005"
+  },
+  {
+    "original": "ဖျ",
+    "mapped": "R*",
+    "id": "R007"
+  },
+  {
+    "original": "ဖြ",
+    "mapped": "R¢",
+    "id": "R009"
+  },
+  {
+    "original": "ဖွ",
+    "mapped": "R¤",
+    "id": "R010"
+  },
+  {
+    "original": "ဖာ",
+    "mapped": "R¼",
+    "id": "R011"
+  },
+  {
+    "original": "ဖိ",
+    "mapped": "RÐ",
+    "id": "R012"
+  },
+  {
+    "original": "ဖ့",
+    "mapped": "R¿",
+    "id": "R194"
+  },
+  {
+    "original": "ဖုံ",
+    "mapped": "Rð¾",
+    "id": "R019"
+  },
+  {
+    "original": "ဖူး",
+    "mapped": "Rþ_",
+    "id": "R020"
+  },
+  {
+    "original": "ဖော",
+    "mapped": "R∆¼",
+    "id": "R008"
+  },
+  {
+    "original": "ဖေး",
+    "mapped": "R∆_",
+    "id": "R018"
+  },
+  {
+    "original": "ဖဲ့",
+    "mapped": "Rß¿",
+    "id": "R021"
+  },
+  {
+    "original": "ဖျာ",
+    "mapped": "R*¼",
+    "id": "R015"
+  },
+  {
+    "original": "ဖျံ",
+    "mapped": "R*¾",
+    "id": "R027"
+  },
+  {
+    "original": "ဖြာ",
+    "mapped": "R¢¼",
+    "id": "R017"
+  },
+  {
+    "original": "ဖြူ",
+    "mapped": "R¢þ",
+    "id": "R028"
+  },
+  {
+    "original": "ဖြေ",
+    "mapped": "R¢∆",
+    "id": "R016"
+  },
+  {
+    "original": "ဖြဲ",
+    "mapped": "R¢ß",
+    "id": "R029"
+  },
+  {
+    "original": "ဖွာ",
+    "mapped": "R¤¼",
+    "id": "R031"
+  },
+  {
+    "original": "ဖွဲ",
+    "mapped": "R¤ß",
+    "id": "R033"
+  },
+  {
+    "original": "ဖို",
+    "mapped": "RÐð",
+    "id": "R034"
+  },
+  {
+    "original": "ဖက်",
+    "mapped": "Ra",
+    "id": "R035"
+  },
+  {
+    "original": "ဖင်",
+    "mapped": "Re",
+    "id": "R036"
+  },
+  {
+    "original": "ဖတ်",
+    "mapped": "Rm",
+    "id": "R040"
+  },
+  {
+    "original": "ဖန်",
+    "mapped": "Rp",
+    "id": "R041"
+  },
+  {
+    "original": "ဖပ်",
+    "mapped": "Rq",
+    "id": "R042"
+  },
+  {
+    "original": "ဖယ်",
+    "mapped": "Rv",
+    "id": "R044"
+  },
+  {
+    "original": "ဖား",
+    "mapped": "R¼_",
+    "id": "R045"
+  },
+  {
+    "original": "ဖွေ",
+    "mapped": "R¤∆",
+    "id": "R047"
+  },
+  {
+    "original": "ဖီး",
+    "mapped": "RÞ_",
+    "id": "R196"
+  },
+  {
+    "original": "ဖည်",
+    "mapped": "Rh",
+    "id": "R252"
+  },
+  {
+    "original": "ဖဂ်",
+    "mapped": "Rc",
+    "id": "R299"
+  },
+  {
+    "original": "ဖုတ်",
+    "mapped": "Rðm",
+    "id": "R053"
+  },
+  {
+    "original": "ဖုန်",
+    "mapped": "Rðp",
+    "id": "R054"
+  },
+  {
+    "original": "ဖုံး",
+    "mapped": "Rð¾_",
+    "id": "R058"
+  },
+  {
+    "original": "ဖော့",
+    "mapped": "R∆¼¿",
+    "id": "R059"
+  },
+  {
+    "original": "ဖော်",
+    "mapped": "R∆¼^",
+    "id": "R060"
+  },
+  {
+    "original": "ဖျက်",
+    "mapped": "R*a",
+    "id": "R061"
+  },
+  {
+    "original": "ဖျင်",
+    "mapped": "R*e",
+    "id": "R062"
+  },
+  {
+    "original": "ဖျစ်",
+    "mapped": "R*f",
+    "id": "R063"
+  },
+  {
+    "original": "ဖျဉ်",
+    "mapped": "R*j",
+    "id": "R064"
+  },
+  {
+    "original": "ဖျတ်",
+    "mapped": "R*m",
+    "id": "R066"
+  },
+  {
+    "original": "ဖျန်",
+    "mapped": "R*p",
+    "id": "R067"
+  },
+  {
+    "original": "ဖျပ်",
+    "mapped": "R*q",
+    "id": "R068"
+  },
+  {
+    "original": "ဖျား",
+    "mapped": "R*¼_",
+    "id": "R070"
+  },
+  {
+    "original": "ဖျူး",
+    "mapped": "R*þ_",
+    "id": "R075"
+  },
+  {
+    "original": "ဖျော",
+    "mapped": "R*∆¼",
+    "id": "R076"
+  },
+  {
+    "original": "ဖြင်",
+    "mapped": "R¢e",
+    "id": "R081"
+  },
+  {
+    "original": "ဖြစ်",
+    "mapped": "R¢f",
+    "id": "R082"
+  },
+  {
+    "original": "ဖြတ်",
+    "mapped": "R¢m",
+    "id": "R085"
+  },
+  {
+    "original": "ဖြန်",
+    "mapped": "R¢p",
+    "id": "R086"
+  },
+  {
+    "original": "ဖြား",
+    "mapped": "R¢¼_",
+    "id": "R090"
+  },
+  {
+    "original": "ဖြို",
+    "mapped": "R¢Ðð",
+    "id": "R091"
+  },
+  {
+    "original": "ဖြီး",
+    "mapped": "R¢Þ_",
+    "id": "R050"
+  },
+  {
+    "original": "ဖြုံ",
+    "mapped": "R¢ð¾",
+    "id": "R092"
+  },
+  {
+    "original": "ဖြူး",
+    "mapped": "R¢þ_",
+    "id": "R093"
+  },
+  {
+    "original": "ဖြော",
+    "mapped": "R¢∆¼",
+    "id": "R094"
+  },
+  {
+    "original": "ဖွတ်",
+    "mapped": "R¤m",
+    "id": "R099"
+  },
+  {
+    "original": "ဖွပ်",
+    "mapped": "R¤q",
+    "id": "R101"
+  },
+  {
+    "original": "ဖွယ်",
+    "mapped": "R¤v",
+    "id": "R103"
+  },
+  {
+    "original": "ဖွေး",
+    "mapped": "R¤∆_",
+    "id": "R105"
+  },
+  {
+    "original": "ဖွဲ့",
+    "mapped": "R¤ß¿",
+    "id": "R106"
+  },
+  {
+    "original": "ဖန့်",
+    "mapped": "RP¿^",
+    "id": "R107"
+  },
+  {
+    "original": "ဖမ်း",
+    "mapped": "Ru_",
+    "id": "R109"
+  },
+  {
+    "original": "ဖိတ်",
+    "mapped": "RÐm",
+    "id": "R113"
+  },
+  {
+    "original": "ဖိုး",
+    "mapped": "RÐð_",
+    "id": "R115"
+  },
+  {
+    "original": "ဖွံ့",
+    "mapped": "R¤¾¿",
+    "id": "R207"
+  },
+  {
+    "original": "ဖင့်",
+    "mapped": "RE¿^",
+    "id": "R241"
+  },
+  {
+    "original": "ဖို့",
+    "mapped": "RÐð¿",
+    "id": "R242"
+  },
+  {
+    "original": "ဖွား",
+    "mapped": "R¤¼_",
+    "id": "R244"
+  },
+  {
+    "original": "ဖုသ်",
+    "mapped": "Rðy",
+    "id": "R352"
+  },
+  {
+    "original": "ဖင်း",
+    "mapped": "Re_",
+    "id": "R001"
+  },
+  {
+    "original": "ဖွက်",
+    "mapped": "R¤a",
+    "id": "R098"
+  },
+  {
+    "original": "ဖုန်း",
+    "mapped": "Rðp_",
+    "id": "R120"
+  },
+  {
+    "original": "ဖောက်",
+    "mapped": "R∆¼a",
+    "id": "R121"
+  },
+  {
+    "original": "ဖောင်",
+    "mapped": "R∆¼e",
+    "id": "R122"
+  },
+  {
+    "original": "ဖျဉ်း",
+    "mapped": "R*j_",
+    "id": "R124"
+  },
+  {
+    "original": "ဖျန်း",
+    "mapped": "R*p_",
+    "id": "R126"
+  },
+  {
+    "original": "ဖျော့",
+    "mapped": "R*∆¼¿",
+    "id": "R135"
+  },
+  {
+    "original": "ဖြင့်",
+    "mapped": "R¢E¿^",
+    "id": "R139"
+  },
+  {
+    "original": "ဖြည့်",
+    "mapped": "R¢H¿^",
+    "id": "R141"
+  },
+  {
+    "original": "ဖြည်း",
+    "mapped": "R¢h_",
+    "id": "R142"
+  },
+  {
+    "original": "ဖြန့်",
+    "mapped": "R¢P¿^",
+    "id": "R143"
+  },
+  {
+    "original": "ဖြိုး",
+    "mapped": "R¢Ðð_",
+    "id": "R118"
+  },
+  {
+    "original": "ဖြုတ်",
+    "mapped": "R¢ðm",
+    "id": "R148"
+  },
+  {
+    "original": "ဖြုံး",
+    "mapped": "R¢ð¾_",
+    "id": "R149"
+  },
+  {
+    "original": "ဖြော်",
+    "mapped": "R¢∆¼^",
+    "id": "R151"
+  },
+  {
+    "original": "ဖွန်း",
+    "mapped": "R¤p_",
+    "id": "R159"
+  },
+  {
+    "original": "ဖိန်း",
+    "mapped": "RÐp_",
+    "id": "R161"
+  },
+  {
+    "original": "ဖိုင်",
+    "mapped": "RÐðe",
+    "id": "R162"
+  },
+  {
+    "original": "ဖျင်း",
+    "mapped": "R*e_",
+    "id": "R163"
+  },
+  {
+    "original": "ဖိုလ်",
+    "mapped": "RÐðx",
+    "id": "R164"
+  },
+  {
+    "original": "ဖျော်",
+    "mapped": "R*∆¼^",
+    "id": "R165"
+  },
+  {
+    "original": "ဖျိုး",
+    "mapped": "R*Ðð_",
+    "id": "R166"
+  },
+  {
+    "original": "ဖိုက်",
+    "mapped": "RÐða",
+    "id": "R168"
+  },
+  {
+    "original": "ဖြုပ်",
+    "mapped": "R¢ðq",
+    "id": "R171"
+  },
+  {
+    "original": "ဖွင့်",
+    "mapped": "R¤E¿^",
+    "id": "R215"
+  },
+  {
+    "original": "ဖြင်း",
+    "mapped": "R¢e_",
+    "id": "R170"
+  },
+  {
+    "original": "ဖိမ့်",
+    "mapped": "RÐU¿^",
+    "id": "R258"
+  },
+  {
+    "original": "ဖောဋ်",
+    "mapped": "R∆¼i",
+    "id": "R369"
+  },
+  {
+    "original": "ဖြန်း",
+    "mapped": "R¢p_",
+    "id": "R370"
+  },
+  {
+    "original": "ဖြုံ့",
+    "mapped": "R¢ð¾¿",
+    "id": "R371"
+  },
+  {
+    "original": "ဖျောက်",
+    "mapped": "R*∆¼a",
+    "id": "R176"
+  },
+  {
+    "original": "ဖြိုက်",
+    "mapped": "R¢Ðða",
+    "id": "R180"
+  },
+  {
+    "original": "ဖြိုင်",
+    "mapped": "R¢Ððe",
+    "id": "R181"
+  },
+  {
+    "original": "ဖြောက်",
+    "mapped": "R¢∆¼a",
+    "id": "R182"
+  },
+  {
+    "original": "ဖြောင်",
+    "mapped": "R¢∆¼e",
+    "id": "R183"
+  },
+  {
+    "original": "ဖောင်း",
+    "mapped": "R∆¼e_",
+    "id": "R186"
+  },
+  {
+    "original": "ဖောင့်",
+    "mapped": "R∆¼E¿^",
+    "id": "R262"
+  },
+  {
+    "original": "ဖိုင့်",
+    "mapped": "RÐðE¿^",
+    "id": "R364"
+  },
+  {
+    "original": "ဖြုန်း",
+    "mapped": "R¢ðp_",
+    "id": "R366"
+  },
+  {
+    "original": "ဖွိုက်",
+    "mapped": "R¤Ðða",
+    "id": "R372"
+  },
+  {
+    "original": "ဖြောင့်",
+    "mapped": "R¢∆¼E¿^",
+    "id": "R190"
+  },
+  {
+    "original": "ဖြောင်း",
+    "mapped": "R¢∆¼e_",
+    "id": "R191"
+  },
+  {
+    "original": "ဖျောင်း",
+    "mapped": "R*∆¼e_",
+    "id": "R192"
+  },
+  {
+    "original": "ဗံ",
+    "mapped": "S¾",
+    "id": "S006"
+  },
+  {
+    "original": "ဗီ",
+    "mapped": "SÞ",
+    "id": "S002"
+  },
+  {
+    "original": "ဗု",
+    "mapped": "Sð",
+    "id": "S003"
+  },
+  {
+    "original": "ဗူ",
+    "mapped": "Sþ",
+    "id": "S004"
+  },
+  {
+    "original": "ဗေ",
+    "mapped": "S∆",
+    "id": "S013"
+  },
+  {
+    "original": "ဗဲ",
+    "mapped": "Sß",
+    "id": "S005"
+  },
+  {
+    "original": "ဗျ",
+    "mapped": "S*",
+    "id": "S007"
+  },
+  {
+    "original": "ဗြ",
+    "mapped": "S¢",
+    "id": "S009"
+  },
+  {
+    "original": "ဗာ",
+    "mapped": "S¼",
+    "id": "S011"
+  },
+  {
+    "original": "ဗိ",
+    "mapped": "SÐ",
+    "id": "S012"
+  },
+  {
+    "original": "ဗ့",
+    "mapped": "S¿",
+    "id": "S194"
+  },
+  {
+    "original": "ဗူး",
+    "mapped": "Sþ_",
+    "id": "S020"
+  },
+  {
+    "original": "ဗုံ",
+    "mapped": "Sð¾",
+    "id": "S019"
+  },
+  {
+    "original": "ဗော",
+    "mapped": "S∆¼",
+    "id": "S008"
+  },
+  {
+    "original": "ဗေး",
+    "mapped": "S∆_",
+    "id": "S018"
+  },
+  {
+    "original": "ဗျာ",
+    "mapped": "S*¼",
+    "id": "S015"
+  },
+  {
+    "original": "ဗျူ",
+    "mapped": "S*þ",
+    "id": "S024"
+  },
+  {
+    "original": "ဗြာ",
+    "mapped": "S¢¼",
+    "id": "S017"
+  },
+  {
+    "original": "ဗြဲ",
+    "mapped": "S¢ß",
+    "id": "S029"
+  },
+  {
+    "original": "ဗွီ",
+    "mapped": "S¤Þ",
+    "id": "S032"
+  },
+  {
+    "original": "ဗက်",
+    "mapped": "Sa",
+    "id": "S035"
+  },
+  {
+    "original": "ဗင်",
+    "mapped": "Se",
+    "id": "S036"
+  },
+  {
+    "original": "ဗစ်",
+    "mapped": "Sf",
+    "id": "S037"
+  },
+  {
+    "original": "ဗန်",
+    "mapped": "Sp",
+    "id": "S041"
+  },
+  {
+    "original": "ဗား",
+    "mapped": "S¼_",
+    "id": "S045"
+  },
+  {
+    "original": "ဗွေ",
+    "mapped": "S¤∆",
+    "id": "S047"
+  },
+  {
+    "original": "ဗီး",
+    "mapped": "SÞ_",
+    "id": "S196"
+  },
+  {
+    "original": "ဗြိ",
+    "mapped": "S¢Ð",
+    "id": "S049"
+  },
+  {
+    "original": "ဗြု",
+    "mapped": "S¢ð",
+    "id": "S276"
+  },
+  {
+    "original": "ဗတ်",
+    "mapped": "Sm",
+    "id": "S040"
+  },
+  {
+    "original": "ဗုံး",
+    "mapped": "Sð¾_",
+    "id": "S058"
+  },
+  {
+    "original": "ဗော့",
+    "mapped": "S∆¼¿",
+    "id": "S059"
+  },
+  {
+    "original": "ဗော်",
+    "mapped": "S∆¼^",
+    "id": "S060"
+  },
+  {
+    "original": "ဗျစ်",
+    "mapped": "S*f",
+    "id": "S063"
+  },
+  {
+    "original": "ဗျဉ်",
+    "mapped": "S*j",
+    "id": "S064"
+  },
+  {
+    "original": "ဗျတ်",
+    "mapped": "S*m",
+    "id": "S066"
+  },
+  {
+    "original": "ဗျပ်",
+    "mapped": "S*q",
+    "id": "S068"
+  },
+  {
+    "original": "ဗျား",
+    "mapped": "S*¼_",
+    "id": "S070"
+  },
+  {
+    "original": "ဗျော",
+    "mapped": "S*∆¼",
+    "id": "S076"
+  },
+  {
+    "original": "ဗြက်",
+    "mapped": "S¢a",
+    "id": "S080"
+  },
+  {
+    "original": "ဗြတ်",
+    "mapped": "S¢m",
+    "id": "S085"
+  },
+  {
+    "original": "ဗြူး",
+    "mapped": "S¢þ_",
+    "id": "S093"
+  },
+  {
+    "original": "ဗြော",
+    "mapped": "S¢∆¼",
+    "id": "S094"
+  },
+  {
+    "original": "ဗွက်",
+    "mapped": "S¤a",
+    "id": "S098"
+  },
+  {
+    "original": "ဗွတ်",
+    "mapped": "S¤m",
+    "id": "S099"
+  },
+  {
+    "original": "ဗွန်",
+    "mapped": "S¤p",
+    "id": "S100"
+  },
+  {
+    "original": "ဗန်း",
+    "mapped": "Sp_",
+    "id": "S108"
+  },
+  {
+    "original": "ဗိန်",
+    "mapped": "SÐp",
+    "id": "S114"
+  },
+  {
+    "original": "ဗိုး",
+    "mapped": "SÐð_",
+    "id": "S115"
+  },
+  {
+    "original": "ဗို့",
+    "mapped": "SÐð¿",
+    "id": "S242"
+  },
+  {
+    "original": "ဗိသ်",
+    "mapped": "SÐy",
+    "id": "S313"
+  },
+  {
+    "original": "ဗုဒ်",
+    "mapped": "Sðo",
+    "id": "S351"
+  },
+  {
+    "original": "ဗြဟ်",
+    "mapped": "S¢z",
+    "id": "S373"
+  },
+  {
+    "original": "ဗွီး",
+    "mapped": "S¤Þ_",
+    "id": "S374"
+  },
+  {
+    "original": "ဗြား",
+    "mapped": "S¢¼_",
+    "id": "S090"
+  },
+  {
+    "original": "ဗုန်း",
+    "mapped": "Sðp_",
+    "id": "S120"
+  },
+  {
+    "original": "ဗောက်",
+    "mapped": "S∆¼a",
+    "id": "S121"
+  },
+  {
+    "original": "ဗျည်း",
+    "mapped": "S*h_",
+    "id": "S125"
+  },
+  {
+    "original": "ဗျို့",
+    "mapped": "S*Ðð¿",
+    "id": "S130"
+  },
+  {
+    "original": "ဗျုပ်",
+    "mapped": "S*ðq",
+    "id": "S132"
+  },
+  {
+    "original": "ဗြို့",
+    "mapped": "S¢Ðð¿",
+    "id": "S147"
+  },
+  {
+    "original": "ဗြုတ်",
+    "mapped": "S¢ðm",
+    "id": "S148"
+  },
+  {
+    "original": "ဗြုံး",
+    "mapped": "S¢ð¾_",
+    "id": "S149"
+  },
+  {
+    "original": "ဗွမ်း",
+    "mapped": "S¤u_",
+    "id": "S160"
+  },
+  {
+    "original": "ဗိန်း",
+    "mapped": "SÐp_",
+    "id": "S161"
+  },
+  {
+    "original": "ဗိုလ်",
+    "mapped": "SÐðx",
+    "id": "S164"
+  },
+  {
+    "original": "ဗျိုး",
+    "mapped": "S*Ðð_",
+    "id": "S166"
+  },
+  {
+    "original": "ဗိုက်",
+    "mapped": "SÐða",
+    "id": "S168"
+  },
+  {
+    "original": "ဗြင်း",
+    "mapped": "S¢e_",
+    "id": "S170"
+  },
+  {
+    "original": "ဗိုဇ်",
+    "mapped": "SÐðg",
+    "id": "S375"
+  },
+  {
+    "original": "ဗိုဟ်",
+    "mapped": "SÐðz",
+    "id": "S376"
+  },
+  {
+    "original": "ဗြာဟ်",
+    "mapped": "S¢¼z",
+    "id": "S377"
+  },
+  {
+    "original": "ဗြိစ်",
+    "mapped": "S¢Ðf",
+    "id": "S378"
+  },
+  {
+    "original": "ဗျိုက်",
+    "mapped": "S*Ðða",
+    "id": "S174"
+  },
+  {
+    "original": "ဗြောက်",
+    "mapped": "S¢∆¼a",
+    "id": "S182"
+  },
+  {
+    "original": "ဗြောင်",
+    "mapped": "S¢∆¼e",
+    "id": "S183"
+  },
+  {
+    "original": "ဗိုင်း",
+    "mapped": "SÐðe_",
+    "id": "S184"
+  },
+  {
+    "original": "ဗောင်း",
+    "mapped": "S∆¼e_",
+    "id": "S186"
+  },
+  {
+    "original": "ဗြုန်း",
+    "mapped": "S¢ðp_",
+    "id": "S366"
+  },
+  {
+    "original": "ဗျို့်",
+    "mapped": "S*Ðð¿^",
+    "id": "S379"
+  },
+  {
+    "original": "ဗြောင်း",
+    "mapped": "S¢∆¼e_",
+    "id": "S191"
+  },
+  {
+    "original": "ဗျိုင်း",
+    "mapped": "S*Ððe_",
+    "id": "S223"
+  },
+  {
+    "original": "ဘျ",
+    "mapped": "T*",
+    "id": "T007"
+  },
+  {
+    "original": "ဘာ",
+    "mapped": "T¼",
+    "id": "T011"
+  },
+  {
+    "original": "ဘီ",
+    "mapped": "TÞ",
+    "id": "T002"
+  },
+  {
+    "original": "ဘု",
+    "mapped": "Tð",
+    "id": "T003"
+  },
+  {
+    "original": "ဘူ",
+    "mapped": "Tþ",
+    "id": "T004"
+  },
+  {
+    "original": "ဘေ",
+    "mapped": "T∆",
+    "id": "T013"
+  },
+  {
+    "original": "ဘဲ",
+    "mapped": "Tß",
+    "id": "T005"
+  },
+  {
+    "original": "ဘံ",
+    "mapped": "T¾",
+    "id": "T006"
+  },
+  {
+    "original": "ဘိ",
+    "mapped": "TÐ",
+    "id": "T012"
+  },
+  {
+    "original": "ဘျူ",
+    "mapped": "T*þ",
+    "id": "T024"
+  },
+  {
+    "original": "ဘျာ",
+    "mapped": "T*¼",
+    "id": "T015"
+  },
+  {
+    "original": "ဘျု",
+    "mapped": "T*ð",
+    "id": "T048"
+  },
+  {
+    "original": "ဘုံ",
+    "mapped": "Tð¾",
+    "id": "T019"
+  },
+  {
+    "original": "ဘူး",
+    "mapped": "Tþ_",
+    "id": "T020"
+  },
+  {
+    "original": "ဘော",
+    "mapped": "T∆¼",
+    "id": "T008"
+  },
+  {
+    "original": "ဘေး",
+    "mapped": "T∆_",
+    "id": "T018"
+  },
+  {
+    "original": "ဘွာ",
+    "mapped": "T¤¼",
+    "id": "T031"
+  },
+  {
+    "original": "ဘို",
+    "mapped": "TÐð",
+    "id": "T034"
+  },
+  {
+    "original": "ဘက်",
+    "mapped": "Ta",
+    "id": "T035"
+  },
+  {
+    "original": "ဘင်",
+    "mapped": "Te",
+    "id": "T036"
+  },
+  {
+    "original": "ဘဏ်",
+    "mapped": "Tl",
+    "id": "T039"
+  },
+  {
+    "original": "ဘတ်",
+    "mapped": "Tm",
+    "id": "T040"
+  },
+  {
+    "original": "ဘန်",
+    "mapped": "Tp",
+    "id": "T041"
+  },
+  {
+    "original": "ဘယ်",
+    "mapped": "Tv",
+    "id": "T044"
+  },
+  {
+    "original": "ဘား",
+    "mapped": "T¼_",
+    "id": "T045"
+  },
+  {
+    "original": "ဘီး",
+    "mapped": "TÞ_",
+    "id": "T196"
+  },
+  {
+    "original": "ဘဒ်",
+    "mapped": "To",
+    "id": "T263"
+  },
+  {
+    "original": "ဘျော",
+    "mapped": "T*∆¼",
+    "id": "T076"
+  },
+  {
+    "original": "ဘုတ်",
+    "mapped": "Tðm",
+    "id": "T053"
+  },
+  {
+    "original": "ဘုမ်",
+    "mapped": "Tðu",
+    "id": "T057"
+  },
+  {
+    "original": "ဘော့",
+    "mapped": "T∆¼¿",
+    "id": "T059"
+  },
+  {
+    "original": "ဘော်",
+    "mapped": "T∆¼^",
+    "id": "T060"
+  },
+  {
+    "original": "ဘွတ်",
+    "mapped": "T¤m",
+    "id": "T099"
+  },
+  {
+    "original": "ဘွယ်",
+    "mapped": "T¤v",
+    "id": "T103"
+  },
+  {
+    "original": "ဘွဲ့",
+    "mapped": "T¤ß¿",
+    "id": "T106"
+  },
+  {
+    "original": "ဘန့်",
+    "mapped": "TP¿^",
+    "id": "T107"
+  },
+  {
+    "original": "ဘန်း",
+    "mapped": "Tp_",
+    "id": "T108"
+  },
+  {
+    "original": "ဘိတ်",
+    "mapped": "TÐm",
+    "id": "T113"
+  },
+  {
+    "original": "ဘင်း",
+    "mapped": "Te_",
+    "id": "T001"
+  },
+  {
+    "original": "ဘိုး",
+    "mapped": "TÐð_",
+    "id": "T115"
+  },
+  {
+    "original": "ဘို့",
+    "mapped": "TÐð¿",
+    "id": "T242"
+  },
+  {
+    "original": "ဘွား",
+    "mapped": "T¤¼_",
+    "id": "T244"
+  },
+  {
+    "original": "ဘယ့်",
+    "mapped": "TV¿^",
+    "id": "T264"
+  },
+  {
+    "original": "ဘာန်",
+    "mapped": "T¼p",
+    "id": "T269"
+  },
+  {
+    "original": "ဘယ့်",
+    "mapped": "TV¿^",
+    "id": "T264"
+  },
+  {
+    "original": "ဘုန်း",
+    "mapped": "Tðp_",
+    "id": "T120"
+  },
+  {
+    "original": "ဘောက်",
+    "mapped": "T∆¼a",
+    "id": "T121"
+  },
+  {
+    "original": "ဘောင်",
+    "mapped": "T∆¼e",
+    "id": "T122"
+  },
+  {
+    "original": "ဘျမ်း",
+    "mapped": "T*u_",
+    "id": "T127"
+  },
+  {
+    "original": "ဘိန်း",
+    "mapped": "TÐp_",
+    "id": "T161"
+  },
+  {
+    "original": "ဘိုင်",
+    "mapped": "TÐðe",
+    "id": "T162"
+  },
+  {
+    "original": "ဘွင်း",
+    "mapped": "T¤e_",
+    "id": "T172"
+  },
+  {
+    "original": "ဘုဉ်း",
+    "mapped": "Tðj_",
+    "id": "T380"
+  },
+  {
+    "original": "ဘောင်း",
+    "mapped": "T∆¼e_",
+    "id": "T186"
+  },
+  {
+    "original": "ဘွိုင်",
+    "mapped": "T¤Ððe",
+    "id": "T381"
+  },
+  {
+    "original": "မျ",
+    "mapped": "U*",
+    "id": "U007"
+  },
+  {
+    "original": "မိ",
+    "mapped": "UÐ",
+    "id": "U012"
+  },
+  {
+    "original": "မ့",
+    "mapped": "U¿",
+    "id": "U194"
+  },
+  {
+    "original": "မီ",
+    "mapped": "UÞ",
+    "id": "U002"
+  },
+  {
+    "original": "မု",
+    "mapped": "Uð",
+    "id": "U003"
+  },
+  {
+    "original": "မူ",
+    "mapped": "Uþ",
+    "id": "U004"
+  },
+  {
+    "original": "မေ",
+    "mapped": "U∆",
+    "id": "U013"
+  },
+  {
+    "original": "မဲ",
+    "mapped": "Uß",
+    "id": "U005"
+  },
+  {
+    "original": "မံ",
+    "mapped": "U¾",
+    "id": "U006"
+  },
+  {
+    "original": "မြ",
+    "mapped": "U¢",
+    "id": "U009"
+  },
+  {
+    "original": "မွ",
+    "mapped": "U¤",
+    "id": "U010"
+  },
+  {
+    "original": "မာ",
+    "mapped": "U¼",
+    "id": "U011"
+  },
+  {
+    "original": "မှ",
+    "mapped": "Uµ",
+    "id": "U233"
+  },
+  {
+    "original": "မျာ",
+    "mapped": "U*¼",
+    "id": "U015"
+  },
+  {
+    "original": "မျံ",
+    "mapped": "U*¾",
+    "id": "U027"
+  },
+  {
+    "original": "မား",
+    "mapped": "U¼_",
+    "id": "U045"
+  },
+  {
+    "original": "မှု",
+    "mapped": "Uµð",
+    "id": "U382"
+  },
+  {
+    "original": "မေး",
+    "mapped": "U∆_",
+    "id": "U018"
+  },
+  {
+    "original": "မုံ",
+    "mapped": "Uð¾",
+    "id": "U019"
+  },
+  {
+    "original": "မူး",
+    "mapped": "Uþ_",
+    "id": "U020"
+  },
+  {
+    "original": "မော",
+    "mapped": "U∆¼",
+    "id": "U008"
+  },
+  {
+    "original": "မဲ့",
+    "mapped": "Uß¿",
+    "id": "U021"
+  },
+  {
+    "original": "မြာ",
+    "mapped": "U¢¼",
+    "id": "U017"
+  },
+  {
+    "original": "မြူ",
+    "mapped": "U¢þ",
+    "id": "U028"
+  },
+  {
+    "original": "မြေ",
+    "mapped": "U¢∆",
+    "id": "U016"
+  },
+  {
+    "original": "မြဲ",
+    "mapped": "U¢ß",
+    "id": "U029"
+  },
+  {
+    "original": "မွဲ",
+    "mapped": "U¤ß",
+    "id": "U033"
+  },
+  {
+    "original": "မို",
+    "mapped": "UÐð",
+    "id": "U034"
+  },
+  {
+    "original": "မက်",
+    "mapped": "Ua",
+    "id": "U035"
+  },
+  {
+    "original": "မင်",
+    "mapped": "Ue",
+    "id": "U036"
+  },
+  {
+    "original": "မစ်",
+    "mapped": "Uf",
+    "id": "U037"
+  },
+  {
+    "original": "မဏ်",
+    "mapped": "Ul",
+    "id": "U039"
+  },
+  {
+    "original": "မတ်",
+    "mapped": "Um",
+    "id": "U040"
+  },
+  {
+    "original": "မန်",
+    "mapped": "Up",
+    "id": "U041"
+  },
+  {
+    "original": "မပ်",
+    "mapped": "Uq",
+    "id": "U042"
+  },
+  {
+    "original": "မယ်",
+    "mapped": "Uv",
+    "id": "U044"
+  },
+  {
+    "original": "မြံ",
+    "mapped": "U¢¾",
+    "id": "U046"
+  },
+  {
+    "original": "မွေ",
+    "mapped": "U¤∆",
+    "id": "U047"
+  },
+  {
+    "original": "မီး",
+    "mapped": "UÞ_",
+    "id": "U196"
+  },
+  {
+    "original": "မာ့",
+    "mapped": "U¼¿",
+    "id": "U231"
+  },
+  {
+    "original": "မဉ်",
+    "mapped": "Uj",
+    "id": "U251"
+  },
+  {
+    "original": "မည်",
+    "mapped": "Uh",
+    "id": "U252"
+  },
+  {
+    "original": "မေ့",
+    "mapped": "U∆¿",
+    "id": "U235"
+  },
+  {
+    "original": "မှီ",
+    "mapped": "UµÞ",
+    "id": "U275"
+  },
+  {
+    "original": "မြီ",
+    "mapped": "U¢Þ",
+    "id": "U293"
+  },
+  {
+    "original": "မဂ်",
+    "mapped": "Uc",
+    "id": "U299"
+  },
+  {
+    "original": "မဇ်",
+    "mapped": "Ug",
+    "id": "U341"
+  },
+  {
+    "original": "မလ်",
+    "mapped": "Ux",
+    "id": "U342"
+  },
+  {
+    "original": "မျှ",
+    "mapped": "U*µ",
+    "id": "U383"
+  },
+  {
+    "original": "မှေ",
+    "mapped": "Uµ∆",
+    "id": "U384"
+  },
+  {
+    "original": "မှာ",
+    "mapped": "Uµ¼",
+    "id": "U238"
+  },
+  {
+    "original": "မွှ",
+    "mapped": "U¤µ",
+    "id": "U385"
+  },
+  {
+    "original": "မြွေ",
+    "mapped": "U¢¤∆",
+    "id": "U097"
+  },
+  {
+    "original": "မုန်",
+    "mapped": "Uðp",
+    "id": "U054"
+  },
+  {
+    "original": "မှန်",
+    "mapped": "Uµp",
+    "id": "U386"
+  },
+  {
+    "original": "မြူး",
+    "mapped": "U¢þ_",
+    "id": "U093"
+  },
+  {
+    "original": "မှူး",
+    "mapped": "Uµþ_",
+    "id": "U321"
+  },
+  {
+    "original": "မုက်",
+    "mapped": "Uða",
+    "id": "U051"
+  },
+  {
+    "original": "မုဋ်",
+    "mapped": "Uði",
+    "id": "U052"
+  },
+  {
+    "original": "မုတ်",
+    "mapped": "Uðm",
+    "id": "U053"
+  },
+  {
+    "original": "မုဗ်",
+    "mapped": "Uðs",
+    "id": "U056"
+  },
+  {
+    "original": "မော့",
+    "mapped": "U∆¼¿",
+    "id": "U059"
+  },
+  {
+    "original": "မော်",
+    "mapped": "U∆¼^",
+    "id": "U060"
+  },
+  {
+    "original": "မျက်",
+    "mapped": "U*a",
+    "id": "U061"
+  },
+  {
+    "original": "မျစ်",
+    "mapped": "U*f",
+    "id": "U063"
+  },
+  {
+    "original": "မျဉ်",
+    "mapped": "U*j",
+    "id": "U064"
+  },
+  {
+    "original": "များ",
+    "mapped": "U*¼_",
+    "id": "U070"
+  },
+  {
+    "original": "မျို",
+    "mapped": "U*Ðð",
+    "id": "U072"
+  },
+  {
+    "original": "မျော",
+    "mapped": "U*∆¼",
+    "id": "U076"
+  },
+  {
+    "original": "မြက်",
+    "mapped": "U¢a",
+    "id": "U080"
+  },
+  {
+    "original": "မြင်",
+    "mapped": "U¢e",
+    "id": "U081"
+  },
+  {
+    "original": "မြစ်",
+    "mapped": "U¢f",
+    "id": "U082"
+  },
+  {
+    "original": "မြည်",
+    "mapped": "U¢h",
+    "id": "U084"
+  },
+  {
+    "original": "မြတ်",
+    "mapped": "U¢m",
+    "id": "U085"
+  },
+  {
+    "original": "မြန်",
+    "mapped": "U¢p",
+    "id": "U086"
+  },
+  {
+    "original": "မြား",
+    "mapped": "U¢¼_",
+    "id": "U090"
+  },
+  {
+    "original": "မြို",
+    "mapped": "U¢Ðð",
+    "id": "U091"
+  },
+  {
+    "original": "မြီး",
+    "mapped": "U¢Þ_",
+    "id": "U050"
+  },
+  {
+    "original": "မြုံ",
+    "mapped": "U¢ð¾",
+    "id": "U092"
+  },
+  {
+    "original": "မြော",
+    "mapped": "U¢∆¼",
+    "id": "U094"
+  },
+  {
+    "original": "မြေး",
+    "mapped": "U¢∆_",
+    "id": "U095"
+  },
+  {
+    "original": "မွတ်",
+    "mapped": "U¤m",
+    "id": "U099"
+  },
+  {
+    "original": "မွန်",
+    "mapped": "U¤p",
+    "id": "U100"
+  },
+  {
+    "original": "မွေ့",
+    "mapped": "U¤∆¿",
+    "id": "U104"
+  },
+  {
+    "original": "မွေး",
+    "mapped": "U¤∆_",
+    "id": "U105"
+  },
+  {
+    "original": "မန်း",
+    "mapped": "Up_",
+    "id": "U108"
+  },
+  {
+    "original": "မိစ်",
+    "mapped": "UÐf",
+    "id": "U112"
+  },
+  {
+    "original": "မိတ်",
+    "mapped": "UÐm",
+    "id": "U113"
+  },
+  {
+    "original": "မိန်",
+    "mapped": "UÐp",
+    "id": "U114"
+  },
+  {
+    "original": "မင်း",
+    "mapped": "Ue_",
+    "id": "U001"
+  },
+  {
+    "original": "မိုး",
+    "mapped": "UÐð_",
+    "id": "U115"
+  },
+  {
+    "original": "မေတ်",
+    "mapped": "U∆m",
+    "id": "U201"
+  },
+  {
+    "original": "မင့်",
+    "mapped": "UE¿^",
+    "id": "U241"
+  },
+  {
+    "original": "မို့",
+    "mapped": "UÐð¿",
+    "id": "U242"
+  },
+  {
+    "original": "မုံ့",
+    "mapped": "Uð¾¿",
+    "id": "U243"
+  },
+  {
+    "original": "မှက်",
+    "mapped": "Uµa",
+    "id": "U245"
+  },
+  {
+    "original": "မှား",
+    "mapped": "Uµ¼_",
+    "id": "U246"
+  },
+  {
+    "original": "မှဲ့",
+    "mapped": "Uµß¿",
+    "id": "U247"
+  },
+  {
+    "original": "မည့်",
+    "mapped": "UH¿^",
+    "id": "U255"
+  },
+  {
+    "original": "မည်း",
+    "mapped": "Uh_",
+    "id": "U256"
+  },
+  {
+    "original": "မယ့်",
+    "mapped": "UV¿^",
+    "id": "U264"
+  },
+  {
+    "original": "မာန်",
+    "mapped": "U¼p",
+    "id": "U269"
+  },
+  {
+    "original": "မာသ်",
+    "mapped": "U¼y",
+    "id": "U274"
+  },
+  {
+    "original": "မိသ်",
+    "mapped": "UÐy",
+    "id": "U313"
+  },
+  {
+    "original": "မှင်",
+    "mapped": "Uµe",
+    "id": "U318"
+  },
+  {
+    "original": "မှတ်",
+    "mapped": "Uµm",
+    "id": "U319"
+  },
+  {
+    "original": "မှေး",
+    "mapped": "Uµ∆_",
+    "id": "U322"
+  },
+  {
+    "original": "မာရ်",
+    "mapped": "U¼w",
+    "id": "U387"
+  },
+  {
+    "original": "မိလ်",
+    "mapped": "UÐx",
+    "id": "U388"
+  },
+  {
+    "original": "မုခ်",
+    "mapped": "Uðb",
+    "id": "U389"
+  },
+  {
+    "original": "မြေ့",
+    "mapped": "U¢∆¿",
+    "id": "U390"
+  },
+  {
+    "original": "မြွာ",
+    "mapped": "U¢¤¼",
+    "id": "U391"
+  },
+  {
+    "original": "မြွှ",
+    "mapped": "U¢¤µ",
+    "id": "U392"
+  },
+  {
+    "original": "မြှူ",
+    "mapped": "U¢µþ",
+    "id": "U393"
+  },
+  {
+    "original": "မှို",
+    "mapped": "UµÐð",
+    "id": "U394"
+  },
+  {
+    "original": "မှုံ",
+    "mapped": "Uµð¾",
+    "id": "U395"
+  },
+  {
+    "original": "မှီး",
+    "mapped": "UµÞ_",
+    "id": "U308"
+  },
+  {
+    "original": "မိန့်",
+    "mapped": "UÐP¿^",
+    "id": "U298"
+  },
+  {
+    "original": "မှိ",
+    "mapped": "UµÐ",
+    "id": "U270"
+  },
+  {
+    "original": "မြန်း",
+    "mapped": "U¢p_",
+    "id": "U370"
+  },
+  {
+    "original": "မျှင်",
+    "mapped": "U*µe",
+    "id": "U396"
+  },
+  {
+    "original": "မျင်",
+    "mapped": "U*e",
+    "id": "U062"
+  },
+  {
+    "original": "မြင့်",
+    "mapped": "U¢E¿^",
+    "id": "U139"
+  },
+  {
+    "original": "မုန့်",
+    "mapped": "UðP¿^",
+    "id": "U261"
+  },
+  {
+    "original": "မြုံ့",
+    "mapped": "U¢ð¾¿",
+    "id": "U371"
+  },
+  {
+    "original": "မုန်း",
+    "mapped": "Uðp_",
+    "id": "U120"
+  },
+  {
+    "original": "မောက်",
+    "mapped": "U∆¼a",
+    "id": "U121"
+  },
+  {
+    "original": "မောင်",
+    "mapped": "U∆¼e",
+    "id": "U122"
+  },
+  {
+    "original": "မျဉ်း",
+    "mapped": "U*j_",
+    "id": "U124"
+  },
+  {
+    "original": "မြင့်",
+    "mapped": "U¢E¿^",
+    "id": "U139"
+  },
+  {
+    "original": "မြည့်",
+    "mapped": "U¢H¿^",
+    "id": "U141"
+  },
+  {
+    "original": "မြည်း",
+    "mapped": "U¢h_",
+    "id": "U142"
+  },
+  {
+    "original": "မြိတ်",
+    "mapped": "U¢Ðm",
+    "id": "U145"
+  },
+  {
+    "original": "မြို့",
+    "mapped": "U¢Ðð¿",
+    "id": "U147"
+  },
+  {
+    "original": "မြိုး",
+    "mapped": "U¢Ðð_",
+    "id": "U118"
+  },
+  {
+    "original": "မြော့",
+    "mapped": "U¢∆¼¿",
+    "id": "U150"
+  },
+  {
+    "original": "မြော်",
+    "mapped": "U¢∆¼^",
+    "id": "U151"
+  },
+  {
+    "original": "မြွက်",
+    "mapped": "U¢¤a",
+    "id": "U152"
+  },
+  {
+    "original": "မွန်း",
+    "mapped": "U¤p_",
+    "id": "U159"
+  },
+  {
+    "original": "မွမ်း",
+    "mapped": "U¤u_",
+    "id": "U160"
+  },
+  {
+    "original": "မိန်း",
+    "mapped": "UÐp_",
+    "id": "U161"
+  },
+  {
+    "original": "မျိုး",
+    "mapped": "U*Ðð_",
+    "id": "U166"
+  },
+  {
+    "original": "မိုက်",
+    "mapped": "UÐða",
+    "id": "U168"
+  },
+  {
+    "original": "မြုပ်",
+    "mapped": "U¢ðq",
+    "id": "U171"
+  },
+  {
+    "original": "မြင်း",
+    "mapped": "U¢e_",
+    "id": "U170"
+  },
+  {
+    "original": "မှန်း",
+    "mapped": "Uµp_",
+    "id": "U249"
+  },
+  {
+    "original": "မိုရ်",
+    "mapped": "UÐðw",
+    "id": "U260"
+  },
+  {
+    "original": "မုန့်",
+    "mapped": "UðP¿^",
+    "id": "U261"
+  },
+  {
+    "original": "မွှတ်",
+    "mapped": "U¤µm",
+    "id": "U279"
+  },
+  {
+    "original": "မွှန်",
+    "mapped": "U¤µp",
+    "id": "U280"
+  },
+  {
+    "original": "မှော်",
+    "mapped": "Uµ∆¼^",
+    "id": "U284"
+  },
+  {
+    "original": "မိန့်",
+    "mapped": "UÐP¿^",
+    "id": "U298"
+  },
+  {
+    "original": "မွှေး",
+    "mapped": "U¤µ∆_",
+    "id": "U327"
+  },
+  {
+    "original": "မှုတ်",
+    "mapped": "Uµðm",
+    "id": "U333"
+  },
+  {
+    "original": "မြိန်",
+    "mapped": "U¢Ðp",
+    "id": "U359"
+  },
+  {
+    "original": "မျှစ်",
+    "mapped": "U*µf",
+    "id": "U397"
+  },
+  {
+    "original": "မျှား",
+    "mapped": "U*µ¼_",
+    "id": "U398"
+  },
+  {
+    "original": "မျှော",
+    "mapped": "U*µ∆¼",
+    "id": "U399"
+  },
+  {
+    "original": "မြွှာ",
+    "mapped": "U¢¤µ¼",
+    "id": "U400"
+  },
+  {
+    "original": "မြှပ်",
+    "mapped": "U¢µq",
+    "id": "U401"
+  },
+  {
+    "original": "မွှေ့",
+    "mapped": "U¤µ∆¿",
+    "id": "U402"
+  },
+  {
+    "original": "မှည့်",
+    "mapped": "UµH¿^",
+    "id": "U403"
+  },
+  {
+    "original": "မှာန်",
+    "mapped": "Uµ¼p",
+    "id": "U404"
+  },
+  {
+    "original": "မှိန်",
+    "mapped": "UµÐp",
+    "id": "U405"
+  },
+  {
+    "original": "မှုန်",
+    "mapped": "Uµðp",
+    "id": "U406"
+  },
+  {
+    "original": "မားစ်",
+    "mapped": "U¼_f",
+    "id": "U407"
+  },
+  {
+    "original": "မြိင်",
+    "mapped": "U¢Ðe",
+    "id": "U408"
+  },
+  {
+    "original": "မျည်း",
+    "mapped": "U*h_",
+    "id": "U125"
+  },
+  {
+    "original": "မြှေး",
+    "mapped": "U¢µ∆_",
+    "id": "U409"
+  },
+  {
+    "original": "မွှား",
+    "mapped": "U¤µ¼_",
+    "id": "U410"
+  },
+  {
+    "original": "မှိတ်",
+    "mapped": "UµÐm",
+    "id": "U411"
+  },
+  {
+    "original": "မြှင့်",
+    "mapped": "U¢µE¿^",
+    "id": "U412"
+  },
+  {
+    "original": "မှုန့်",
+    "mapped": "UµðP¿^",
+    "id": "U413"
+  },
+  {
+    "original": "မျောက်",
+    "mapped": "U*∆¼a",
+    "id": "U176"
+  },
+  {
+    "original": "မြိုက်",
+    "mapped": "U¢Ðða",
+    "id": "U180"
+  },
+  {
+    "original": "မြိုင်",
+    "mapped": "U¢Ððe",
+    "id": "U181"
+  },
+  {
+    "original": "မြောက်",
+    "mapped": "U¢∆¼a",
+    "id": "U182"
+  },
+  {
+    "original": "မြောင်",
+    "mapped": "U¢∆¼e",
+    "id": "U183"
+  },
+  {
+    "original": "မိုင်း",
+    "mapped": "UÐðe_",
+    "id": "U184"
+  },
+  {
+    "original": "မောင်း",
+    "mapped": "U∆¼e_",
+    "id": "U186"
+  },
+  {
+    "original": "မြွင်း",
+    "mapped": "U¢¤e_",
+    "id": "U187"
+  },
+  {
+    "original": "မှောက်",
+    "mapped": "Uµ∆¼a",
+    "id": "U287"
+  },
+  {
+    "original": "မွှန်း",
+    "mapped": "U¤µp_",
+    "id": "U288"
+  },
+  {
+    "original": "မှောင်",
+    "mapped": "Uµ∆¼e",
+    "id": "U337"
+  },
+  {
+    "original": "မျှဉ်း",
+    "mapped": "U*µj_",
+    "id": "U414"
+  },
+  {
+    "original": "မျှော့",
+    "mapped": "U*µ∆¼¿",
+    "id": "U415"
+  },
+  {
+    "original": "မျှော်",
+    "mapped": "U*µ∆¼^",
+    "id": "U416"
+  },
+  {
+    "original": "မြှင့်",
+    "mapped": "U¢µE¿^",
+    "id": "U412"
+  },
+  {
+    "original": "မြှုပ်",
+    "mapped": "U¢µðq",
+    "id": "U417"
+  },
+  {
+    "original": "မြှုံး",
+    "mapped": "U¢µð¾_",
+    "id": "U418"
+  },
+  {
+    "original": "မွှမ်း",
+    "mapped": "U¤µu_",
+    "id": "U419"
+  },
+  {
+    "original": "မှိန်း",
+    "mapped": "UµÐp_",
+    "id": "U420"
+  },
+  {
+    "original": "မှိုင်",
+    "mapped": "UµÐðe",
+    "id": "U421"
+  },
+  {
+    "original": "မှုန့်",
+    "mapped": "UµðP¿^",
+    "id": "U413"
+  },
+  {
+    "original": "မန့်စ်",
+    "mapped": "UP¿^f",
+    "id": "U422"
+  },
+  {
+    "original": "မိုဃ်း",
+    "mapped": "UÐðd_",
+    "id": "U423"
+  },
+  {
+    "original": "မှုန်း",
+    "mapped": "Uµðp_",
+    "id": "U336"
+  },
+  {
+    "original": "မြောင်း",
+    "mapped": "U¢∆¼e_",
+    "id": "U191"
+  },
+  {
+    "original": "မှောင့်",
+    "mapped": "Uµ∆¼E¿^",
+    "id": "U289"
+  },
+  {
+    "original": "မှိုင်း",
+    "mapped": "UµÐðe_",
+    "id": "U338"
+  },
+  {
+    "original": "မြိုင့်",
+    "mapped": "U¢ÐðE¿^",
+    "id": "U424"
+  },
+  {
+    "original": "မြှိုက်",
+    "mapped": "U¢µÐða",
+    "id": "U425"
+  },
+  {
+    "original": "မြှောက်",
+    "mapped": "U¢µ∆¼a",
+    "id": "U426"
+  },
+  {
+    "original": "မြှောင်",
+    "mapped": "U¢µ∆¼e",
+    "id": "U427"
+  },
+  {
+    "original": "မြိုင်း",
+    "mapped": "U¢Ððe_",
+    "id": "U368"
+  },
+  {
+    "original": "မြှောင့်",
+    "mapped": "U¢µ∆¼E¿^",
+    "id": "U428"
+  },
+  {
+    "original": "မြှောင်း",
+    "mapped": "U¢µ∆¼e_",
+    "id": "U429"
+  },
+  {
+    "original": "ယှ",
+    "mapped": "Vµ",
+    "id": "V233"
+  },
+  {
+    "original": "ယျ",
+    "mapped": "V*",
+    "id": "V007"
+  },
+  {
+    "original": "ယ့",
+    "mapped": "V¿",
+    "id": "V194"
+  },
+  {
+    "original": "ယီ",
+    "mapped": "VÞ",
+    "id": "V002"
+  },
+  {
+    "original": "ယု",
+    "mapped": "Vð",
+    "id": "V003"
+  },
+  {
+    "original": "ယူ",
+    "mapped": "Vþ",
+    "id": "V004"
+  },
+  {
+    "original": "ယေ",
+    "mapped": "V∆",
+    "id": "V013"
+  },
+  {
+    "original": "ယဲ",
+    "mapped": "Vß",
+    "id": "V005"
+  },
+  {
+    "original": "ယံ",
+    "mapped": "V¾",
+    "id": "V006"
+  },
+  {
+    "original": "ယွ",
+    "mapped": "V¤",
+    "id": "V010"
+  },
+  {
+    "original": "ယာ",
+    "mapped": "V¼",
+    "id": "V011"
+  },
+  {
+    "original": "ယိ",
+    "mapped": "VÐ",
+    "id": "V012"
+  },
+  {
+    "original": "ယှာ",
+    "mapped": "Vµ¼",
+    "id": "V238"
+  },
+  {
+    "original": "ယှိ",
+    "mapped": "VµÐ",
+    "id": "V270"
+  },
+  {
+    "original": "ယျံ",
+    "mapped": "V*¾",
+    "id": "V027"
+  },
+  {
+    "original": "ယှူ",
+    "mapped": "Vµþ",
+    "id": "V430"
+  },
+  {
+    "original": "ယှု",
+    "mapped": "Vµð",
+    "id": "V382"
+  },
+  {
+    "original": "ယှံ",
+    "mapped": "Vµ¾",
+    "id": "V307"
+  },
+  {
+    "original": "ယျိ",
+    "mapped": "V*Ð",
+    "id": "V023"
+  },
+  {
+    "original": "ယျေ",
+    "mapped": "V*∆",
+    "id": "V025"
+  },
+  {
+    "original": "ယျု",
+    "mapped": "V*ð",
+    "id": "V048"
+  },
+  {
+    "original": "ယျူ",
+    "mapped": "V*þ",
+    "id": "V024"
+  },
+  {
+    "original": "ယျီ",
+    "mapped": "V*Þ",
+    "id": "V014"
+  },
+  {
+    "original": "ယုံ",
+    "mapped": "Vð¾",
+    "id": "V019"
+  },
+  {
+    "original": "ယူး",
+    "mapped": "Vþ_",
+    "id": "V020"
+  },
+  {
+    "original": "ယော",
+    "mapped": "V∆¼",
+    "id": "V008"
+  },
+  {
+    "original": "ယဲ့",
+    "mapped": "Vß¿",
+    "id": "V021"
+  },
+  {
+    "original": "ယျာ့",
+    "mapped": "V*¼¿",
+    "id": "V431"
+  },
+  {
+    "original": "ယျာ",
+    "mapped": "V*¼",
+    "id": "V015"
+  },
+  {
+    "original": "ယြေ",
+    "mapped": "V¢∆",
+    "id": "V016"
+  },
+  {
+    "original": "ယို",
+    "mapped": "VÐð",
+    "id": "V034"
+  },
+  {
+    "original": "ယက်",
+    "mapped": "Va",
+    "id": "V035"
+  },
+  {
+    "original": "ယင်",
+    "mapped": "Ve",
+    "id": "V036"
+  },
+  {
+    "original": "ယစ်",
+    "mapped": "Vf",
+    "id": "V037"
+  },
+  {
+    "original": "ယတ်",
+    "mapped": "Vm",
+    "id": "V040"
+  },
+  {
+    "original": "ယန်",
+    "mapped": "Vp",
+    "id": "V041"
+  },
+  {
+    "original": "ယပ်",
+    "mapped": "Vq",
+    "id": "V042"
+  },
+  {
+    "original": "ယမ်",
+    "mapped": "Vu",
+    "id": "V043"
+  },
+  {
+    "original": "ယယ်",
+    "mapped": "Vv",
+    "id": "V044"
+  },
+  {
+    "original": "ယား",
+    "mapped": "V¼_",
+    "id": "V045"
+  },
+  {
+    "original": "ယီး",
+    "mapped": "VÞ_",
+    "id": "V196"
+  },
+  {
+    "original": "ယွံ",
+    "mapped": "V¤¾",
+    "id": "V198"
+  },
+  {
+    "original": "ယဉ်",
+    "mapped": "Vj",
+    "id": "V251"
+  },
+  {
+    "original": "ယဇ်",
+    "mapped": "Vg",
+    "id": "V341"
+  },
+  {
+    "original": "ယှေ",
+    "mapped": "Vµ∆",
+    "id": "V384"
+  },
+  {
+    "original": "ယျုံ",
+    "mapped": "V*ð¾",
+    "id": "V074"
+  },
+  {
+    "original": "ယှိံ",
+    "mapped": "VµÐ¾",
+    "id": "V432"
+  },
+  {
+    "original": "ယျိံ",
+    "mapped": "V*Ð¾",
+    "id": "V433"
+  },
+  {
+    "original": "ယုတ်",
+    "mapped": "Vðm",
+    "id": "V053"
+  },
+  {
+    "original": "ယုန်",
+    "mapped": "Vðp",
+    "id": "V054"
+  },
+  {
+    "original": "ယော်",
+    "mapped": "V∆¼^",
+    "id": "V060"
+  },
+  {
+    "original": "ယျော",
+    "mapped": "V*∆¼",
+    "id": "V076"
+  },
+  {
+    "original": "ယွက်",
+    "mapped": "V¤a",
+    "id": "V098"
+  },
+  {
+    "original": "ယွတ်",
+    "mapped": "V¤m",
+    "id": "V099"
+  },
+  {
+    "original": "ယွမ်",
+    "mapped": "V¤u",
+    "id": "V102"
+  },
+  {
+    "original": "ယန်း",
+    "mapped": "Vp_",
+    "id": "V108"
+  },
+  {
+    "original": "ယမ်း",
+    "mapped": "Vu_",
+    "id": "V109"
+  },
+  {
+    "original": "ယာယ်",
+    "mapped": "V¼v",
+    "id": "V111"
+  },
+  {
+    "original": "ယင်း",
+    "mapped": "Ve_",
+    "id": "V001"
+  },
+  {
+    "original": "ယိုး",
+    "mapped": "VÐð_",
+    "id": "V115"
+  },
+  {
+    "original": "ယို့",
+    "mapped": "VÐð¿",
+    "id": "V242"
+  },
+  {
+    "original": "ယုံ့",
+    "mapped": "Vð¾¿",
+    "id": "V243"
+  },
+  {
+    "original": "ယှက်",
+    "mapped": "Vµa",
+    "id": "V245"
+  },
+  {
+    "original": "ယဉ့်",
+    "mapped": "VJ¿^",
+    "id": "V253"
+  },
+  {
+    "original": "ယဉ်း",
+    "mapped": "Vj_",
+    "id": "V254"
+  },
+  {
+    "original": "ယာန်",
+    "mapped": "V¼p",
+    "id": "V269"
+  },
+  {
+    "original": "ယာဉ်",
+    "mapped": "V¼j",
+    "id": "V272"
+  },
+  {
+    "original": "ယုဂ်",
+    "mapped": "Vðc",
+    "id": "V349"
+  },
+  {
+    "original": "ယှဉ်",
+    "mapped": "Vµj",
+    "id": "V434"
+  },
+  {
+    "original": "ယောက်",
+    "mapped": "V∆¼a",
+    "id": "V121"
+  },
+  {
+    "original": "ယောင်",
+    "mapped": "V∆¼e",
+    "id": "V122"
+  },
+  {
+    "original": "ယွန်း",
+    "mapped": "V¤p_",
+    "id": "V159"
+  },
+  {
+    "original": "ယိုင်",
+    "mapped": "VÐðe",
+    "id": "V162"
+  },
+  {
+    "original": "ယိမ်း",
+    "mapped": "VÐu_",
+    "id": "V259"
+  },
+  {
+    "original": "ယွင်း",
+    "mapped": "V¤e_",
+    "id": "V172"
+  },
+  {
+    "original": "ယျာဉ်",
+    "mapped": "V*¼j",
+    "id": "V435"
+  },
+  {
+    "original": "ယောင်း",
+    "mapped": "V∆¼e_",
+    "id": "V186"
+  },
+  {
+    "original": "ရေ",
+    "mapped": "W∆",
+    "id": "W013"
+  },
+  {
+    "original": "ရာ",
+    "mapped": "W¼",
+    "id": "W011"
+  },
+  {
+    "original": "ရီ",
+    "mapped": "WÞ",
+    "id": "W002"
+  },
+  {
+    "original": "ရူ",
+    "mapped": "Wþ",
+    "id": "W004"
+  },
+  {
+    "original": "ရဲ",
+    "mapped": "Wß",
+    "id": "W005"
+  },
+  {
+    "original": "ရံ",
+    "mapped": "W¾",
+    "id": "W006"
+  },
+  {
+    "original": "ရွ",
+    "mapped": "W¤",
+    "id": "W010"
+  },
+  {
+    "original": "ရိ",
+    "mapped": "WÐ",
+    "id": "W012"
+  },
+  {
+    "original": "ရး",
+    "mapped": "W_",
+    "id": "W239"
+  },
+  {
+    "original": "ရု",
+    "mapped": "Wð",
+    "id": "W003"
+  },
+  {
+    "original": "ရှ",
+    "mapped": "Wµ",
+    "id": "W233"
+  },
+  {
+    "original": "ရှု",
+    "mapped": "Wµð",
+    "id": "W382"
+  },
+  {
+    "original": "ရေး",
+    "mapped": "W∆_",
+    "id": "W018"
+  },
+  {
+    "original": "ရုံ",
+    "mapped": "Wð¾",
+    "id": "W019"
+  },
+  {
+    "original": "ရူး",
+    "mapped": "Wþ_",
+    "id": "W020"
+  },
+  {
+    "original": "ရော",
+    "mapped": "W∆¼",
+    "id": "W008"
+  },
+  {
+    "original": "ရဲ့",
+    "mapped": "Wß¿",
+    "id": "W021"
+  },
+  {
+    "original": "ရွာ",
+    "mapped": "W¤¼",
+    "id": "W031"
+  },
+  {
+    "original": "ရွဲ",
+    "mapped": "W¤ß",
+    "id": "W033"
+  },
+  {
+    "original": "ရို",
+    "mapped": "WÐð",
+    "id": "W034"
+  },
+  {
+    "original": "ရက်",
+    "mapped": "Wa",
+    "id": "W035"
+  },
+  {
+    "original": "ရင်",
+    "mapped": "We",
+    "id": "W036"
+  },
+  {
+    "original": "ရစ်",
+    "mapped": "Wf",
+    "id": "W037"
+  },
+  {
+    "original": "ရတ်",
+    "mapped": "Wm",
+    "id": "W040"
+  },
+  {
+    "original": "ရန်",
+    "mapped": "Wp",
+    "id": "W041"
+  },
+  {
+    "original": "ရပ်",
+    "mapped": "Wq",
+    "id": "W042"
+  },
+  {
+    "original": "ရမ်",
+    "mapped": "Wu",
+    "id": "W043"
+  },
+  {
+    "original": "ရယ်",
+    "mapped": "Wv",
+    "id": "W044"
+  },
+  {
+    "original": "ရား",
+    "mapped": "W¼_",
+    "id": "W045"
+  },
+  {
+    "original": "ရွေ",
+    "mapped": "W¤∆",
+    "id": "W047"
+  },
+  {
+    "original": "ရီး",
+    "mapped": "WÞ_",
+    "id": "W196"
+  },
+  {
+    "original": "ရာ့",
+    "mapped": "W¼¿",
+    "id": "W231"
+  },
+  {
+    "original": "ရှာ",
+    "mapped": "Wµ¼",
+    "id": "W238"
+  },
+  {
+    "original": "ရဉ်",
+    "mapped": "Wj",
+    "id": "W251"
+  },
+  {
+    "original": "ရည်",
+    "mapped": "Wh",
+    "id": "W252"
+  },
+  {
+    "original": "ရေ့",
+    "mapped": "W∆¿",
+    "id": "W235"
+  },
+  {
+    "original": "ရှီ",
+    "mapped": "WµÞ",
+    "id": "W275"
+  },
+  {
+    "original": "ရှဲ",
+    "mapped": "Wµß",
+    "id": "W306"
+  },
+  {
+    "original": "ရှံ",
+    "mapped": "Wµ¾",
+    "id": "W307"
+  },
+  {
+    "original": "ရသ်",
+    "mapped": "Wy",
+    "id": "W436"
+  },
+  {
+    "original": "ရှူ",
+    "mapped": "Wµþ",
+    "id": "W430"
+  },
+  {
+    "original": "ရှိ",
+    "mapped": "WµÐ",
+    "id": "W270"
+  },
+  {
+    "original": "ရံ့",
+    "mapped": "W¾¿",
+    "id": "W022"
+  },
+  {
+    "original": "ရွှေ",
+    "mapped": "W¤µ∆",
+    "id": "W437"
+  },
+  {
+    "original": "ရှေး",
+    "mapped": "Wµ∆_",
+    "id": "W322"
+  },
+  {
+    "original": "ရုက်",
+    "mapped": "Wða",
+    "id": "W051"
+  },
+  {
+    "original": "ရုတ်",
+    "mapped": "Wðm",
+    "id": "W053"
+  },
+  {
+    "original": "ရုပ်",
+    "mapped": "Wðq",
+    "id": "W055"
+  },
+  {
+    "original": "ရုံး",
+    "mapped": "Wð¾_",
+    "id": "W058"
+  },
+  {
+    "original": "ရော့",
+    "mapped": "W∆¼¿",
+    "id": "W059"
+  },
+  {
+    "original": "ရော်",
+    "mapped": "W∆¼^",
+    "id": "W060"
+  },
+  {
+    "original": "ရွက်",
+    "mapped": "W¤a",
+    "id": "W098"
+  },
+  {
+    "original": "ရွတ်",
+    "mapped": "W¤m",
+    "id": "W099"
+  },
+  {
+    "original": "ရွပ်",
+    "mapped": "W¤q",
+    "id": "W101"
+  },
+  {
+    "original": "ရွယ်",
+    "mapped": "W¤v",
+    "id": "W103"
+  },
+  {
+    "original": "ရွေ့",
+    "mapped": "W¤∆¿",
+    "id": "W104"
+  },
+  {
+    "original": "ရွေး",
+    "mapped": "W¤∆_",
+    "id": "W105"
+  },
+  {
+    "original": "ရွဲ့",
+    "mapped": "W¤ß¿",
+    "id": "W106"
+  },
+  {
+    "original": "ရန့်",
+    "mapped": "WP¿^",
+    "id": "W107"
+  },
+  {
+    "original": "ရန်း",
+    "mapped": "Wp_",
+    "id": "W108"
+  },
+  {
+    "original": "ရမ်း",
+    "mapped": "Wu_",
+    "id": "W109"
+  },
+  {
+    "original": "ရာယ်",
+    "mapped": "W¼v",
+    "id": "W111"
+  },
+  {
+    "original": "ရိတ်",
+    "mapped": "WÐm",
+    "id": "W113"
+  },
+  {
+    "original": "ရင်း",
+    "mapped": "We_",
+    "id": "W001"
+  },
+  {
+    "original": "ရိုး",
+    "mapped": "WÐð_",
+    "id": "W115"
+  },
+  {
+    "original": "ရိပ်",
+    "mapped": "WÐq",
+    "id": "W200"
+  },
+  {
+    "original": "ရွင်",
+    "mapped": "W¤e",
+    "id": "W206"
+  },
+  {
+    "original": "ရွံ့",
+    "mapped": "W¤¾¿",
+    "id": "W207"
+  },
+  {
+    "original": "ရုဏ်",
+    "mapped": "Wðl",
+    "id": "W227"
+  },
+  {
+    "original": "ရင့်",
+    "mapped": "WE¿^",
+    "id": "W241"
+  },
+  {
+    "original": "ရို့",
+    "mapped": "WÐð¿",
+    "id": "W242"
+  },
+  {
+    "original": "ရွား",
+    "mapped": "W¤¼_",
+    "id": "W244"
+  },
+  {
+    "original": "ရှက်",
+    "mapped": "Wµa",
+    "id": "W245"
+  },
+  {
+    "original": "ရှား",
+    "mapped": "Wµ¼_",
+    "id": "W246"
+  },
+  {
+    "original": "ရဉ့်",
+    "mapped": "WJ¿^",
+    "id": "W253"
+  },
+  {
+    "original": "ရည်း",
+    "mapped": "Wh_",
+    "id": "W256"
+  },
+  {
+    "original": "ရိမ်",
+    "mapped": "WÐu",
+    "id": "W257"
+  },
+  {
+    "original": "ရာဏ်",
+    "mapped": "W¼l",
+    "id": "W273"
+  },
+  {
+    "original": "ရှစ်",
+    "mapped": "Wµf",
+    "id": "W277"
+  },
+  {
+    "original": "ရှပ်",
+    "mapped": "Wµq",
+    "id": "W278"
+  },
+  {
+    "original": "ရွှာ",
+    "mapped": "W¤µ¼",
+    "id": "W315"
+  },
+  {
+    "original": "ရွှဲ",
+    "mapped": "W¤µß",
+    "id": "W316"
+  },
+  {
+    "original": "ရှင်",
+    "mapped": "Wµe",
+    "id": "W318"
+  },
+  {
+    "original": "ရှယ်",
+    "mapped": "Wµv",
+    "id": "W320"
+  },
+  {
+    "original": "ရှူး",
+    "mapped": "Wµþ_",
+    "id": "W321"
+  },
+  {
+    "original": "ရှုံ",
+    "mapped": "Wµð¾",
+    "id": "W395"
+  },
+  {
+    "original": "ရှဉ်",
+    "mapped": "Wµj",
+    "id": "W434"
+  },
+  {
+    "original": "ရာဇ်",
+    "mapped": "W¼g",
+    "id": "W438"
+  },
+  {
+    "original": "ရှည်",
+    "mapped": "Wµh",
+    "id": "W439"
+  },
+  {
+    "original": "ရှိး",
+    "mapped": "WµÐ_",
+    "id": "W440"
+  },
+  {
+    "original": "ရှော",
+    "mapped": "Wµ∆¼",
+    "id": "W271"
+  },
+  {
+    "original": "ရှေ့",
+    "mapped": "Wµ∆¿",
+    "id": "W441"
+  },
+  {
+    "original": "ရုန်း",
+    "mapped": "Wðp_",
+    "id": "W120"
+  },
+  {
+    "original": "ရောက်",
+    "mapped": "W∆¼a",
+    "id": "W121"
+  },
+  {
+    "original": "ရောင်",
+    "mapped": "W∆¼e",
+    "id": "W122"
+  },
+  {
+    "original": "ရွန်း",
+    "mapped": "W¤p_",
+    "id": "W159"
+  },
+  {
+    "original": "ရွမ်း",
+    "mapped": "W¤u_",
+    "id": "W160"
+  },
+  {
+    "original": "ရိန်း",
+    "mapped": "WÐp_",
+    "id": "W161"
+  },
+  {
+    "original": "ရိုင်",
+    "mapped": "WÐðe",
+    "id": "W162"
+  },
+  {
+    "original": "ရိုက်",
+    "mapped": "WÐða",
+    "id": "W168"
+  },
+  {
+    "original": "ရုန့်",
+    "mapped": "WðP¿^",
+    "id": "W261"
+  },
+  {
+    "original": "ရွှတ်",
+    "mapped": "W¤µm",
+    "id": "W279"
+  },
+  {
+    "original": "ရှို့",
+    "mapped": "WµÐð¿",
+    "id": "W282"
+  },
+  {
+    "original": "ရှိုး",
+    "mapped": "WµÐð_",
+    "id": "W283"
+  },
+  {
+    "original": "ရှော်",
+    "mapped": "Wµ∆¼^",
+    "id": "W284"
+  },
+  {
+    "original": "ရွှင်",
+    "mapped": "W¤µe",
+    "id": "W325"
+  },
+  {
+    "original": "ရှင့်",
+    "mapped": "WµE¿^",
+    "id": "W328"
+  },
+  {
+    "original": "ရှင်း",
+    "mapped": "Wµe_",
+    "id": "W285"
+  },
+  {
+    "original": "ရှန့်",
+    "mapped": "WµP¿^",
+    "id": "W329"
+  },
+  {
+    "original": "ရှမ်း",
+    "mapped": "Wµu_",
+    "id": "W330"
+  },
+  {
+    "original": "ရှုတ်",
+    "mapped": "Wµðm",
+    "id": "W333"
+  },
+  {
+    "original": "ရိုဏ်",
+    "mapped": "WÐðl",
+    "id": "W357"
+  },
+  {
+    "original": "ရွှေ့",
+    "mapped": "W¤µ∆¿",
+    "id": "W402"
+  },
+  {
+    "original": "ရှည့်",
+    "mapped": "WµH¿^",
+    "id": "W403"
+  },
+  {
+    "original": "ရှိန်",
+    "mapped": "WµÐp",
+    "id": "W405"
+  },
+  {
+    "original": "ရုဏ်း",
+    "mapped": "Wðl_",
+    "id": "W442"
+  },
+  {
+    "original": "ရွှံ့",
+    "mapped": "W¤µ¾¿",
+    "id": "W443"
+  },
+  {
+    "original": "ရှဉ့်",
+    "mapped": "WµJ¿^",
+    "id": "W444"
+  },
+  {
+    "original": "ရှိက်",
+    "mapped": "WµÐa",
+    "id": "W445"
+  },
+  {
+    "original": "ရှုပ်",
+    "mapped": "Wµðq",
+    "id": "W446"
+  },
+  {
+    "original": "ရှုံ့",
+    "mapped": "Wµð¾¿",
+    "id": "W447"
+  },
+  {
+    "original": "ရှုံး",
+    "mapped": "Wµð¾_",
+    "id": "W448"
+  },
+  {
+    "original": "ရှော့",
+    "mapped": "Wµ∆¼¿",
+    "id": "W449"
+  },
+  {
+    "original": "ရွင်း",
+    "mapped": "W¤e_",
+    "id": "W172"
+  },
+  {
+    "original": "ရွှပ်",
+    "mapped": "W¤µq",
+    "id": "W450"
+  },
+  {
+    "original": "ရိုင်း",
+    "mapped": "WÐðe_",
+    "id": "W184"
+  },
+  {
+    "original": "ရောင်း",
+    "mapped": "W∆¼e_",
+    "id": "W186"
+  },
+  {
+    "original": "ရိုဏ်း",
+    "mapped": "WÐðl_",
+    "id": "W229"
+  },
+  {
+    "original": "ရောင့်",
+    "mapped": "W∆¼E¿^",
+    "id": "W262"
+  },
+  {
+    "original": "ရှောက်",
+    "mapped": "Wµ∆¼a",
+    "id": "W287"
+  },
+  {
+    "original": "ရွှန်း",
+    "mapped": "W¤µp_",
+    "id": "W288"
+  },
+  {
+    "original": "ရှိုက်",
+    "mapped": "WµÐða",
+    "id": "W335"
+  },
+  {
+    "original": "ရှောင်",
+    "mapped": "Wµ∆¼e",
+    "id": "W337"
+  },
+  {
+    "original": "ရွိုင်",
+    "mapped": "W¤Ððe",
+    "id": "W381"
+  },
+  {
+    "original": "ရွှမ်း",
+    "mapped": "W¤µu_",
+    "id": "W419"
+  },
+  {
+    "original": "ရှိန်း",
+    "mapped": "WµÐp_",
+    "id": "W420"
+  },
+  {
+    "original": "ရှိမ်း",
+    "mapped": "WµÐu_",
+    "id": "W451"
+  },
+  {
+    "original": "ရှောင့်",
+    "mapped": "Wµ∆¼E¿^",
+    "id": "W289"
+  },
+  {
+    "original": "ရှိုင်း",
+    "mapped": "WµÐðe_",
+    "id": "W338"
+  },
+  {
+    "original": "ရှောင်း",
+    "mapped": "Wµ∆¼e_",
+    "id": "W339"
+  },
+  {
+    "original": "လှ",
+    "mapped": "Xµ",
+    "id": "X233"
+  },
+  {
+    "original": "လု",
+    "mapped": "Xð",
+    "id": "X003"
+  },
+  {
+    "original": "လူ",
+    "mapped": "Xþ",
+    "id": "X004"
+  },
+  {
+    "original": "လေ",
+    "mapped": "X∆",
+    "id": "X013"
+  },
+  {
+    "original": "လဲ",
+    "mapped": "Xß",
+    "id": "X005"
+  },
+  {
+    "original": "လံ",
+    "mapped": "X¾",
+    "id": "X006"
+  },
+  {
+    "original": "လာ",
+    "mapped": "X¼",
+    "id": "X011"
+  },
+  {
+    "original": "လိ",
+    "mapped": "XÐ",
+    "id": "X012"
+  },
+  {
+    "original": "လျ",
+    "mapped": "X*",
+    "id": "X007"
+  },
+  {
+    "original": "လွ",
+    "mapped": "X¤",
+    "id": "X010"
+  },
+  {
+    "original": "လီ",
+    "mapped": "XÞ",
+    "id": "X002"
+  },
+  {
+    "original": "လေး",
+    "mapped": "X∆_",
+    "id": "X018"
+  },
+  {
+    "original": "လား",
+    "mapped": "X¼_",
+    "id": "X045"
+  },
+  {
+    "original": "လန်",
+    "mapped": "Xp",
+    "id": "X041"
+  },
+  {
+    "original": "လေ့",
+    "mapped": "X∆¿",
+    "id": "X235"
+  },
+  {
+    "original": "လုံ",
+    "mapped": "Xð¾",
+    "id": "X019"
+  },
+  {
+    "original": "လူး",
+    "mapped": "Xþ_",
+    "id": "X020"
+  },
+  {
+    "original": "လော",
+    "mapped": "X∆¼",
+    "id": "X008"
+  },
+  {
+    "original": "လဲ့",
+    "mapped": "Xß¿",
+    "id": "X021"
+  },
+  {
+    "original": "လျာ",
+    "mapped": "X*¼",
+    "id": "X015"
+  },
+  {
+    "original": "လျူ",
+    "mapped": "X*þ",
+    "id": "X024"
+  },
+  {
+    "original": "လွဲ",
+    "mapped": "X¤ß",
+    "id": "X033"
+  },
+  {
+    "original": "လို",
+    "mapped": "XÐð",
+    "id": "X034"
+  },
+  {
+    "original": "လက်",
+    "mapped": "Xa",
+    "id": "X035"
+  },
+  {
+    "original": "လင်",
+    "mapped": "Xe",
+    "id": "X036"
+  },
+  {
+    "original": "လစ်",
+    "mapped": "Xf",
+    "id": "X037"
+  },
+  {
+    "original": "လတ်",
+    "mapped": "Xm",
+    "id": "X040"
+  },
+  {
+    "original": "လပ်",
+    "mapped": "Xq",
+    "id": "X042"
+  },
+  {
+    "original": "လယ်",
+    "mapped": "Xv",
+    "id": "X044"
+  },
+  {
+    "original": "လီး",
+    "mapped": "XÞ_",
+    "id": "X196"
+  },
+  {
+    "original": "လွံ",
+    "mapped": "X¤¾",
+    "id": "X198"
+  },
+  {
+    "original": "လှာ",
+    "mapped": "Xµ¼",
+    "id": "X238"
+  },
+  {
+    "original": "လည်",
+    "mapped": "Xh",
+    "id": "X252"
+  },
+  {
+    "original": "လဒ်",
+    "mapped": "Xo",
+    "id": "X263"
+  },
+  {
+    "original": "လှီ",
+    "mapped": "XµÞ",
+    "id": "X275"
+  },
+  {
+    "original": "လဂ်",
+    "mapped": "Xc",
+    "id": "X299"
+  },
+  {
+    "original": "လှဲ",
+    "mapped": "Xµß",
+    "id": "X306"
+  },
+  {
+    "original": "လှံ",
+    "mapped": "Xµ¾",
+    "id": "X307"
+  },
+  {
+    "original": "လှေ",
+    "mapped": "Xµ∆",
+    "id": "X384"
+  },
+  {
+    "original": "လှူ",
+    "mapped": "Xµþ",
+    "id": "X430"
+  },
+  {
+    "original": "လွှ",
+    "mapped": "X¤µ",
+    "id": "X385"
+  },
+  {
+    "original": "လူ့",
+    "mapped": "Xþ¿",
+    "id": "X452"
+  },
+  {
+    "original": "လှု",
+    "mapped": "Xµð",
+    "id": "X382"
+  },
+  {
+    "original": "လုံး",
+    "mapped": "Xð¾_",
+    "id": "X058"
+  },
+  {
+    "original": "လှုံ",
+    "mapped": "Xµð¾",
+    "id": "X395"
+  },
+  {
+    "original": "လှယ်",
+    "mapped": "Xµv",
+    "id": "X320"
+  },
+  {
+    "original": "လုတ်",
+    "mapped": "Xðm",
+    "id": "X053"
+  },
+  {
+    "original": "လုန်",
+    "mapped": "Xðp",
+    "id": "X054"
+  },
+  {
+    "original": "လုပ်",
+    "mapped": "Xðq",
+    "id": "X055"
+  },
+  {
+    "original": "လော့",
+    "mapped": "X∆¼¿",
+    "id": "X059"
+  },
+  {
+    "original": "လော်",
+    "mapped": "X∆¼^",
+    "id": "X060"
+  },
+  {
+    "original": "လျက်",
+    "mapped": "X*a",
+    "id": "X061"
+  },
+  {
+    "original": "လျင်",
+    "mapped": "X*e",
+    "id": "X062"
+  },
+  {
+    "original": "လျစ်",
+    "mapped": "X*f",
+    "id": "X063"
+  },
+  {
+    "original": "လျဉ်",
+    "mapped": "X*j",
+    "id": "X064"
+  },
+  {
+    "original": "လျပ်",
+    "mapped": "X*q",
+    "id": "X068"
+  },
+  {
+    "original": "လျား",
+    "mapped": "X*¼_",
+    "id": "X070"
+  },
+  {
+    "original": "လျော",
+    "mapped": "X*∆¼",
+    "id": "X076"
+  },
+  {
+    "original": "လွတ်",
+    "mapped": "X¤m",
+    "id": "X099"
+  },
+  {
+    "original": "လွန်",
+    "mapped": "X¤p",
+    "id": "X100"
+  },
+  {
+    "original": "လွယ်",
+    "mapped": "X¤v",
+    "id": "X103"
+  },
+  {
+    "original": "လွေ့",
+    "mapped": "X¤∆¿",
+    "id": "X104"
+  },
+  {
+    "original": "လန့်",
+    "mapped": "XP¿^",
+    "id": "X107"
+  },
+  {
+    "original": "လန်း",
+    "mapped": "Xp_",
+    "id": "X108"
+  },
+  {
+    "original": "လမ်း",
+    "mapped": "Xu_",
+    "id": "X109"
+  },
+  {
+    "original": "လိတ်",
+    "mapped": "XÐm",
+    "id": "X113"
+  },
+  {
+    "original": "လင်း",
+    "mapped": "Xe_",
+    "id": "X001"
+  },
+  {
+    "original": "လိုး",
+    "mapped": "XÐð_",
+    "id": "X115"
+  },
+  {
+    "original": "လိပ်",
+    "mapped": "XÐq",
+    "id": "X200"
+  },
+  {
+    "original": "လွင်",
+    "mapped": "X¤e",
+    "id": "X206"
+  },
+  {
+    "original": "လင့်",
+    "mapped": "XE¿^",
+    "id": "X241"
+  },
+  {
+    "original": "လို့",
+    "mapped": "XÐð¿",
+    "id": "X242"
+  },
+  {
+    "original": "လုံ့",
+    "mapped": "Xð¾¿",
+    "id": "X243"
+  },
+  {
+    "original": "လည့်",
+    "mapped": "XH¿^",
+    "id": "X255"
+  },
+  {
+    "original": "လည်း",
+    "mapped": "Xh_",
+    "id": "X256"
+  },
+  {
+    "original": "လိမ်",
+    "mapped": "XÐu",
+    "id": "X257"
+  },
+  {
+    "original": "လှစ်",
+    "mapped": "Xµf",
+    "id": "X277"
+  },
+  {
+    "original": "လှပ်",
+    "mapped": "Xµq",
+    "id": "X278"
+  },
+  {
+    "original": "လိင်",
+    "mapped": "XÐe",
+    "id": "X312"
+  },
+  {
+    "original": "လွှာ",
+    "mapped": "X¤µ¼",
+    "id": "X315"
+  },
+  {
+    "original": "လွှဲ",
+    "mapped": "X¤µß",
+    "id": "X316"
+  },
+  {
+    "original": "လှင်",
+    "mapped": "Xµe",
+    "id": "X318"
+  },
+  {
+    "original": "လှီး",
+    "mapped": "XµÞ_",
+    "id": "X308"
+  },
+  {
+    "original": "လှေး",
+    "mapped": "Xµ∆_",
+    "id": "X322"
+  },
+  {
+    "original": "လှန်",
+    "mapped": "Xµp",
+    "id": "X386"
+  },
+  {
+    "original": "လာပ်",
+    "mapped": "X¼q",
+    "id": "X453"
+  },
+  {
+    "original": "လာဘ်",
+    "mapped": "X¼t",
+    "id": "X454"
+  },
+  {
+    "original": "လျှာ",
+    "mapped": "X*µ¼",
+    "id": "X455"
+  },
+  {
+    "original": "လျှံ",
+    "mapped": "X*µ¾",
+    "id": "X456"
+  },
+  {
+    "original": "လွေး",
+    "mapped": "X¤∆_",
+    "id": "X105"
+  },
+  {
+    "original": "လှုပ်",
+    "mapped": "Xµðq",
+    "id": "X446"
+  },
+  {
+    "original": "လောက်",
+    "mapped": "X∆¼a",
+    "id": "X121"
+  },
+  {
+    "original": "လောင်",
+    "mapped": "X∆¼e",
+    "id": "X122"
+  },
+  {
+    "original": "လျဉ်း",
+    "mapped": "X*j_",
+    "id": "X124"
+  },
+  {
+    "original": "လျည်း",
+    "mapped": "X*h_",
+    "id": "X125"
+  },
+  {
+    "original": "လျော့",
+    "mapped": "X*∆¼¿",
+    "id": "X135"
+  },
+  {
+    "original": "လွန်း",
+    "mapped": "X¤p_",
+    "id": "X159"
+  },
+  {
+    "original": "လွမ်း",
+    "mapped": "X¤u_",
+    "id": "X160"
+  },
+  {
+    "original": "လိန်း",
+    "mapped": "XÐp_",
+    "id": "X161"
+  },
+  {
+    "original": "လိုင်",
+    "mapped": "XÐðe",
+    "id": "X162"
+  },
+  {
+    "original": "လျင်း",
+    "mapped": "X*e_",
+    "id": "X163"
+  },
+  {
+    "original": "လျော်",
+    "mapped": "X*∆¼^",
+    "id": "X165"
+  },
+  {
+    "original": "လိုက်",
+    "mapped": "XÐða",
+    "id": "X168"
+  },
+  {
+    "original": "လွင့်",
+    "mapped": "X¤E¿^",
+    "id": "X215"
+  },
+  {
+    "original": "လှန်း",
+    "mapped": "Xµp_",
+    "id": "X249"
+  },
+  {
+    "original": "လိမ့်",
+    "mapped": "XÐU¿^",
+    "id": "X258"
+  },
+  {
+    "original": "လိမ်း",
+    "mapped": "XÐu_",
+    "id": "X259"
+  },
+  {
+    "original": "လွှတ်",
+    "mapped": "X¤µm",
+    "id": "X279"
+  },
+  {
+    "original": "လှော်",
+    "mapped": "Xµ∆¼^",
+    "id": "X284"
+  },
+  {
+    "original": "လှန့်",
+    "mapped": "XµP¿^",
+    "id": "X329"
+  },
+  {
+    "original": "လှမ်း",
+    "mapped": "Xµu_",
+    "id": "X330"
+  },
+  {
+    "original": "လိုဏ်",
+    "mapped": "XÐðl",
+    "id": "X357"
+  },
+  {
+    "original": "လျှင်",
+    "mapped": "X*µe",
+    "id": "X396"
+  },
+  {
+    "original": "လှည့်",
+    "mapped": "XµH¿^",
+    "id": "X403"
+  },
+  {
+    "original": "လွှံ့",
+    "mapped": "X¤µ¾¿",
+    "id": "X443"
+  },
+  {
+    "original": "လှုံ့",
+    "mapped": "Xµð¾¿",
+    "id": "X447"
+  },
+  {
+    "original": "လျှပ်",
+    "mapped": "X*µq",
+    "id": "X457"
+  },
+  {
+    "original": "လျှို",
+    "mapped": "X*µÐð",
+    "id": "X458"
+  },
+  {
+    "original": "လွှား",
+    "mapped": "X¤µ¼_",
+    "id": "X410"
+  },
+  {
+    "original": "လှည်း",
+    "mapped": "Xµh_",
+    "id": "X459"
+  },
+  {
+    "original": "လျောက်",
+    "mapped": "X*∆¼a",
+    "id": "X176"
+  },
+  {
+    "original": "လိုင်း",
+    "mapped": "XÐðe_",
+    "id": "X184"
+  },
+  {
+    "original": "လောင်း",
+    "mapped": "X∆¼e_",
+    "id": "X186"
+  },
+  {
+    "original": "လောင့်",
+    "mapped": "X∆¼E¿^",
+    "id": "X262"
+  },
+  {
+    "original": "လှောက်",
+    "mapped": "Xµ∆¼a",
+    "id": "X287"
+  },
+  {
+    "original": "လှိမ့်",
+    "mapped": "XµÐU¿^",
+    "id": "X334"
+  },
+  {
+    "original": "လှိုက်",
+    "mapped": "XµÐða",
+    "id": "X335"
+  },
+  {
+    "original": "လှောင်",
+    "mapped": "Xµ∆¼e",
+    "id": "X337"
+  },
+  {
+    "original": "လျှော့",
+    "mapped": "X*µ∆¼¿",
+    "id": "X415"
+  },
+  {
+    "original": "လျှော်",
+    "mapped": "X*µ∆¼^",
+    "id": "X416"
+  },
+  {
+    "original": "လွှမ်း",
+    "mapped": "X¤µu_",
+    "id": "X419"
+  },
+  {
+    "original": "လှိုင်",
+    "mapped": "XµÐðe",
+    "id": "X421"
+  },
+  {
+    "original": "လျှမ်း",
+    "mapped": "X*µu_",
+    "id": "X460"
+  },
+  {
+    "original": "လျှို့",
+    "mapped": "X*µÐð¿",
+    "id": "X461"
+  },
+  {
+    "original": "လျှိုး",
+    "mapped": "X*µÐð_",
+    "id": "X462"
+  },
+  {
+    "original": "လွှင့်",
+    "mapped": "X¤µE¿^",
+    "id": "X463"
+  },
+  {
+    "original": "လျှင်း",
+    "mapped": "X*µe_",
+    "id": "X464"
+  },
+  {
+    "original": "လျှောက်",
+    "mapped": "X*µ∆¼a",
+    "id": "X465"
+  },
+  {
+    "original": "လျောင်း",
+    "mapped": "X*∆¼e_",
+    "id": "X192"
+  },
+  {
+    "original": "လှိုင်း",
+    "mapped": "XµÐðe_",
+    "id": "X338"
+  },
+  {
+    "original": "လှောင်း",
+    "mapped": "Xµ∆¼e_",
+    "id": "X339"
+  },
+  {
+    "original": "ဝှ",
+    "mapped": "§µ",
+    "id": "§233"
+  },
+  {
+    "original": "ဝျ",
+    "mapped": "§*",
+    "id": "§007"
+  },
+  {
+    "original": "ဝီ",
+    "mapped": "§Þ",
+    "id": "§002"
+  },
+  {
+    "original": "ဝု",
+    "mapped": "§ð",
+    "id": "§003"
+  },
+  {
+    "original": "ဝူ",
+    "mapped": "§þ",
+    "id": "§004"
+  },
+  {
+    "original": "ဝေ",
+    "mapped": "§∆",
+    "id": "§013"
+  },
+  {
+    "original": "ဝဲ",
+    "mapped": "§ß",
+    "id": "§005"
+  },
+  {
+    "original": "ဝံ",
+    "mapped": "§¾",
+    "id": "§006"
+  },
+  {
+    "original": "ဝိ",
+    "mapped": "§Ð",
+    "id": "§012"
+  },
+  {
+    "original": "ဝါ",
+    "mapped": "§½",
+    "id": "§193"
+  },
+  {
+    "original": "ဝှံ",
+    "mapped": "§µ¾",
+    "id": "§307"
+  },
+  {
+    "original": "ဝွံ",
+    "mapped": "§¤¾",
+    "id": "§198"
+  },
+  {
+    "original": "ဝျာ",
+    "mapped": "§*¼",
+    "id": "§015"
+  },
+  {
+    "original": "ဝျူ",
+    "mapped": "§*þ",
+    "id": "§024"
+  },
+  {
+    "original": "ဝှေ",
+    "mapped": "§µ∆",
+    "id": "§384"
+  },
+  {
+    "original": "ဝှိ",
+    "mapped": "§µÐ",
+    "id": "§270"
+  },
+  {
+    "original": "ဝျံ",
+    "mapped": "§*¾",
+    "id": "§027"
+  },
+  {
+    "original": "ဝျီ",
+    "mapped": "§*Þ",
+    "id": "§014"
+  },
+  {
+    "original": "ဝျှ",
+    "mapped": "§*µ",
+    "id": "§383"
+  },
+  {
+    "original": "ဝေး",
+    "mapped": "§∆_",
+    "id": "§018"
+  },
+  {
+    "original": "ဝံ့",
+    "mapped": "§¾¿",
+    "id": "§022"
+  },
+  {
+    "original": "ဝက်",
+    "mapped": "§a",
+    "id": "§035"
+  },
+  {
+    "original": "ဝင်",
+    "mapped": "§e",
+    "id": "§036"
+  },
+  {
+    "original": "ဝစ်",
+    "mapped": "§f",
+    "id": "§037"
+  },
+  {
+    "original": "ဝဋ်",
+    "mapped": "§i",
+    "id": "§038"
+  },
+  {
+    "original": "ဝဏ်",
+    "mapped": "§l",
+    "id": "§039"
+  },
+  {
+    "original": "ဝတ်",
+    "mapped": "§m",
+    "id": "§040"
+  },
+  {
+    "original": "ဝန်",
+    "mapped": "§p",
+    "id": "§041"
+  },
+  {
+    "original": "ဝပ်",
+    "mapped": "§q",
+    "id": "§042"
+  },
+  {
+    "original": "ဝမ်",
+    "mapped": "§u",
+    "id": "§043"
+  },
+  {
+    "original": "ဝယ်",
+    "mapped": "§v",
+    "id": "§044"
+  },
+  {
+    "original": "ဝါး",
+    "mapped": "§½_",
+    "id": "§195"
+  },
+  {
+    "original": "ဝှါ",
+    "mapped": "§µ½",
+    "id": "§237"
+  },
+  {
+    "original": "ဝှာ",
+    "mapped": "§µ¼",
+    "id": "§238"
+  },
+  {
+    "original": "ဝေ့",
+    "mapped": "§∆¿",
+    "id": "§235"
+  },
+  {
+    "original": "ဝဂ်",
+    "mapped": "§c",
+    "id": "§299"
+  },
+  {
+    "original": "ဝှဲ",
+    "mapped": "§µß",
+    "id": "§306"
+  },
+  {
+    "original": "ဝသ်",
+    "mapped": "§y",
+    "id": "§436"
+  },
+  {
+    "original": "ဝူး",
+    "mapped": "§þ_",
+    "id": "§020"
+  },
+  {
+    "original": "ဝျော",
+    "mapped": "§*∆¼",
+    "id": "§076"
+  },
+  {
+    "original": "ဝှော",
+    "mapped": "§µ∆¼",
+    "id": "§271"
+  },
+  {
+    "original": "ဝုတ်",
+    "mapped": "§ðm",
+    "id": "§053"
+  },
+  {
+    "original": "ဝန်း",
+    "mapped": "§p_",
+    "id": "§108"
+  },
+  {
+    "original": "ဝမ်း",
+    "mapped": "§u_",
+    "id": "§109"
+  },
+  {
+    "original": "ဝိန်",
+    "mapped": "§Ðp",
+    "id": "§114"
+  },
+  {
+    "original": "ဝင်း",
+    "mapped": "§e_",
+    "id": "§001"
+  },
+  {
+    "original": "ဝိုး",
+    "mapped": "§Ðð_",
+    "id": "§115"
+  },
+  {
+    "original": "ဝေါ်",
+    "mapped": "§∆½^",
+    "id": "§208"
+  },
+  {
+    "original": "မှ",
+    "mapped": "Uµ",
+    "id": "U233"
+  },
+  {
+    "original": "ဝေါ်",
+    "mapped": "§∆½^",
+    "id": "§208"
+  },
+  {
+    "original": "ဝိဇ်",
+    "mapped": "§Ðg",
+    "id": "§226"
+  },
+  {
+    "original": "ဝုဏ်",
+    "mapped": "§ðl",
+    "id": "§227"
+  },
+  {
+    "original": "ဝင့်",
+    "mapped": "§E¿^",
+    "id": "§241"
+  },
+  {
+    "original": "ဝှက်",
+    "mapped": "§µa",
+    "id": "§245"
+  },
+  {
+    "original": "ဝိက်",
+    "mapped": "§Ða",
+    "id": "§310"
+  },
+  {
+    "original": "ဝှေး",
+    "mapped": "§µ∆_",
+    "id": "§322"
+  },
+  {
+    "original": "ဝုစ်",
+    "mapped": "§ðf",
+    "id": "§350"
+  },
+  {
+    "original": "ဝှန်",
+    "mapped": "§µp",
+    "id": "§386"
+  },
+  {
+    "original": "ဝှေ့",
+    "mapped": "§µ∆¿",
+    "id": "§441"
+  },
+  {
+    "original": "ဝေသ်",
+    "mapped": "§∆y",
+    "id": "§466"
+  },
+  {
+    "original": "ဝုန်း",
+    "mapped": "§ðp_",
+    "id": "§120"
+  },
+  {
+    "original": "ဝိုက်",
+    "mapped": "§Ðða",
+    "id": "§168"
+  },
+  {
+    "original": "ဝှန်း",
+    "mapped": "§µp_",
+    "id": "§249"
+  },
+  {
+    "original": "ဝှန့်",
+    "mapped": "§µP¿^",
+    "id": "§329"
+  },
+  {
+    "original": "ဝှမ်း",
+    "mapped": "§µu_",
+    "id": "§330"
+  },
+  {
+    "original": "ဝိုင်း",
+    "mapped": "§Ððe_",
+    "id": "§184"
+  },
+  {
+    "original": "သျ",
+    "mapped": "Y*",
+    "id": "Y007"
+  },
+  {
+    "original": "သွ",
+    "mapped": "Y¤",
+    "id": "Y010"
+  },
+  {
+    "original": "သီ",
+    "mapped": "YÞ",
+    "id": "Y002"
+  },
+  {
+    "original": "သံ",
+    "mapped": "Y¾",
+    "id": "Y006"
+  },
+  {
+    "original": "သ့",
+    "mapped": "Y¿",
+    "id": "Y194"
+  },
+  {
+    "original": "သု",
+    "mapped": "Yð",
+    "id": "Y003"
+  },
+  {
+    "original": "သူ",
+    "mapped": "Yþ",
+    "id": "Y004"
+  },
+  {
+    "original": "သေ",
+    "mapped": "Y∆",
+    "id": "Y013"
+  },
+  {
+    "original": "သဲ",
+    "mapped": "Yß",
+    "id": "Y005"
+  },
+  {
+    "original": "သာ",
+    "mapped": "Y¼",
+    "id": "Y011"
+  },
+  {
+    "original": "သိ",
+    "mapped": "YÐ",
+    "id": "Y012"
+  },
+  {
+    "original": "သိံ",
+    "mapped": "YÐ¾",
+    "id": "Y292"
+  },
+  {
+    "original": "သွိ",
+    "mapped": "Y¤Ð",
+    "id": "Y234"
+  },
+  {
+    "original": "သျာ",
+    "mapped": "Y*¼",
+    "id": "Y015"
+  },
+  {
+    "original": "သျံ",
+    "mapped": "Y*¾",
+    "id": "Y027"
+  },
+  {
+    "original": "သီး",
+    "mapped": "YÞ_",
+    "id": "Y196"
+  },
+  {
+    "original": "သုံ",
+    "mapped": "Yð¾",
+    "id": "Y019"
+  },
+  {
+    "original": "သော",
+    "mapped": "Y∆¼",
+    "id": "Y008"
+  },
+  {
+    "original": "သေး",
+    "mapped": "Y∆_",
+    "id": "Y018"
+  },
+  {
+    "original": "သဲ့",
+    "mapped": "Yß¿",
+    "id": "Y021"
+  },
+  {
+    "original": "သံ့",
+    "mapped": "Y¾¿",
+    "id": "Y022"
+  },
+  {
+    "original": "သွာ",
+    "mapped": "Y¤¼",
+    "id": "Y031"
+  },
+  {
+    "original": "သို",
+    "mapped": "YÐð",
+    "id": "Y034"
+  },
+  {
+    "original": "သက်",
+    "mapped": "Ya",
+    "id": "Y035"
+  },
+  {
+    "original": "သင်",
+    "mapped": "Ye",
+    "id": "Y036"
+  },
+  {
+    "original": "သစ်",
+    "mapped": "Yf",
+    "id": "Y037"
+  },
+  {
+    "original": "သဏ်",
+    "mapped": "Yl",
+    "id": "Y039"
+  },
+  {
+    "original": "သတ်",
+    "mapped": "Ym",
+    "id": "Y040"
+  },
+  {
+    "original": "သန်",
+    "mapped": "Yp",
+    "id": "Y041"
+  },
+  {
+    "original": "သပ်",
+    "mapped": "Yq",
+    "id": "Y042"
+  },
+  {
+    "original": "သမ်",
+    "mapped": "Yu",
+    "id": "Y043"
+  },
+  {
+    "original": "သယ်",
+    "mapped": "Yv",
+    "id": "Y044"
+  },
+  {
+    "original": "သား",
+    "mapped": "Y¼_",
+    "id": "Y045"
+  },
+  {
+    "original": "သွေ",
+    "mapped": "Y¤∆",
+    "id": "Y047"
+  },
+  {
+    "original": "သွံ",
+    "mapped": "Y¤¾",
+    "id": "Y198"
+  },
+  {
+    "original": "သဉ်",
+    "mapped": "Yj",
+    "id": "Y251"
+  },
+  {
+    "original": "သည်",
+    "mapped": "Yh",
+    "id": "Y252"
+  },
+  {
+    "original": "သေ့",
+    "mapped": "Y∆¿",
+    "id": "Y235"
+  },
+  {
+    "original": "သဒ်",
+    "mapped": "Yo",
+    "id": "Y263"
+  },
+  {
+    "original": "သျှ",
+    "mapped": "Y*µ",
+    "id": "Y383"
+  },
+  {
+    "original": "သူ့",
+    "mapped": "Yþ¿",
+    "id": "Y452"
+  },
+  {
+    "original": "သဗ်",
+    "mapped": "Ys",
+    "id": "Y467"
+  },
+  {
+    "original": "သွဲ့",
+    "mapped": "Y¤ß¿",
+    "id": "Y106"
+  },
+  {
+    "original": "သုက်",
+    "mapped": "Yða",
+    "id": "Y051"
+  },
+  {
+    "original": "သုတ်",
+    "mapped": "Yðm",
+    "id": "Y053"
+  },
+  {
+    "original": "သုပ်",
+    "mapped": "Yðq",
+    "id": "Y055"
+  },
+  {
+    "original": "သုံး",
+    "mapped": "Yð¾_",
+    "id": "Y058"
+  },
+  {
+    "original": "သော့",
+    "mapped": "Y∆¼¿",
+    "id": "Y059"
+  },
+  {
+    "original": "သော်",
+    "mapped": "Y∆¼^",
+    "id": "Y060"
+  },
+  {
+    "original": "သွက်",
+    "mapped": "Y¤a",
+    "id": "Y098"
+  },
+  {
+    "original": "သွတ်",
+    "mapped": "Y¤m",
+    "id": "Y099"
+  },
+  {
+    "original": "သွန်",
+    "mapped": "Y¤p",
+    "id": "Y100"
+  },
+  {
+    "original": "သွပ်",
+    "mapped": "Y¤q",
+    "id": "Y101"
+  },
+  {
+    "original": "သွမ်",
+    "mapped": "Y¤u",
+    "id": "Y102"
+  },
+  {
+    "original": "သွယ်",
+    "mapped": "Y¤v",
+    "id": "Y103"
+  },
+  {
+    "original": "သွေ့",
+    "mapped": "Y¤∆¿",
+    "id": "Y104"
+  },
+  {
+    "original": "သွေး",
+    "mapped": "Y¤∆_",
+    "id": "Y105"
+  },
+  {
+    "original": "သန့်",
+    "mapped": "YP¿^",
+    "id": "Y107"
+  },
+  {
+    "original": "သန်း",
+    "mapped": "Yp_",
+    "id": "Y108"
+  },
+  {
+    "original": "သမ်း",
+    "mapped": "Yu_",
+    "id": "Y109"
+  },
+  {
+    "original": "သိန်",
+    "mapped": "YÐp",
+    "id": "Y114"
+  },
+  {
+    "original": "သင်း",
+    "mapped": "Ye_",
+    "id": "Y001"
+  },
+  {
+    "original": "သိုး",
+    "mapped": "YÐð_",
+    "id": "Y115"
+  },
+  {
+    "original": "သိပ်",
+    "mapped": "YÐq",
+    "id": "Y200"
+  },
+  {
+    "original": "သေတ်",
+    "mapped": "Y∆m",
+    "id": "Y201"
+  },
+  {
+    "original": "သင့်",
+    "mapped": "YE¿^",
+    "id": "Y241"
+  },
+  {
+    "original": "သို့",
+    "mapped": "YÐð¿",
+    "id": "Y242"
+  },
+  {
+    "original": "သုံ့",
+    "mapped": "Yð¾¿",
+    "id": "Y243"
+  },
+  {
+    "original": "သွား",
+    "mapped": "Y¤¼_",
+    "id": "Y244"
+  },
+  {
+    "original": "သည့်",
+    "mapped": "YH¿^",
+    "id": "Y255"
+  },
+  {
+    "original": "သည်း",
+    "mapped": "Yh_",
+    "id": "Y256"
+  },
+  {
+    "original": "သိမ်",
+    "mapped": "YÐu",
+    "id": "Y257"
+  },
+  {
+    "original": "သေဋ်",
+    "mapped": "Y∆i",
+    "id": "Y267"
+  },
+  {
+    "original": "သာန်",
+    "mapped": "Y¼p",
+    "id": "Y269"
+  },
+  {
+    "original": "သိက်",
+    "mapped": "YÐa",
+    "id": "Y310"
+  },
+  {
+    "original": "သိင်",
+    "mapped": "YÐe",
+    "id": "Y312"
+  },
+  {
+    "original": "သုဒ်",
+    "mapped": "Yðo",
+    "id": "Y351"
+  },
+  {
+    "original": "သာဒ်",
+    "mapped": "Y¼o",
+    "id": "Y468"
+  },
+  {
+    "original": "သိဉ်",
+    "mapped": "YÐj",
+    "id": "Y469"
+  },
+  {
+    "original": "သိဒ်",
+    "mapped": "YÐo",
+    "id": "Y470"
+  },
+  {
+    "original": "သိဟ်",
+    "mapped": "YÐz",
+    "id": "Y471"
+  },
+  {
+    "original": "သေဉ်",
+    "mapped": "Y∆j",
+    "id": "Y472"
+  },
+  {
+    "original": "သျှီ",
+    "mapped": "Y*µÞ",
+    "id": "Y473"
+  },
+  {
+    "original": "သျှု",
+    "mapped": "Y*µð",
+    "id": "Y474"
+  },
+  {
+    "original": "သောက်",
+    "mapped": "Y∆¼a",
+    "id": "Y121"
+  },
+  {
+    "original": "သောင်",
+    "mapped": "Y∆¼e",
+    "id": "Y122"
+  },
+  {
+    "original": "သွန်း",
+    "mapped": "Y¤p_",
+    "id": "Y159"
+  },
+  {
+    "original": "သွမ်း",
+    "mapped": "Y¤u_",
+    "id": "Y160"
+  },
+  {
+    "original": "သိန်း",
+    "mapped": "YÐp_",
+    "id": "Y161"
+  },
+  {
+    "original": "သိုလ်",
+    "mapped": "YÐðx",
+    "id": "Y164"
+  },
+  {
+    "original": "သိုက်",
+    "mapped": "YÐða",
+    "id": "Y168"
+  },
+  {
+    "original": "သိမ့်",
+    "mapped": "YÐU¿^",
+    "id": "Y258"
+  },
+  {
+    "original": "သိမ်း",
+    "mapped": "YÐu_",
+    "id": "Y259"
+  },
+  {
+    "original": "သုန့်",
+    "mapped": "YðP¿^",
+    "id": "Y261"
+  },
+  {
+    "original": "သွင်း",
+    "mapped": "Y¤e_",
+    "id": "Y172"
+  },
+  {
+    "original": "သုဉ်း",
+    "mapped": "Yðj_",
+    "id": "Y380"
+  },
+  {
+    "original": "သျှင်",
+    "mapped": "Y*µe",
+    "id": "Y396"
+  },
+  {
+    "original": "သျှစ်",
+    "mapped": "Y*µf",
+    "id": "Y397"
+  },
+  {
+    "original": "သျှား",
+    "mapped": "Y*µ¼_",
+    "id": "Y398"
+  },
+  {
+    "original": "သျှို",
+    "mapped": "Y*µÐð",
+    "id": "Y458"
+  },
+  {
+    "original": "သောပ်",
+    "mapped": "Y∆¼q",
+    "id": "Y475"
+  },
+  {
+    "original": "သျှတ်",
+    "mapped": "Y*µm",
+    "id": "Y476"
+  },
+  {
+    "original": "သျှူး",
+    "mapped": "Y*µþ_",
+    "id": "Y477"
+  },
+  {
+    "original": "သုန်း",
+    "mapped": "Yðp_",
+    "id": "Y120"
+  },
+  {
+    "original": "သိုင်း",
+    "mapped": "YÐðe_",
+    "id": "Y184"
+  },
+  {
+    "original": "သောင်း",
+    "mapped": "Y∆¼e_",
+    "id": "Y186"
+  },
+  {
+    "original": "သိုဏ်း",
+    "mapped": "YÐðl_",
+    "id": "Y229"
+  },
+  {
+    "original": "သောင့်",
+    "mapped": "Y∆¼E¿^",
+    "id": "Y262"
+  },
+  {
+    "original": "သျှိုး",
+    "mapped": "Y*µÐð_",
+    "id": "Y462"
+  },
+  {
+    "original": "သျှောင်",
+    "mapped": "Y*µ∆¼e",
+    "id": "Y478"
+  },
+  {
+    "original": "ဿိ",
+    "mapped": "ªÐ",
+    "id": "ª012"
+  },
+  {
+    "original": "ဿူ",
+    "mapped": "ªþ",
+    "id": "ª004"
+  },
+  {
+    "original": "ဿေ",
+    "mapped": "ª∆",
+    "id": "ª013"
+  },
+  {
+    "original": "ဿီ",
+    "mapped": "ªÞ",
+    "id": "ª002"
+  },
+  {
+    "original": "ဿု",
+    "mapped": "ªð",
+    "id": "ª003"
+  },
+  {
+    "original": "ဿံ",
+    "mapped": "ª¾",
+    "id": "ª006"
+  },
+  {
+    "original": "ဿာ",
+    "mapped": "ª¼",
+    "id": "ª011"
+  },
+  {
+    "original": "ဿော",
+    "mapped": "ª∆¼",
+    "id": "ª008"
+  },
+  {
+    "original": "ဿိံ",
+    "mapped": "ªÐ¾",
+    "id": "ª292"
+  },
+  {
+    "original": "ဿုံ",
+    "mapped": "ªð¾",
+    "id": "ª019"
+  },
+  {
+    "original": "ဿန်",
+    "mapped": "ªp",
+    "id": "ª041"
+  },
+  {
+    "original": "ဿာန်",
+    "mapped": "ª¼p",
+    "id": "ª269"
+  },
+  {
+    "original": "ဟွ",
+    "mapped": "Z¤",
+    "id": "Z010"
+  },
+  {
+    "original": "ဟျ",
+    "mapped": "Z*",
+    "id": "Z007"
+  },
+  {
+    "original": "ဟီ",
+    "mapped": "ZÞ",
+    "id": "Z002"
+  },
+  {
+    "original": "ဟု",
+    "mapped": "Zð",
+    "id": "Z003"
+  },
+  {
+    "original": "ဟူ",
+    "mapped": "Zþ",
+    "id": "Z004"
+  },
+  {
+    "original": "ဟေ",
+    "mapped": "Z∆",
+    "id": "Z013"
+  },
+  {
+    "original": "ဟဲ",
+    "mapped": "Zß",
+    "id": "Z005"
+  },
+  {
+    "original": "ဟံ",
+    "mapped": "Z¾",
+    "id": "Z006"
+  },
+  {
+    "original": "ဟာ",
+    "mapped": "Z¼",
+    "id": "Z011"
+  },
+  {
+    "original": "ဟိ",
+    "mapped": "ZÐ",
+    "id": "Z012"
+  },
+  {
+    "original": "ဟွာ",
+    "mapped": "Z¤¼",
+    "id": "Z031"
+  },
+  {
+    "original": "ဟျံ",
+    "mapped": "Z*¾",
+    "id": "Z027"
+  },
+  {
+    "original": "ဟုံ",
+    "mapped": "Zð¾",
+    "id": "Z019"
+  },
+  {
+    "original": "ဟူး",
+    "mapped": "Zþ_",
+    "id": "Z020"
+  },
+  {
+    "original": "ဟော",
+    "mapped": "Z∆¼",
+    "id": "Z008"
+  },
+  {
+    "original": "ဟေး",
+    "mapped": "Z∆_",
+    "id": "Z018"
+  },
+  {
+    "original": "ဟဲ့",
+    "mapped": "Zß¿",
+    "id": "Z021"
+  },
+  {
+    "original": "ဟို",
+    "mapped": "ZÐð",
+    "id": "Z034"
+  },
+  {
+    "original": "ဟက်",
+    "mapped": "Za",
+    "id": "Z035"
+  },
+  {
+    "original": "ဟင်",
+    "mapped": "Ze",
+    "id": "Z036"
+  },
+  {
+    "original": "ဟစ်",
+    "mapped": "Zf",
+    "id": "Z037"
+  },
+  {
+    "original": "ဟတ်",
+    "mapped": "Zm",
+    "id": "Z040"
+  },
+  {
+    "original": "ဟန်",
+    "mapped": "Zp",
+    "id": "Z041"
+  },
+  {
+    "original": "ဟပ်",
+    "mapped": "Zq",
+    "id": "Z042"
+  },
+  {
+    "original": "ဟယ်",
+    "mapped": "Zv",
+    "id": "Z044"
+  },
+  {
+    "original": "ဟား",
+    "mapped": "Z¼_",
+    "id": "Z045"
+  },
+  {
+    "original": "ဟီး",
+    "mapped": "ZÞ_",
+    "id": "Z196"
+  },
+  {
+    "original": "ဟေ့",
+    "mapped": "Z∆¿",
+    "id": "Z235"
+  },
+  {
+    "original": "ဟသ်",
+    "mapped": "Zy",
+    "id": "Z436"
+  },
+  {
+    "original": "ဟျော",
+    "mapped": "Z*∆¼",
+    "id": "Z076"
+  },
+  {
+    "original": "ဟုတ်",
+    "mapped": "Zðm",
+    "id": "Z053"
+  },
+  {
+    "original": "ဟုန်",
+    "mapped": "Zðp",
+    "id": "Z054"
+  },
+  {
+    "original": "ဟုပ်",
+    "mapped": "Zðq",
+    "id": "Z055"
+  },
+  {
+    "original": "ဟုံး",
+    "mapped": "Zð¾_",
+    "id": "Z058"
+  },
+  {
+    "original": "ဟော့",
+    "mapped": "Z∆¼¿",
+    "id": "Z059"
+  },
+  {
+    "original": "ဟော်",
+    "mapped": "Z∆¼^",
+    "id": "Z060"
+  },
+  {
+    "original": "ဟွန်",
+    "mapped": "Z¤p",
+    "id": "Z100"
+  },
+  {
+    "original": "ဟန့်",
+    "mapped": "ZP¿^",
+    "id": "Z107"
+  },
+  {
+    "original": "ဟန်း",
+    "mapped": "Zp_",
+    "id": "Z108"
+  },
+  {
+    "original": "ဟမ်း",
+    "mapped": "Zu_",
+    "id": "Z109"
+  },
+  {
+    "original": "ဟိတ်",
+    "mapped": "ZÐm",
+    "id": "Z113"
+  },
+  {
+    "original": "ဟင်း",
+    "mapped": "Ze_",
+    "id": "Z001"
+  },
+  {
+    "original": "ဟိုး",
+    "mapped": "ZÐð_",
+    "id": "Z115"
+  },
+  {
+    "original": "ဟင့်",
+    "mapped": "ZE¿^",
+    "id": "Z241"
+  },
+  {
+    "original": "ဟည်း",
+    "mapped": "Zh_",
+    "id": "Z256"
+  },
+  {
+    "original": "ဟုန်း",
+    "mapped": "Zðp_",
+    "id": "Z120"
+  },
+  {
+    "original": "ဟောက်",
+    "mapped": "Z∆¼a",
+    "id": "Z121"
+  },
+  {
+    "original": "ဟောင်",
+    "mapped": "Z∆¼e",
+    "id": "Z122"
+  },
+  {
+    "original": "ဟွန်း",
+    "mapped": "Z¤p_",
+    "id": "Z159"
+  },
+  {
+    "original": "ဟိန်း",
+    "mapped": "ZÐp_",
+    "id": "Z161"
+  },
+  {
+    "original": "ဟိုက်",
+    "mapped": "ZÐða",
+    "id": "Z168"
+  },
+  {
+    "original": "ဟိုရ်",
+    "mapped": "ZÐðw",
+    "id": "Z260"
+  },
+  {
+    "original": "ဟိုဠ်",
+    "mapped": "ZÐð®^",
+    "id": "Z479"
+  },
+  {
+    "original": "ဟိုင်း",
+    "mapped": "ZÐðe_",
+    "id": "Z184"
+  },
+  {
+    "original": "ဟောင်း",
+    "mapped": "Z∆¼e_",
+    "id": "Z186"
+  },
+  {
+    "original": "ဠေ",
+    "mapped": "®∆",
+    "id": "®013"
+  },
+  {
+    "original": "ဠှ",
+    "mapped": "®µ",
+    "id": "®233"
+  },
+  {
+    "original": "ဠု",
+    "mapped": "®ð",
+    "id": "®003"
+  },
+  {
+    "original": "ဠီ",
+    "mapped": "®Þ",
+    "id": "®002"
+  },
+  {
+    "original": "ဠူ",
+    "mapped": "®þ",
+    "id": "®004"
+  },
+  {
+    "original": "ဠံ",
+    "mapped": "®¾",
+    "id": "®006"
+  },
+  {
+    "original": "ဠာ",
+    "mapped": "®¼",
+    "id": "®011"
+  },
+  {
+    "original": "ဠိ",
+    "mapped": "®Ð",
+    "id": "®012"
+  },
+  {
+    "original": "ဠော",
+    "mapped": "®∆¼",
+    "id": "®008"
+  },
+  {
+    "original": "ဠှံ",
+    "mapped": "®µ¾",
+    "id": "®307"
+  },
+  {
+    "original": "ဠှိ",
+    "mapped": "®µÐ",
+    "id": "®270"
+  },
+  {
+    "original": "ဠှာ",
+    "mapped": "®µ¼",
+    "id": "®238"
+  },
+  {
+    "original": "ဠှေ",
+    "mapped": "®µ∆",
+    "id": "®384"
+  },
+  {
+    "original": "ဠှီ",
+    "mapped": "®µÞ",
+    "id": "®275"
+  },
+  {
+    "original": "ဠှော",
+    "mapped": "®µ∆¼",
+    "id": "®271"
+  },
+  {
+    "original": "ဠုန်",
+    "mapped": "®ðp",
+    "id": "®054"
+  },
+  {
+    "original": "အီ",
+    "mapped": "¶Þ",
+    "id": "¶002"
+  },
+  {
+    "original": "အု",
+    "mapped": "¶ð",
+    "id": "¶003"
+  },
+  {
+    "original": "အူ",
+    "mapped": "¶þ",
+    "id": "¶004"
+  },
+  {
+    "original": "အေ",
+    "mapped": "¶∆",
+    "id": "¶013"
+  },
+  {
+    "original": "အဲ",
+    "mapped": "¶ß",
+    "id": "¶005"
+  },
+  {
+    "original": "အံ",
+    "mapped": "¶¾",
+    "id": "¶006"
+  },
+  {
+    "original": "အာ",
+    "mapped": "¶¼",
+    "id": "¶011"
+  },
+  {
+    "original": "အိ",
+    "mapped": "¶Ð",
+    "id": "¶012"
+  },
+  {
+    "original": "အုံ",
+    "mapped": "¶ð¾",
+    "id": "¶019"
+  },
+  {
+    "original": "အူး",
+    "mapped": "¶þ_",
+    "id": "¶020"
+  },
+  {
+    "original": "အော",
+    "mapped": "¶∆¼",
+    "id": "¶008"
+  },
+  {
+    "original": "အေး",
+    "mapped": "¶∆_",
+    "id": "¶018"
+  },
+  {
+    "original": "အဲ့",
+    "mapped": "¶ß¿",
+    "id": "¶021"
+  },
+  {
+    "original": "အံ့",
+    "mapped": "¶¾¿",
+    "id": "¶022"
+  },
+  {
+    "original": "အို",
+    "mapped": "¶Ðð",
+    "id": "¶034"
+  },
+  {
+    "original": "အက်",
+    "mapped": "¶a",
+    "id": "¶035"
+  },
+  {
+    "original": "အင်",
+    "mapped": "¶e",
+    "id": "¶036"
+  },
+  {
+    "original": "အစ်",
+    "mapped": "¶f",
+    "id": "¶037"
+  },
+  {
+    "original": "အတ်",
+    "mapped": "¶m",
+    "id": "¶040"
+  },
+  {
+    "original": "အန်",
+    "mapped": "¶p",
+    "id": "¶041"
+  },
+  {
+    "original": "အပ်",
+    "mapped": "¶q",
+    "id": "¶042"
+  },
+  {
+    "original": "အယ်",
+    "mapped": "¶v",
+    "id": "¶044"
+  },
+  {
+    "original": "အား",
+    "mapped": "¶¼_",
+    "id": "¶045"
+  },
+  {
+    "original": "အီး",
+    "mapped": "¶Þ_",
+    "id": "¶196"
+  },
+  {
+    "original": "အေ့",
+    "mapped": "¶∆¿",
+    "id": "¶235"
+  },
+  {
+    "original": "အဂ်",
+    "mapped": "¶c",
+    "id": "¶299"
+  },
+  {
+    "original": "အသ်",
+    "mapped": "¶y",
+    "id": "¶436"
+  },
+  {
+    "original": "အုတ်",
+    "mapped": "¶ðm",
+    "id": "¶053"
+  },
+  {
+    "original": "အုပ်",
+    "mapped": "¶ðq",
+    "id": "¶055"
+  },
+  {
+    "original": "အုံး",
+    "mapped": "¶ð¾_",
+    "id": "¶058"
+  },
+  {
+    "original": "အော့",
+    "mapped": "¶∆¼¿",
+    "id": "¶059"
+  },
+  {
+    "original": "အော်",
+    "mapped": "¶∆¼^",
+    "id": "¶060"
+  },
+  {
+    "original": "အန်း",
+    "mapped": "¶p_",
+    "id": "¶108"
+  },
+  {
+    "original": "အမ်း",
+    "mapped": "¶u_",
+    "id": "¶109"
+  },
+  {
+    "original": "အိတ်",
+    "mapped": "¶Ðm",
+    "id": "¶113"
+  },
+  {
+    "original": "အင်း",
+    "mapped": "¶e_",
+    "id": "¶001"
+  },
+  {
+    "original": "အိုး",
+    "mapped": "¶Ðð_",
+    "id": "¶115"
+  },
+  {
+    "original": "အိပ်",
+    "mapped": "¶Ðq",
+    "id": "¶200"
+  },
+  {
+    "original": "အင့်",
+    "mapped": "¶E¿^",
+    "id": "¶241"
+  },
+  {
+    "original": "အို့",
+    "mapped": "¶Ðð¿",
+    "id": "¶242"
+  },
+  {
+    "original": "အုံ့",
+    "mapped": "¶ð¾¿",
+    "id": "¶243"
+  },
+  {
+    "original": "အည်း",
+    "mapped": "¶h_",
+    "id": "¶256"
+  },
+  {
+    "original": "အိမ်",
+    "mapped": "¶Ðu",
+    "id": "¶257"
+  },
+  {
+    "original": "အုန်း",
+    "mapped": "¶ðp_",
+    "id": "¶120"
+  },
+  {
+    "original": "အောက်",
+    "mapped": "¶∆¼a",
+    "id": "¶121"
+  },
+  {
+    "original": "အောင်",
+    "mapped": "¶∆¼e",
+    "id": "¶122"
+  },
+  {
+    "original": "အိုင်",
+    "mapped": "¶Ððe",
+    "id": "¶162"
+  },
+  {
+    "original": "အိုက်",
+    "mapped": "¶Ðða",
+    "id": "¶168"
+  },
+  {
+    "original": "အိမ့်",
+    "mapped": "¶ÐU¿^",
+    "id": "¶258"
+  },
+  {
+    "original": "အိမ်း",
+    "mapped": "¶Ðu_",
+    "id": "¶259"
+  },
+  {
+    "original": "အောင်း",
+    "mapped": "¶∆¼e_",
+    "id": "¶186"
+  },
+  {
+    "original": "အောင့်",
+    "mapped": "¶∆¼E¿^",
+    "id": "¶262"
+  },
+  {
+    "original": "အိုဝ့်",
+    "mapped": "¶Ðð§¿^",
+    "id": "¶480"
+  },
+  {
+    "original": "အိုင်း",
+    "mapped": "¶Ððe_",
+    "id": "¶184"
+  },
+  {
+    "original": "၍",
+    "mapped": "၍",
+    "id": "π000"
+  },
+  {
+    "original": "၌",
+    "mapped": "၌",
+    "id": "π001"
+  },
+  {
+    "original": "၏",
+    "mapped": "၏",
+    "id": "π002"
+  },
+  {
+    "original": "ဤ",
+    "mapped": "ဤ",
+    "id": "π003"
+  },
+  {
+    "original": "ဪ",
+    "mapped": "²",
+    "id": "π004"
+  }
+]
