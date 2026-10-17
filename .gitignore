@@ -28,3 +28,4 @@ Thumbs.db
 downloaded_files/
 /scan/*
 !/scan/.gitkeep
+/ssh/
