@@ -17,7 +17,7 @@ export function buildPack() {
     inlined++;
     return `const ${name} = ${JSON.stringify(section)};`;
   };
-  for (const [disk, key] of [["function.js", "_function.js"], ["normalize.js", "normalize.js"], ["sourceMap.js", "sourceMap.js"], ["sourceMapper.js", "sourceMapper.js"]]) {
+  for (const [disk, key] of [["function.js", "function.js"], ["normalize.js", "normalize.js"], ["sourceMap.js", "sourceMap.js"], ["sourceMapper.js", "sourceMapper.js"]]) {
     let src = fs.readFileSync(path.join(BASE, disk), "utf8");
     // inline only the imported key (mapData) from the knowledge JSON, compact
     src = src.replace(

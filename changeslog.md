@@ -5,6 +5,8 @@
 - Repointed runtime/deployment/bootstrap paths to `crawler/bin/` and `crawler/scribdl/`, and corrected root-relative `praser/` model/map paths.
 - Corrected the Engine mapbuilder imports from the nonexistent `./_function.js` to `./function.js`. Verified the Engine build in isolated before/after copies: before, the imports were treated as external; after, that warning disappeared and the build completed.
 - Added `/ssh/` to `.gitignore` to preserve the repo-root SSH directory layout used on `main`.
+- Updated the wasm payload pack key to `function.js` to match the corrected mapbuilder imports. Verified archived wasm tests (loader, payload, box, Python/wasmtime), `deploy/engine_ready.py`, the live segment bridge, and `main.py --help`.
+- Refreshed `test.zip`'s scraper pipeline and wasm tests for the current `crawler/` and `wasm/box/` paths; the fake-download end-to-end test passed all 15 assertions against this checkout. Preserved the archive's unrelated historical `R_Site` utilities unchanged.
 
 
 ## Overview & Requirements
