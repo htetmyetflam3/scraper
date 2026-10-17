@@ -1,6 +1,7 @@
 # Changelog — v1.0.0 (2026-10-17)
 
 ## Changes — 2026-10-18
+- Added a `javascript-obfuscator` pass to the wasm payload builder for all four bundled modules before AES-GCM encryption; moved it to runtime build dependencies and rebuilt `box.wasm`. Added an archived regression assertion that checks every packed module has obfuscator-generated identifiers. Wasm round trips and the fake-download pipeline pass. This is source obfuscation, not bytecode compilation or cryptographic secrecy.
 - Consolidated the duplicate `scraper/` tree into `crawler/`; moved the unique `dedup_pdfs.py` into `crawler/bin/` before removing `scraper/`.
 - Repointed runtime/deployment/bootstrap paths to `crawler/bin/` and `crawler/scribdl/`, and corrected root-relative `praser/` model/map paths.
 - Corrected the Engine mapbuilder imports from the nonexistent `./_function.js` to `./function.js`. Verified the Engine build in isolated before/after copies: before, the imports were treated as external; after, that warning disappeared and the build completed.

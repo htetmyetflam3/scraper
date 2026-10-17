@@ -4,12 +4,15 @@ One distributable: `box.wasm` =
 
 - [compiled] QuickJS engine
 - [data] obfuscated `loader.js` — key assembled at runtime from split/encoded strings; loader is obfuscated but **NOT encrypted** (bootstrap must run raw)
-- [data] `payload = encrypt( compile( obfuscate( base/ bundle ) ) )` — engine bytecode
+- [data] `payload = encrypt( obfuscate( base/ bundle ) )` — current builder ships obfuscated JS source, not QuickJS bytecode; see `REVERSE-ENGINEERING.md` for the remaining gap
 
-## Contract (owner's words)
+## Intended contract (owner's words; not yet fully met)
 
 - The key is **decrypt-TO-LOAD** (decrypt in memory → hand to engine → run).
-  **Not** decrypt-to-readable: even a holder of the key gets bytecode, never source.
+  The intended stronger goal is decrypt-to-bytecode, not readable source. The
+  current builder encrypts obfuscated JavaScript source, not QuickJS bytecode;
+  a box holder can decrypt it and may reverse the obfuscation. See
+  `REVERSE-ENGINEERING.md`.
 - Knowledge/tables = commodity (baked wherever convenient, never a secret).
 - Walker/segmentor/`Parser` cheap parts ship as readable code.
 - The ONLY secret = the `mapbuilder/base/` entry logic (normalize / mapperNormalize /
@@ -24,7 +27,7 @@ One distributable: `box.wasm` =
 
 1. spike: engine boots, in-engine decode-to-load + eval loop (Node host)  ← now
 2. in-box loader: pure-JS AES-256-GCM, key split across encoded strings
-3. payload: obfuscate(base/) → QuickJS bytecode → encrypt
+3. payload (current): obfuscate(base/) → encrypt; compiling to QuickJS bytecode remains a future step
 4. package single `box.wasm` (engine + loader + payload in one binary)
 5. parity: box == `Engine/MonoSyllabism/map/loader.js` on the test vector corpus
 

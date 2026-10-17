@@ -2,11 +2,9 @@
   "name": "linga-box",
   "private": true,
   "type": "module",
-  "description": "blackbox package: QuickJS engine + obfuscated loader + encrypted bytecode payload",
+  "description": "blackbox package: QuickJS engine + obfuscated loader and JavaScript payload",
   "dependencies": {
+    "javascript-obfuscator": "^5.9.0",
     "quickjs-emscripten": "0.32.0"
-  },
-  "devDependencies": {
-    "javascript-obfuscator": "^5.9.0"
   }
 }
