@@ -3,23 +3,19 @@
 During a download run every convertable PDF (Unicode or Zawgyi-One text)
 contributes two things the moment it is saved:
 
-* the PDF itself, staged in ``pdfs/.convert/`` — the dot-prefixed name keeps
-  the uploader away from it until its text is committed;
 * one JSON line in ``scan/collected.jsonl`` — filename, sha256, encoding,
   pages, the converted + normalised text, and the broken-text scan counts.
   The journal is append-only and fsynced per document, so an interrupted
-  run loses nothing and the next run's flush picks the leftovers up.
+  run loses nothing and the next run's flush picks the leftovers up;
+* the PDF itself, filed directly in ``pdfs/convertable/`` so the background
+  uploader pushes convertable books to remote storage one by one immediately
+  (just like ``scanned/`` and ``old/``).
 
 When the download run finishes, :func:`flush` sends the whole collected
 text as ONE stream through a single segmentor process
 (``segment_bridge.mjs`` — the Engine's MonoSyllabism syllable segmentor),
-splits the result back per document, writes one Parquet file for the run —
-the owner's book collection: author | book | text | segmented, nothing
-developer-facing — (dot-named while being written, atomically renamed when
-complete), and only
-then moves the staged PDFs into ``pdfs/convertable/`` where the uploader
-may take them. A flush failure leaves the journal and the staged PDFs in
-place: nothing uploads before its text is committed, ever.
+splits the result back per document, and writes one Parquet file for the run
+in ``pdfs/parquet/`` (kept on the VPS; never uploaded to shared host storage).
 """
 
 from __future__ import annotations
@@ -240,13 +236,11 @@ class FlushStats:
         if not self.ok:
             return (
                 f"🧾 Convert: {self.documents} doc(s) still journaled — "
-                f"{self.error} (kept for the next run; their PDFs stay "
-                "staged and unuploaded)."
+                f"{self.error} (kept in scan/collected.jsonl for the next run)."
             )
         return (
             f"🧾 Convert: {self.documents} doc(s) segmented -> "
-            f"{self.parquet.name if self.parquet else '?'}; "
-            f"{self.moved} PDF(s) released to {CONVERT_FINAL_NAME}/."
+            f"{self.parquet.name if self.parquet else '?'} (kept on VPS)."
         )
 
 

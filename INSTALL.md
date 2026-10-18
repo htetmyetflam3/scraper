@@ -9,11 +9,11 @@ download  ->  validate / unlock / repair / linearize   (python, pikepdf)
                 scanned/      image-only books (NO OCR)
                 old/          pre-standard fonts / undecodable text (NO recovery)
           ->  convertable text journaled to scan/collected.jsonl during the run
+upload    ->  books (convertable/, scanned/, old/) pushed one by one, verify
+              sha256, then delete local copy
 run end   ->  ONE node subprocess: Engine MonoSyllabism segmentor + formatter
-          ->  ONE Parquet batch per run in pdfs/parquet/ (zstd level 19;
-              book-collection schema: author | book | text | segmented)
-          ->  staged PDFs released .convert/ -> convertable/
-upload    ->  category folders + parquet, verify sha256, then delete local
+          ->  ONE Parquet batch per run in pdfs/parquet/ kept on the VPS
+              (zstd level 19; schema: author | book | text | segmented)
 ```
 
 ## Requirements

@@ -18,17 +18,16 @@ from typing import TYPE_CHECKING
 
 from pdf_classify import classify_pdf
 from pdf_support import linearize
-from text_collect import CONVERT_STAGE_NAME, append_document
+from text_collect import CONVERT_FINAL_NAME, append_document
 
 if TYPE_CHECKING:
     from Dcrawler import DownloadCandidate
 
-# Classified PDFs are filed under the output dir by category. Convertable
-# documents stage in a dot-prefixed dir the uploader skips; the run-end
-# flush (text_collect.flush) releases them to convertable/ only after
-# their text is committed to Parquet.
+# Classified PDFs are filed under the output dir by category so the uploader
+# pushes convertable/, scanned/ and old/ books one by one immediately after
+# each convertable book's text is journaled to scan/collected.jsonl.
 CATEGORY_DIRS = {
-    "convertable": CONVERT_STAGE_NAME,
+    "convertable": CONVERT_FINAL_NAME,
     "scanned": "scanned",
     "old": "old",
 }

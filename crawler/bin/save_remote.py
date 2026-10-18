@@ -540,17 +540,43 @@ def push_file(
     )
 
 
-def pending_files(root: Path) -> list[Path]:
-    """Files waiting in root, depth included, sorted. Staged temps
-    (.download-*.tmp), dotfiles, dot-directories and __pycache__ are never
-    listed, so a half-written download is never pushed."""
+def _release_legacy_staged(root: Path) -> None:
+    """Move any legacy PDFs left in root/.convert into root/convertable."""
+    stage = root / ".convert"
+    if not stage.is_dir():
+        return
+    final_dir = root / "convertable"
     try:
+        entries = sorted(p for p in stage.iterdir() if p.is_file() and not p.name.startswith("."))
+    except OSError:
+        return
+    if not entries:
+        return
+    final_dir.mkdir(parents=True, exist_ok=True)
+    for source in entries:
+        target = final_dir / source.name
+        index = 1
+        while target.exists():
+            index += 1
+            target = final_dir / f"{source.stem} ({index}){source.suffix}"
+        with contextlib.suppress(OSError):
+            os.replace(source, target)
+
+
+def pending_files(root: Path) -> list[Path]:
+    """Book files waiting in root, depth included, sorted. Staged temps
+    (.download-*.tmp), dotfiles, dot-directories, __pycache__ and local-only
+    Parquet batches (parquet/ and *.parquet) are never listed, so Parquet
+    stays on the VPS and only books are pushed to remote storage."""
+    try:
+        _release_legacy_staged(root)
         return sorted(
             entry
             for entry in root.rglob("*")
             if entry.is_file()
+            and entry.suffix.lower() != ".parquet"
             and not any(
-                part.startswith(".") or part == "__pycache__"
+                part.startswith(".") or part in {"__pycache__", "parquet"}
                 for part in entry.relative_to(root).parts
             )
         )
