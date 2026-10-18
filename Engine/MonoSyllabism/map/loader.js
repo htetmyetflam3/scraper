@@ -33,7 +33,7 @@ const BINARY = path.join(import.meta.dirname, "payload.jsc");
 //      rotated/kept outside the artifact instead of travelling inside it.
 //   2. the key baked in at build time (always present, so the artifact works
 //      without any environment setup).
-const BAKED_KEY = "7817a03e1cd9fc923052818d8ae9d7b06433bc7a0f0a1f8578be1e480a10e89d";
+const BAKED_KEY = "9933509b9f18e8ae05db5275b02a3d17770981f8066ae040cee40d5ec2b2858e";
 const ENV_KEY = (process.env.PAYLOAD_KEY || "").trim();
 if (ENV_KEY && !/^[0-9a-f]{64}$/i.test(ENV_KEY)) {
 	throw new Error(

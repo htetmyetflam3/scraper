@@ -1,6 +1,7 @@
 # Changelog — v1.0.0 (2026-10-17)
 
 ## Changes — 2026-10-18
+- Require Node.js 22+ for builds, systemd installation, Engine readiness, and wasm rebuilding. Added a no-install/no-switch preflight and skip Engine npm dependency installation when its build packages are already present.
 - Added a `javascript-obfuscator` pass to the wasm payload builder for all four bundled modules before AES-GCM encryption; moved it to runtime build dependencies and rebuilt `box.wasm`. Added an archived regression assertion that checks every packed module has obfuscator-generated identifiers. Wasm round trips and the fake-download pipeline pass. This is source obfuscation, not bytecode compilation or cryptographic secrecy.
 - Consolidated the duplicate `scraper/` tree into `crawler/`; moved the unique `dedup_pdfs.py` into `crawler/bin/` before removing `scraper/`.
 - Repointed runtime/deployment/bootstrap paths to `crawler/bin/` and `crawler/scribdl/`, and corrected root-relative `praser/` model/map paths.
@@ -16,7 +17,7 @@ Single-entry Burmese PDF crawler, classifier, segmentor, and Parquet archiver (`
 
 ### Core Runtime & Build Requirements
 - **Python 3.11+ (`uv` / `pyproject.toml`)**: `httpx`, `pikepdf`, `pyarrow`, `pypdf`, `cryptography`, `beautifulsoup4`, `tenacity`, `selenium`, `requests`, `trio`, `trio-websocket`, `websocket-client` (plus `wasmtime` when hosting `wasm/box/box.wasm` via `wasm/box/loader.py`).
-- **Node.js 18+ & `npm`**:
+- **Node.js 22+ & `npm`**:
   - Run-end segmentation subprocess (`python/bin/segment_bridge.mjs`) loads `Engine/MonoSyllabism/map/loader.js` (`payload.jsc` V8 bytecode, regenerated with all 12 `IMPOSTER` entries) and the precomputed syllable tree in `Engine/.cache-tree/`.
   - `npm run rebuild`: installs `Engine/MonoSyllabism/mapbuilder` deps (`bytenode`, `javascript-obfuscator`), restores `Engine/knowledge/isTreasure/master.json` from `Engine/MonoSyllabism/map/master.json.enc` (5,285 B `mapData`-only container) via `Engine/Bridge/restore-master.js`, and compiles host-bound V8 bytecode (`payload.jsc` + `loader.js`) via `Engine/MonoSyllabism/mapbuilder/obfuscator.js`.
   - `npm run rebuild:wasm` (`sh wasm/rebuild-box.sh`): restores `master.json` if absent, builds `wasm/box/payload.bin` (19,025 B, inlining only compact `mapData` = 2,280 B via `wasm/box/build-payload.mjs`, no fallback paths), and packages `wasm/box/box.wasm` (5,128,492 B = `engine.wasm` + `linga.loader` + `linga.payload`) via `wasm/box/tools/pack-box.mjs`.

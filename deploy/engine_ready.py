@@ -9,7 +9,7 @@ the VPS. It also works standalone:
     uv run deploy/engine_ready.py --fix    # rebuild the Engine bytecode if needed
 
 What it checks, in order:
-  1. `node` is on PATH and is version 18 or newer (the bridge needs it).
+  1. `node` is on PATH and is version 22 or newer (the bridge and Engine build require it).
   2. `Engine/MonoSyllabism/map/payload.jsc` + `loader.js` exist.
   3. `Engine/.cache-tree/` holds the precomputed syllable tree.
   4. The real bridge boots end to end with empty input -- this loads the
@@ -39,7 +39,7 @@ LOADER = ENGINE / "MonoSyllabism" / "map" / "loader.js"
 TREE = ENGINE / ".cache-tree"
 BOX_WASM = ROOT / "wasm" / "box" / "box.wasm"
 BRIDGE = ROOT / "crawler" / "bin" / "segment_bridge.mjs"
-MIN_NODE_MAJOR = 18
+MIN_NODE_MAJOR = 22
 BOOT_TIMEOUT = 300
 REBUILD_TIMEOUT = 1800
 

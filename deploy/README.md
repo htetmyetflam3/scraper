@@ -24,7 +24,7 @@ One `systemctl start scraper.service` is the whole automated process. Before
 `main.py` runs, the unit runs `deploy/engine_ready.py --fix` (ExecStartPre),
 which:
 
-1. finds `node` and requires version 18 or newer;
+1. finds `node` and requires version 22 or newer;
 2. checks `Engine/MonoSyllabism/map/{payload.jsc,loader.js}` and the
    precomputed `Engine/.cache-tree/`;
 3. boots the real bridge (`python/bin/segment_bridge.mjs`) with empty input,

@@ -5,6 +5,13 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
+echo "== node preflight =="
+if ! command -v node >/dev/null 2>&1; then
+    echo "ERROR: Node.js 22+ is required; this installer will not install or replace Node." >&2
+    exit 1
+fi
+node scripts/check-node.mjs
+
 echo "== python dependencies =="
 if command -v uv >/dev/null 2>&1; then
     uv sync
@@ -24,11 +31,6 @@ fi
 
 echo
 echo "== node (segmentor bridge) =="
-if ! command -v node >/dev/null 2>&1; then
-    echo "ERROR: node not found. Install Node.js 18+ — the run-end" >&2
-    echo "segmentor flush needs it (one subprocess per run)." >&2
-    exit 1
-fi
 node --version
 
 echo
@@ -38,5 +40,5 @@ python3 deploy/engine_ready.py
 
 echo
 echo "Unattended run that survives SSH disconnect (VPS, as root):"
-echo "  uv run deploy/install_service.py -- --process -l 2 -i 60"
+echo "  python3 deploy/install_service.py -- --process -l 2 -i 60"
 echo "  systemctl start scraper.service   (see deploy/README.md)"

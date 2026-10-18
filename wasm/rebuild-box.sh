@@ -24,9 +24,10 @@ BOX="$DIR/box"
 KNOWLEDGE="$ROOT/Engine/knowledge/isTreasure/master.json"
 
 command -v node >/dev/null 2>&1 || {
-  echo "[wasm] node is required (the build steps are Node child processes)" >&2
+  echo "[wasm] Node.js 22+ is required; this script will not install or replace Node." >&2
   exit 1
 }
+node "$ROOT/scripts/check-node.mjs"
 
 if [ ! -f "$KNOWLEDGE" ]; then
   echo "[wasm] restoring Engine/knowledge/isTreasure/master.json from master.json.enc"

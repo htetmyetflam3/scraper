@@ -22,7 +22,7 @@ upload    ->  category folders + parquet, verify sha256, then delete local
 | --- | --- |
 | Python 3.11+ | the whole pipeline |
 | [uv](https://docs.astral.sh/uv/) (or plain `pip`) | dependency install, `uv run main.py …` |
-| Node.js 18+ | the run-end segmentor bridge (`python/bin/segment_bridge.mjs`); one subprocess per run, nothing else uses Node |
+| Node.js 22+ | the run-end segmentor bridge (`crawler/bin/segment_bridge.mjs`) and Engine/wasm builds |
 | npm | one-time `npm install` in `Engine/MonoSyllabism/mapbuilder` (bytenode, for the Engine's encrypted syllable-map loader) |
 
 Python packages (installed by the commands below, from `pyproject.toml`):
@@ -140,7 +140,7 @@ The repo ships its own systemd installer (`deploy/install_service.py`,
 details in `deploy/README.md`). On the VPS, as root, from this checkout:
 
 ```sh
-uv run deploy/install_service.py -- --process -l 2 -i 60
+python3 deploy/install_service.py -- --process -l 2 -i 60
 systemctl start scraper.service        # now you can close SSH
 journalctl -u scraper.service -f       # watch the live log any time
 systemctl stop scraper.service         # clean stop (SIGINT, same as Ctrl+C)
