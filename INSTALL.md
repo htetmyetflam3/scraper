@@ -134,10 +134,29 @@ uv run main.py --process <site-url> # same, one site, no entry.txt
 uv run main.py --upload             # send what is saved, verify, delete, exit
 ```
 
-## Run unattended — survives SSH disconnect (systemd installer)
+## Run unattended — transient systemd unit by default
 
-The repo ships its own systemd installer (`deploy/install_service.py`,
-details in `deploy/README.md`). On the VPS, as root, from this checkout:
+On a systemd VPS, run `main.py` as root as usual; every operational invocation
+starts immediately in the background as its own transient unit and returns its
+unit name. This applies to commands such as `--process`, `--download`, and
+`--upload`. Logs and stop instructions are printed on launch; for example:
+
+```sh
+uv run main.py --process -l 2 -i 60
+journalctl -u scraper-main-<unit-id>.service -f
+systemctl stop scraper-main-<unit-id>.service
+```
+
+The launcher preserves the calling environment for the unit and stages it in a
+root-only temporary file under `/run`, removed after startup. `main.py --help`
+runs normally without a unit. Set `SCRAPER_SYSTEMD_DIRECT=1` for one invocation
+to bypass systemd. On machines without a systemd system manager or when not
+running as root, commands run directly.
+
+The repo also ships a persistent, fixed-argument systemd service installer
+(`deploy/install_service.py`, details in `deploy/README.md`). Use it when you
+want the same configured service name across restarts rather than one transient
+unit per `main.py` invocation. On the VPS, as root, from this checkout:
 
 ```sh
 python3 deploy/install_service.py -- --process -l 2 -i 60

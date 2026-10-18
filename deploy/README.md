@@ -1,7 +1,15 @@
 # Debian 12: keep a run alive after SSH disconnects
 
-Run as root from the repository on the VPS, with `uv` on your PATH and your
-usual `.env` and input files already configured:
+For ordinary commands, `main.py` automatically starts a background transient
+systemd unit per invocation when run as root on a systemd host. It returns the
+unit name and journal instructions immediately; use `journalctl -u <unit> -f`
+to follow logs. This behavior is separate from the persistent fixed-argument
+`scraper.service` documented below. `main.py --help` stays in the foreground;
+set `SCRAPER_SYSTEMD_DIRECT=1` to bypass the transient launcher for one run.
+
+To configure the persistent service, run as root from the repository on the
+VPS, with `uv` on your PATH and your usual `.env` and input files already
+configured:
 
 ```sh
 python3 deploy/install_service.py -- --process -l 2 -i 60

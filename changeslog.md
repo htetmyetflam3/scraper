@@ -1,6 +1,7 @@
 # Changelog — v1.0.0 (2026-10-17)
 
 ## Changes — 2026-10-18
+- Route operational `main.py` invocations on root/systemd hosts into unique, background transient units by default; preserve environment overrides in a root-only `/run` file, send output to journald, and document direct-run/help behavior and journal access.
 - Require Node.js 22+ for builds, systemd installation, Engine readiness, and wasm rebuilding. Added a no-install/no-switch preflight and skip Engine npm dependency installation when its build packages are already present.
 - Added a `javascript-obfuscator` pass to the wasm payload builder for all four bundled modules before AES-GCM encryption; moved it to runtime build dependencies and rebuilt `box.wasm`. Added an archived regression assertion that checks every packed module has obfuscator-generated identifiers. Wasm round trips and the fake-download pipeline pass. This is source obfuscation, not bytecode compilation or cryptographic secrecy.
 - Consolidated the duplicate `scraper/` tree into `crawler/`; moved the unique `dedup_pdfs.py` into `crawler/bin/` before removing `scraper/`.

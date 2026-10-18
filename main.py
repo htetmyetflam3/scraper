@@ -10,7 +10,15 @@ import time
 import urllib.parse
 from pathlib import Path
 
-BIN_DIR = Path(__file__).resolve().parent / "crawler" / "bin"
+ROOT = Path(__file__).resolve().parent
+sys.path.insert(0, str(ROOT / "scripts"))
+from systemd_launcher import launch_under_systemd  # noqa: E402
+
+_systemd_status = launch_under_systemd(sys.argv[1:])
+if _systemd_status is not None:
+    raise SystemExit(_systemd_status)
+
+BIN_DIR = ROOT / "crawler" / "bin"
 sys.path.insert(0, str(BIN_DIR))
 
 from Dcrawler import ENTRY_FILE, OUTPUT_DIR, download_entries, note_pause, retry_line  # noqa: E402
