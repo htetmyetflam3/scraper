@@ -1,6 +1,7 @@
 # Changelog — v1.0.0 (2026-10-17)
 
 ## Changes — 2026-10-18
+- Fixed `OverflowError: Python int too large to convert to C int` in `praser/pdf_extract.py` (`parse_tounicode_stream`) when a PDF `/ToUnicode` `bfrange` maps a character code to a multi-code-unit UTF-16BE string (such as Burmese ligatures/kinzi) or out-of-range code points; guarded TrueType format-12 `cmap` ranges, protected `choose_decoding`'s page probe in `crawler/bin/pdf_classify.py`, and updated `scripts/systemd_launcher.py` to remove the staged `/run` environment file only in `ExecStopPost` with `EnvironmentFile=-...`.
 - Route operational `main.py` invocations on root/systemd hosts into unique, background transient units by default; preserve environment overrides in a root-only `/run` file, send output to journald, and document direct-run/help behavior and journal access.
 - Require Node.js 22+ for builds, systemd installation, Engine readiness, and wasm rebuilding. Added a no-install/no-switch preflight and skip Engine npm dependency installation when its build packages are already present.
 - Added a `javascript-obfuscator` pass to the wasm payload builder for all four bundled modules before AES-GCM encryption; moved it to runtime build dependencies and rebuilt `box.wasm`. Added an archived regression assertion that checks every packed module has obfuscator-generated identifiers. Wasm round trips and the fake-download pipeline pass. This is source obfuscation, not bytecode compilation or cryptographic secrecy.

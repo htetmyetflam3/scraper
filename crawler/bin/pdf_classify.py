@@ -491,7 +491,10 @@ def choose_decoding(objects, pages, zawgyi_one_named: bool):
 
     def decodes_myanmar(decoding) -> bool:
         for idx in range(probe_n):
-            text = _page_text(objects, pages, idx, decoding)
+            try:
+                text = _page_text(objects, pages, idx, decoding)
+            except Exception:  # noqa: BLE001 - one broken page must not stop the probe
+                continue
             if _MY_PAIR.search(text):
                 return True
         return False
