@@ -26,6 +26,7 @@ Exit codes: 0 ready, 1 not ready.
 
 from __future__ import annotations
 
+import os
 import shutil
 import subprocess
 import sys
@@ -49,22 +50,45 @@ def say(message: str) -> None:
 
 
 def find_node() -> str | None:
-    node = shutil.which("node")
-    if node is None:
-        say("node is not on PATH; the run-end segmentor cannot start")
+    candidates: list[Path] = []
+    for entry in os.environ.get("PATH", "").split(os.pathsep):
+        if entry:
+            candidates.append(Path(entry) / "node")
+    for root in (Path.home(), Path("/root")):
+        candidates.extend(sorted(root.glob(".nvm/versions/node/v*/bin/node"), reverse=True))
+        candidates.extend(sorted(root.glob(".local/share/fnm/node-versions/v*/installation/bin/node"), reverse=True))
+        candidates.append(root / ".volta/bin/node")
+    candidates.extend((Path("/usr/local/bin/node"), Path("/usr/bin/node")))
+
+    seen: set[str] = set()
+    older: tuple[str, str] | None = None
+    for cand in candidates:
+        try:
+            resolved = str(cand.resolve())
+        except OSError:
+            continue
+        if resolved in seen or not cand.is_file() or not os.access(cand, os.X_OK):
+            continue
+        seen.add(resolved)
+        result = subprocess.run([str(cand), "--version"], capture_output=True, text=True)
+        raw = (result.stdout or result.stderr or "").strip().lstrip("v")
+        try:
+            major = int(raw.split(".")[0])
+        except ValueError:
+            continue
+        if major >= MIN_NODE_MAJOR:
+            node_dir = str(cand.resolve().parent)
+            os.environ["PATH"] = f"{node_dir}{os.pathsep}{os.environ.get('PATH', '')}"
+            say(f"node {raw} at {cand}")
+            return str(cand)
+        if older is None:
+            older = (raw, str(cand))
+
+    if older is not None:
+        say(f"node {older[0]} at {older[1]} is too old; {MIN_NODE_MAJOR}+ is required")
         return None
-    result = subprocess.run([node, "--version"], capture_output=True, text=True)
-    raw = (result.stdout or result.stderr or "").strip().lstrip("v")
-    try:
-        major = int(raw.split(".")[0])
-    except ValueError:
-        say(f"cannot read node version from {node!r} (got {raw!r})")
-        return None
-    if major < MIN_NODE_MAJOR:
-        say(f"node {raw} at {node} is too old; {MIN_NODE_MAJOR}+ is required")
-        return None
-    say(f"node {raw} at {node}")
-    return node
+    say("node is not on PATH; the run-end segmentor cannot start")
+    return None
 
 
 def boot_bridge(node: str) -> tuple[bool, str]:

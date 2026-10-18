@@ -73,7 +73,7 @@ def filename_hint(
     if not hinted or hinted.lower() in {"file", "download", "view", "uc", ""}:
         hinted = candidate.label or ""
     hinted = hinted.replace("\\", "/").rsplit("/", 1)[-1]
-    hinted = re.sub(r"[<>:\"/\\|?*\x00-\x1f]", "_", hinted).strip(" .")
+    hinted = re.sub(r"[<>:\"/\\|?*\x00-\x1f]", "_", hinted).strip(" .-")
     if not hinted:
         host = _hostname(candidate.url) or "book"
         digest = hashlib.sha256(candidate.url.encode("utf-8")).hexdigest()[:10]

@@ -56,6 +56,15 @@ def launch_under_systemd(args: list[str]) -> int | None:
         print("[systemd] systemd-run not found; running main.py directly", file=sys.stderr)
         return None
 
+    systemctl = shutil.which("systemctl")
+    if systemctl is not None:
+        subprocess.run(
+            [systemctl, "stop", "scraper-main-*.service", "scraper.service"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+
     unit = f"scraper-main-{uuid.uuid4().hex[:12]}.service"
     env_file = ENV_DIR / f"{unit}.env"
     env = dict(os.environ)
@@ -68,6 +77,7 @@ def launch_under_systemd(args: list[str]) -> int | None:
         return 1
 
     cleanup = f"/usr/bin/rm -f {env_file}"
+    engine_ready = f"{sys.executable} -u {ROOT / 'deploy' / 'engine_ready.py'} --fix"
     command = [
         systemd_run,
         f"--unit={unit}",
@@ -77,10 +87,12 @@ def launch_under_systemd(args: list[str]) -> int | None:
         "--property=Type=exec",
         "--property=User=root",
         "--property=KillSignal=SIGINT",
+        "--property=TimeoutStartSec=1800",
         "--property=TimeoutStopSec=120",
         "--property=StandardOutput=journal",
         "--property=StandardError=journal",
         f"--property=EnvironmentFile=-{env_file}",
+        f"--property=ExecStartPre={engine_ready}",
         f"--property=ExecStopPost={cleanup}",
         "--",
         sys.executable,

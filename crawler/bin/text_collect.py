@@ -104,9 +104,41 @@ def _read_journal() -> list[dict]:
     return records
 
 
+def _find_node22() -> str | None:
+    """Return a Node 22+ binary path, checking PATH and common version-manager dirs."""
+    candidates: list[Path] = []
+    for entry in os.environ.get("PATH", "").split(os.pathsep):
+        if entry:
+            candidates.append(Path(entry) / "node")
+    home = Path.home()
+    for root in (home, Path("/root")):
+        candidates.extend(sorted(root.glob(".nvm/versions/node/v*/bin/node"), reverse=True))
+        candidates.extend(sorted(root.glob(".local/share/fnm/node-versions/v*/installation/bin/node"), reverse=True))
+        candidates.append(root / ".volta/bin/node")
+    candidates.extend((Path("/usr/local/bin/node"), Path("/usr/bin/node")))
+
+    seen: set[str] = set()
+    for cand in candidates:
+        try:
+            resolved = str(cand.resolve())
+        except OSError:
+            continue
+        if resolved in seen or not cand.is_file() or not os.access(cand, os.X_OK):
+            continue
+        seen.add(resolved)
+        try:
+            proc = subprocess.run([str(cand), "--version"], capture_output=True, text=True, timeout=5)
+            raw = (proc.stdout or proc.stderr or "").strip().lstrip("v")
+            if int(raw.split(".", 1)[0]) >= 22:
+                return str(cand)
+        except (OSError, ValueError, subprocess.TimeoutExpired):
+            continue
+    return shutil.which("node")
+
+
 def _segment_documents(texts: list[str], log) -> list[str] | None:
     """One segmentor process for the whole run's text; None on failure."""
-    node = shutil.which("node")
+    node = _find_node22()
     if node is None:
         log("[convert-warn] node not found; segmentation postponed")
         return None
@@ -115,12 +147,16 @@ def _segment_documents(texts: list[str], log) -> list[str] | None:
                                     dir=SCAN_DIR)
     os.close(fd)
     out_path = Path(out_name)
+    env = dict(os.environ)
+    node_dir = str(Path(node).resolve().parent)
+    env["PATH"] = f"{node_dir}{os.pathsep}{env.get('PATH', '')}"
     try:
         proc = subprocess.run(
             [node, str(BRIDGE_SCRIPT), str(out_path)],
             input=giant.encode("utf-8"),
             stdout=subprocess.DEVNULL,
             stderr=subprocess.PIPE,
+            env=env,
             timeout=3600,
         )
         if proc.returncode != 0:
