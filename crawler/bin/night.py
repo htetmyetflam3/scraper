@@ -47,7 +47,6 @@ from pathlib import Path
 from disk_floor import DISK_FLOOR, DiskTight, disk_tight, size_text
 from Dcrawler import ENTRY_FILE, OUTPUT_DIR, DownloadSummary, StopRun, download_entries, retry_line
 from mailer import clock, now
-from text_collect import flush as text_flush
 from save_remote import (
     UPLOAD_TRIES,
     RemoteConfig,
@@ -381,23 +380,6 @@ def run_process(
             guard.download_running = False
             if guard.hard_timer is not None:
                 guard.hard_timer.cancel()
-        # Run-end text flush: the whole run's collected text goes through
-        # one segmentor pass into a committed Parquet file, and only then
-        # are the staged convertable PDFs released for upload. This happens
-        # BEFORE download_done so the uploader's final sweep includes them.
-        # Skipped when the disk floor was hit: nothing more gets written.
-        if not guard.failure:
-            try:
-                convert_stats = text_flush(output_dir)
-            except Exception as error:  # noqa: BLE001 - never kill the night run
-                convert_stats = None
-                print(f"[convert-warn] run-end flush crashed: {error}", flush=True)
-                guard.problem("download", f"text flush crashed: {error}")
-            if convert_stats is not None:
-                print(f"[convert] {convert_stats.line()}", flush=True)
-                guard.convert_line = convert_stats.line()
-                if not convert_stats.ok:
-                    guard.problem("download", convert_stats.line())
         guard.download_done.set()
         if not guard.stop_event.is_set():
             print(f"[night] downloading finished; the uploader sends what is left @ {_stamp()}", flush=True)

@@ -4,16 +4,14 @@ What this system does, in one line per stage:
 
 ```
 download  ->  validate / unlock / repair / linearize   (python, pikepdf)
-          ->  classify the final readable bytes        (python/bin/pdf_classify.py)
+          ->  classify the final readable bytes        (crawler/bin/pdf_classify.py)
                 convertable/  Unicode or Zawgyi-One text books
                 scanned/      image-only books (NO OCR)
                 old/          pre-standard fonts / undecodable text (NO recovery)
-          ->  convertable text journaled to scan/collected.jsonl during the run
-upload    ->  books (convertable/, scanned/, old/) pushed one by one, verify
-              sha256, then delete local copy
-run end   ->  ONE node subprocess: Engine MonoSyllabism segmentor + formatter
-          ->  ONE Parquet batch per run in pdfs/parquet/ kept on the VPS
-              (zstd level 19; schema: author | book | text | segmented)
+upload    ->  looks across all folders (convertable/, scanned/, old/):
+              - convertable/: parse PDF -> upload PDF to remote -> segment &
+                write 1 new row to pdfs/parquet/books.parquet on VPS -> delete local PDF
+              - scanned/ & old/: direct upload to remote -> verify sha256 -> delete local PDF
 ```
 
 ## Requirements

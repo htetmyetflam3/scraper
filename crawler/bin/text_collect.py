@@ -26,6 +26,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -36,11 +37,13 @@ SCAN_DIR = REPO_ROOT / "scan"
 JOURNAL_FILE = SCAN_DIR / "collected.jsonl"
 BRIDGE_SCRIPT = BIN_DIR / "segment_bridge.mjs"
 
-CONVERT_STAGE_NAME = ".convert"      # staging dir, invisible to the uploader
-CONVERT_FINAL_NAME = "convertable"   # where staged PDFs land after the flush
+CONVERT_STAGE_NAME = ".convert"      # legacy staging dir
+CONVERT_FINAL_NAME = "convertable"   # convertable PDFs folder
 PARQUET_DIR_NAME = "parquet"
+PARQUET_FILE_NAME = "books.parquet"
 
 DOC_SEPARATOR = "\u001d"  # GROUP SEPARATOR between documents, both directions
+_PARQUET_LOCK = threading.Lock()
 
 # One Parquet file per flushed run keeps batches small and committed: the
 # file only appears (rename) after every row in it is complete.
@@ -137,6 +140,101 @@ def _segment_documents(texts: list[str], log) -> list[str] | None:
         return None
     finally:
         out_path.unlink(missing_ok=True)
+
+
+def parse_convertable_book(path: Path, log=print) -> tuple[str, str, str] | None:
+    """Parse a convertable PDF and segment its text for a single Parquet row."""
+    from pdf_classify import classify_pdf
+
+    name = path.name
+    book = name[:-4] if name.lower().endswith(".pdf") else name
+    text = ""
+    try:
+        verdict = classify_pdf(path.read_bytes())
+        text = verdict.text or ""
+    except Exception as error:  # noqa: BLE001
+        log(f"[convert-warn] parser failed on {name}: {error}")
+    if not text:
+        for record in _read_journal():
+            if record.get("filename") == name and record.get("text"):
+                text = record["text"]
+                break
+    if not text:
+        log(f"[convert-warn] no text extracted from {name}")
+        return None
+    segmented = _segment_documents([text], log)
+    if segmented is None or not segmented:
+        return None
+    return book, text, segmented[0]
+
+
+def write_parquet_row(
+    output_dir: Path,
+    book: str,
+    text: str,
+    segmented: str,
+    *,
+    author: str = "",
+    log=print,
+) -> Path | None:
+    """Append one book row to parquet/books.parquet on the VPS atomically."""
+    try:
+        import pyarrow as pa
+        import pyarrow.parquet as pq
+    except ImportError as error:
+        log(f"[convert-warn] pyarrow unavailable: {error}")
+        return None
+
+    parquet_dir = Path(output_dir) / PARQUET_DIR_NAME
+    final = parquet_dir / PARQUET_FILE_NAME
+    with _PARQUET_LOCK:
+        authors: list[str] = []
+        books: list[str] = []
+        texts: list[str] = []
+        segmenteds: list[str] = []
+        sources = [final] if final.exists() else sorted(parquet_dir.glob("batch-*.parquet"))
+        for src in sources:
+            try:
+                existing = pq.read_table(src)
+                authors.extend(existing["author"].to_pylist())
+                books.extend(existing["book"].to_pylist())
+                texts.extend(existing["text"].to_pylist())
+                segmenteds.extend(existing["segmented"].to_pylist())
+            except Exception as error:  # noqa: BLE001
+                log(f"[convert-warn] could not read {src.name}: {error}")
+                return None
+
+        if book in books:
+            idx = books.index(book)
+            authors[idx] = author
+            texts[idx] = text
+            segmenteds[idx] = segmented
+        else:
+            authors.append(author)
+            books.append(book)
+            texts.append(text)
+            segmenteds.append(segmented)
+
+        table = pa.table({
+            "author": authors,
+            "book": books,
+            "text": texts,
+            "segmented": segmenteds,
+        })
+        parquet_dir.mkdir(parents=True, exist_ok=True)
+        temp = final.with_name("." + final.name + ".tmp")
+        try:
+            pq.write_table(table, temp, compression="zstd", compression_level=19)
+            os.replace(temp, final)
+        except OSError as error:
+            log(f"[convert-warn] parquet write failed: {error}")
+            temp.unlink(missing_ok=True)
+            return None
+        finally:
+            if temp.exists():
+                temp.unlink(missing_ok=True)
+        log(f"[parquet] +1 row ({book}) -> {PARQUET_DIR_NAME}/{final.name} ({len(books)} row(s) on VPS)")
+        return final
 
 
 def _write_parquet(records: list[dict], segmented: list[str],
