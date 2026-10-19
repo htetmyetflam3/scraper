@@ -1,5 +1,8 @@
 # Changelog — v1.0.0 (2026-10-17)
 
+## Changes — 2026-10-19
+- Accelerated SSH uploads in `crawler/bin/save_remote.py`: enabled OpenSSH connection multiplexing (`ControlMaster=auto`, `ControlPersist=600`, `ControlPath=/tmp/scraper-ssh-%C`), streamed and computed remote SHA-256 in a single SSH pass (`tee -- <path> | sha256sum` for new files, `cat >> <path> && sha256sum <path>` for resumed files), cached created remote directories (`ensure_dir`), and cached `scan/uploaded-host.txt` in memory by file mtime/size.
+
 ## Changes — 2026-10-18
 - Added Node 22+ discovery across `PATH` and standard version-manager directories (`.nvm`, `fnm`, `.volta`, `/usr/local/bin`) in `crawler/bin/text_collect.py` and `deploy/engine_ready.py` so systemd units do not pick `/usr/bin/node` (v18) when Node 22+ is installed; updated `scripts/systemd_launcher.py` to stop existing `scraper*` units before launching a new transient unit and run `deploy/engine_ready.py --fix` as `ExecStartPre`; stripped leading `-` from saved filenames in `crawler/bin/save_local.py`.
 - Replaced run-end batch Parquet flushing with linear per-book processing during upload: `save_local.py` classifies and saves books directly to `convertable/`, `scanned/`, or `old/`; `save_remote.push_file()` directly uploads `scanned/` and `old/` books, and for each book in `convertable/` parses the PDF, uploads it to remote storage, segments the text via `segment_bridge.mjs`, appends one new row to `parquet/books.parquet` on the VPS, and deletes the local PDF. `parquet/` stays on the VPS and is never uploaded to shared host storage.
