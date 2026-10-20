@@ -10,7 +10,15 @@ import time
 import urllib.parse
 from pathlib import Path
 
-BIN_DIR = Path(__file__).resolve().parent / "python" / "bin"
+ROOT = Path(__file__).resolve().parent
+sys.path.insert(0, str(ROOT / "scripts"))
+from systemd_launcher import launch_under_systemd  # noqa: E402
+
+_systemd_status = launch_under_systemd(sys.argv[1:])
+if _systemd_status is not None:
+    raise SystemExit(_systemd_status)
+
+BIN_DIR = ROOT / "crawler" / "bin"
 sys.path.insert(0, str(BIN_DIR))
 
 from Dcrawler import ENTRY_FILE, OUTPUT_DIR, download_entries, note_pause, retry_line  # noqa: E402
@@ -24,7 +32,6 @@ from save_remote import start_remote, upload_all  # noqa: E402
 from Scrawler import find_entry  # noqa: E402
 from scribd import download_scribd, read_links_file  # noqa: E402
 from serpapi import SerpApiError  # noqa: E402
-from text_collect import flush as text_flush  # noqa: E402
 
 # --process (night run): hours until it stops at a safe point and mails the
 # report - your wake-up time. No flag on purpose: edit this number.
@@ -364,17 +371,6 @@ def main(argv: list[str] | None = None) -> int:
             details = _download_details(download_entries(source, download_limit=limit))
         elif args.upload:
             part = "upload"
-            # A crashed or stopped run can leave collected text journaled
-            # and its PDFs staged in pdfs/.convert. Committing them first
-            # means --upload really does send everything that CAN go; a
-            # failed flush simply leaves those PDFs staged (not uploaded).
-            try:
-                stats = text_flush(OUTPUT_DIR)
-            except Exception as error:  # noqa: BLE001 - upload must still run
-                print(f"[convert-warn] pre-upload flush crashed: {error}", flush=True)
-            else:
-                if not stats.skipped:
-                    print(f"[convert] {stats.line()}", flush=True)
             details = upload_all(OUTPUT_DIR)
         elif args.process is not None:
             source = ENTRY_FILE if args.process is USE_ENTRY_FILE else args.process

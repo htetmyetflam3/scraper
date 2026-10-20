@@ -18,17 +18,17 @@ from typing import TYPE_CHECKING
 
 from pdf_classify import classify_pdf
 from pdf_support import linearize
-from text_collect import CONVERT_STAGE_NAME, append_document
+from text_collect import CONVERT_FINAL_NAME
 
 if TYPE_CHECKING:
     from Dcrawler import DownloadCandidate
 
-# Classified PDFs are filed under the output dir by category. Convertable
-# documents stage in a dot-prefixed dir the uploader skips; the run-end
-# flush (text_collect.flush) releases them to convertable/ only after
-# their text is committed to Parquet.
+# Classified PDFs are filed under the output dir by category. The download step
+# checks classification and saves directly to convertable/, scanned/ or old/;
+# the uploader then parses convertable/ books, uploads the PDF to remote
+# storage, and appends one row per book to the VPS Parquet file.
 CATEGORY_DIRS = {
-    "convertable": CONVERT_STAGE_NAME,
+    "convertable": CONVERT_FINAL_NAME,
     "scanned": "scanned",
     "old": "old",
 }
@@ -73,7 +73,7 @@ def filename_hint(
     if not hinted or hinted.lower() in {"file", "download", "view", "uc", ""}:
         hinted = candidate.label or ""
     hinted = hinted.replace("\\", "/").rsplit("/", 1)[-1]
-    hinted = re.sub(r"[<>:\"/\\|?*\x00-\x1f]", "_", hinted).strip(" .")
+    hinted = re.sub(r"[<>:\"/\\|?*\x00-\x1f]", "_", hinted).strip(" .-")
     if not hinted:
         host = _hostname(candidate.url) or "book"
         digest = hashlib.sha256(candidate.url.encode("utf-8")).hexdigest()[:10]
@@ -150,21 +150,6 @@ def save_payload(
                 detail += f"; {verdict.category}"
                 if verdict.encoding:
                     detail += f" ({verdict.encoding}, {verdict.decode} decode)"
-                if verdict.category == "convertable":
-                    destination = reserve_unique_path(target_dir, filename)
-                    # Journal BEFORE the PDF becomes visible: a staged file
-                    # without a committed text row would never be released.
-                    append_document(
-                        filename=destination.name,
-                        sha256=hashlib.sha256(final_bytes).hexdigest(),
-                        encoding=verdict.encoding or "",
-                        pages=verdict.pages,
-                        text=verdict.text or "",
-                        scan_counts=verdict.scan_counts,
-                        source_url=candidate.url,
-                    )
-                    os.replace(temp_path, destination)
-                    return destination, detail
         else:
             detail = "saved DOCX"
         destination = reserve_unique_path(target_dir, filename)

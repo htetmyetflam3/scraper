@@ -90,8 +90,20 @@ def main() -> int:
     node = shutil.which("node")
     if not node:
         sys.exit(
-            "node is not on PATH. The run-end segmentor and Box need Node 18+; "
-            "install it, then run this again from a shell where `node --version` works."
+            "Node.js 22+ is not on PATH; select an existing Node 22+ binary. "
+            "This installer does not install or replace Node."
+        )
+    node_version = subprocess.run(
+        [node, "--version"], capture_output=True, text=True, check=True
+    ).stdout.strip()
+    try:
+        node_major = int(node_version.lstrip("v").split(".", 1)[0])
+    except ValueError:
+        sys.exit(f"Cannot parse Node version {node_version!r} from {node!r}.")
+    if node_major < 22:
+        sys.exit(
+            f"Node.js 22+ is required; found {node_version} at {node}. "
+            "Select an existing 22+ binary; no Node installation or downgrade was attempted."
         )
     if not shutil.which("npm"):
         print(

@@ -61,7 +61,7 @@ def _find_model(model_path: str | Path | None) -> Path:
     candidates = [
         # the SHARED copy: <root>/model, same file the JS parser reads
         # (Parser/parsed/core/paths.mjs DEFAULT_MODEL_PATH)
-        Path(__file__).resolve().parent.parent.parent / "model" / "zawgyiUnicodeModel.dat",
+        Path(__file__).resolve().parent.parent / "model" / "zawgyiUnicodeModel.dat",
         Path(__file__).with_suffix('').parent / "zawgyiUnicodeModel.dat",
         Path.cwd() / "zawgyiUnicodeModel.dat",
         Path(sys.argv[0]).parent / "zawgyiUnicodeModel.dat",

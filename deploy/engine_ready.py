@@ -9,7 +9,7 @@ the VPS. It also works standalone:
     uv run deploy/engine_ready.py --fix    # rebuild the Engine bytecode if needed
 
 What it checks, in order:
-  1. `node` is on PATH and is version 18 or newer (the bridge needs it).
+  1. `node` is on PATH and is version 22 or newer (the bridge and Engine build require it).
   2. `Engine/MonoSyllabism/map/payload.jsc` + `loader.js` exist.
   3. `Engine/.cache-tree/` holds the precomputed syllable tree.
   4. The real bridge boots end to end with empty input -- this loads the
@@ -26,6 +26,7 @@ Exit codes: 0 ready, 1 not ready.
 
 from __future__ import annotations
 
+import os
 import shutil
 import subprocess
 import sys
@@ -38,8 +39,8 @@ PAYLOAD = ENGINE / "MonoSyllabism" / "map" / "payload.jsc"
 LOADER = ENGINE / "MonoSyllabism" / "map" / "loader.js"
 TREE = ENGINE / ".cache-tree"
 BOX_WASM = ROOT / "wasm" / "box" / "box.wasm"
-BRIDGE = ROOT / "python" / "bin" / "segment_bridge.mjs"
-MIN_NODE_MAJOR = 18
+BRIDGE = ROOT / "crawler" / "bin" / "segment_bridge.mjs"
+MIN_NODE_MAJOR = 22
 BOOT_TIMEOUT = 300
 REBUILD_TIMEOUT = 1800
 
@@ -49,22 +50,45 @@ def say(message: str) -> None:
 
 
 def find_node() -> str | None:
-    node = shutil.which("node")
-    if node is None:
-        say("node is not on PATH; the run-end segmentor cannot start")
+    candidates: list[Path] = []
+    for entry in os.environ.get("PATH", "").split(os.pathsep):
+        if entry:
+            candidates.append(Path(entry) / "node")
+    for root in (Path.home(), Path("/root")):
+        candidates.extend(sorted(root.glob(".nvm/versions/node/v*/bin/node"), reverse=True))
+        candidates.extend(sorted(root.glob(".local/share/fnm/node-versions/v*/installation/bin/node"), reverse=True))
+        candidates.append(root / ".volta/bin/node")
+    candidates.extend((Path("/usr/local/bin/node"), Path("/usr/bin/node")))
+
+    seen: set[str] = set()
+    older: tuple[str, str] | None = None
+    for cand in candidates:
+        try:
+            resolved = str(cand.resolve())
+        except OSError:
+            continue
+        if resolved in seen or not cand.is_file() or not os.access(cand, os.X_OK):
+            continue
+        seen.add(resolved)
+        result = subprocess.run([str(cand), "--version"], capture_output=True, text=True)
+        raw = (result.stdout or result.stderr or "").strip().lstrip("v")
+        try:
+            major = int(raw.split(".")[0])
+        except ValueError:
+            continue
+        if major >= MIN_NODE_MAJOR:
+            node_dir = str(cand.resolve().parent)
+            os.environ["PATH"] = f"{node_dir}{os.pathsep}{os.environ.get('PATH', '')}"
+            say(f"node {raw} at {cand}")
+            return str(cand)
+        if older is None:
+            older = (raw, str(cand))
+
+    if older is not None:
+        say(f"node {older[0]} at {older[1]} is too old; {MIN_NODE_MAJOR}+ is required")
         return None
-    result = subprocess.run([node, "--version"], capture_output=True, text=True)
-    raw = (result.stdout or result.stderr or "").strip().lstrip("v")
-    try:
-        major = int(raw.split(".")[0])
-    except ValueError:
-        say(f"cannot read node version from {node!r} (got {raw!r})")
-        return None
-    if major < MIN_NODE_MAJOR:
-        say(f"node {raw} at {node} is too old; {MIN_NODE_MAJOR}+ is required")
-        return None
-    say(f"node {raw} at {node}")
-    return node
+    say("node is not on PATH; the run-end segmentor cannot start")
+    return None
 
 
 def boot_bridge(node: str) -> tuple[bool, str]:

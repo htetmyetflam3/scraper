@@ -1849,9 +1849,10 @@ def _scan_output_hashes(output_dir: Path) -> tuple[set[str], int, int]:
     hashes: set[str] = set()
     file_count = 0
     byte_count = 0
-    for dirpath, _dirnames, filenames in os.walk(output_dir):
+    for dirpath, dirnames, filenames in os.walk(output_dir):
+        dirnames[:] = [d for d in dirnames if d != "parquet"]
         for name in filenames:
-            if name.startswith("."):
+            if name.startswith(".") or name.lower().endswith(".parquet"):
                 continue
             entry = Path(dirpath) / name
             try:

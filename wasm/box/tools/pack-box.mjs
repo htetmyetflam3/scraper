@@ -9,7 +9,7 @@
 // Packaging = WASM custom sections (id 0) appended to the engine module:
 //   "linga.loader"  — the loader.js bytes, SELF-CONTAINED (aes.mjs inlined;
 //                     the shipped loader is one bootstrap, obfuscated later)
-//   "linga.payload" — the AES-256-GCM payload from build-payload.mjs
+//   "linga.payload" — obfuscated module source, AES-256-GCM encrypted by build-payload.mjs
 // Custom sections cannot break the engine: every wasm consumer must skip
 // unknown ones. Hosts (python/wasmtime) read them back with
 // Module.custom_sections(name) and feed the engine in-box.

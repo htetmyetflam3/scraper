@@ -19,6 +19,7 @@
 // survive wrapped ({...}) instead of being deleted. MyNormalize was the
 // earlier, wrong pick here: no reordering, and it deletes English blocks.
 //
+// Runtime requirement: Node.js 22+ (the systemd preflight enforces this too).
 // Requirements (one-time, per machine):
 //   * Engine/Bridge/{path.js,logen.js} — committed shims;
 //   * Engine/MonoSyllabism/mapbuilder: `npm install` (bytenode for the
@@ -30,6 +31,12 @@
 import fs from "node:fs";
 import path from "node:path";
 import url from "node:url";
+
+const NODE_MAJOR = Number(process.versions.node.split(".", 1)[0]);
+if (NODE_MAJOR < 22) {
+  console.error(`[segment] Node.js 22+ is required; found ${process.version} at ${process.execPath}.`);
+  process.exit(1);
+}
 
 const HERE = path.dirname(url.fileURLToPath(import.meta.url));
 const REPO = path.resolve(HERE, "..", "..");

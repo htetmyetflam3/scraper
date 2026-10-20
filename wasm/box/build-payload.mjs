@@ -1,9 +1,28 @@
-// step 3: payload = encrypt( pack( base/ entry logic + knowledge ) )
-// knowledge (tables) = commodity -> inlined plainly; secrecy = AES + later obfuscation
+// step 3: payload = encrypt( pack( obfuscate( base/ entry logic ) + knowledge ) )
+// knowledge (tables) is inlined before module obfuscation; AES wraps the pack.
 import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
+import JavaScriptObfuscator from "javascript-obfuscator";
 import { assembleKey, decryptToLoad } from "./loader.mjs";
+
+function obfuscatePayloadModule(src) {
+  return JavaScriptObfuscator.obfuscate(src, {
+    compact: true,
+    target: "browser",
+    identifierNamesGenerator: "hexadecimal",
+    renameGlobals: false,
+    stringArray: true,
+    // QuickJS has no atob; leave strings encoded by the obfuscator's JS decoder.
+    stringArrayEncoding: [],
+    stringArrayThreshold: 0.8,
+    splitStrings: false,
+    controlFlowFlattening: false,
+    deadCodeInjection: false,
+    selfDefending: false,
+    debugProtection: false,
+  }).getObfuscatedCode();
+}
 
 const BASE = path.resolve(import.meta.dirname, "../../Engine/MonoSyllabism/mapbuilder/base");
 const KNOWLEDGE = path.resolve(import.meta.dirname, "../../Engine/knowledge/isTreasure/master.json");
@@ -17,7 +36,7 @@ export function buildPack() {
     inlined++;
     return `const ${name} = ${JSON.stringify(section)};`;
   };
-  for (const [disk, key] of [["function.js", "_function.js"], ["normalize.js", "normalize.js"], ["sourceMap.js", "sourceMap.js"], ["sourceMapper.js", "sourceMapper.js"]]) {
+  for (const [disk, key] of [["function.js", "function.js"], ["normalize.js", "normalize.js"], ["sourceMap.js", "sourceMap.js"], ["sourceMapper.js", "sourceMapper.js"]]) {
     let src = fs.readFileSync(path.join(BASE, disk), "utf8");
     // inline only the imported key (mapData) from the knowledge JSON, compact
     src = src.replace(
@@ -32,7 +51,7 @@ export function buildPack() {
         .filter((n) => !constNames.has(n.split(/\s+as\s+/)[0].trim()));
       return keep.length ? `export { ${keep.join(", ")} };` : "";
     });
-    pack[key] = src;
+    pack[key] = obfuscatePayloadModule(src);
   }
   if (!inlined) throw new Error(`no master.json import found in ${BASE}`);
   return pack;

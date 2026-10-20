@@ -41,6 +41,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from disk_floor import DISK_FLOOR, disk_tight, size_text
+from text_collect import parse_convertable_book, write_parquet_row
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 ENV_FILE = REPO_ROOT / ".env"
@@ -179,6 +180,10 @@ def load_config() -> RemoteConfig:
     )
 
 
+_ENSURED_DIRS: set[tuple[str, int, str]] = set()
+_LEDGER_CACHE: dict[Path, tuple[int, int, UploadedLedger]] = {}
+
+
 def _ssh_argv(config: RemoteConfig, command: str) -> list[str]:
     argv = [
         SSH_BIN,
@@ -186,6 +191,12 @@ def _ssh_argv(config: RemoteConfig, command: str) -> list[str]:
         str(config.port),
         "-o",
         "BatchMode=yes",
+        "-o",
+        "ControlMaster=auto",
+        "-o",
+        "ControlPersist=600",
+        "-o",
+        "ControlPath=/tmp/scraper-ssh-%C",
         "-o",
         "ServerAliveInterval=30",
         "-o",
@@ -255,10 +266,14 @@ def remove(config: RemoteConfig, remote_path: str) -> None:
 
 
 def ensure_dir(config: RemoteConfig, remote_dir: str) -> None:
+    key = (config.target, config.port, remote_dir)
+    if key in _ENSURED_DIRS:
+        return
     result = _run(config, f"mkdir -p {shlex.quote(remote_dir)}")
     if result.returncode != 0:
         detail = (result.stderr or "").strip() or f"exit {result.returncode}"
         raise RemoteError(f"cannot create remote directory {remote_dir}: {detail}")
+    _ENSURED_DIRS.add(key)
 
 
 def probe(config: RemoteConfig) -> str:
@@ -276,8 +291,15 @@ def read_uploaded(ledger: Path | None = None) -> UploadedLedger:
     """Append-only ledger, one TAB record per uploaded file:
     sha256 <TAB> name <TAB> remote_path <TAB> bytes <TAB> MM-DD HH:MM:SS
     """
+    target = (ledger or UPLOAD_LEDGER).resolve()
+    try:
+        st = target.stat()
+    except OSError:
+        return UploadedLedger()
+    cached = _LEDGER_CACHE.get(target)
+    if cached is not None and cached[0] == st.st_mtime_ns and cached[1] == st.st_size:
+        return cached[2]
     entries = UploadedLedger()
-    target = ledger or UPLOAD_LEDGER
     try:
         lines = target.read_text(encoding="utf-8").splitlines()
     except OSError:
@@ -294,6 +316,7 @@ def read_uploaded(ledger: Path | None = None) -> UploadedLedger:
         if len(digest) != 64 or not remote_path:
             continue
         entries.by_digest[digest] = remote_path
+    _LEDGER_CACHE[target] = (st.st_mtime_ns, st.st_size, entries)
     return entries
 
 
@@ -304,8 +327,9 @@ def remember_uploaded(
     size: int,
     ledger: Path | None = None,
 ) -> None:
-    target = ledger or UPLOAD_LEDGER
-    if digest in read_uploaded(target).by_digest:
+    target = (ledger or UPLOAD_LEDGER).resolve()
+    entries = read_uploaded(target)
+    if digest in entries.by_digest:
         return
     line = (
         f"{digest}\t{name}\t{remote_path}\t{size}\t"
@@ -315,6 +339,9 @@ def remember_uploaded(
         target.parent.mkdir(parents=True, exist_ok=True)
         with target.open("a", encoding="utf-8") as handle:
             handle.write(line + "\n")
+        entries.by_digest[digest] = remote_path
+        st = target.stat()
+        _LEDGER_CACHE[target] = (st.st_mtime_ns, st.st_size, entries)
     except OSError as error:
         print(f"[push-warn] cannot record {name}: {error}")
 
@@ -340,13 +367,18 @@ def _append_stream(
     offset: int,
     log,
     name: str,
-) -> None:
-    """Stream local_path's bytes from offset into ``cat >> remote_path``."""
-    argv = _ssh_argv(config, f"cat >> {shlex.quote(remote_path)}")
+) -> str | None:
+    """Stream local_path's bytes from offset and return the remote sha256."""
+    quoted = shlex.quote(remote_path)
+    if offset == 0:
+        remote_cmd = f"tee -- {quoted} | sha256sum"
+    else:
+        remote_cmd = f"cat >> {quoted} && sha256sum {quoted}"
+    argv = _ssh_argv(config, remote_cmd)
     process = subprocess.Popen(
         argv,
         stdin=subprocess.PIPE,
-        stdout=subprocess.DEVNULL,
+        stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
     )
     total = local_path.stat().st_size
@@ -385,7 +417,10 @@ def _append_stream(
         with contextlib.suppress(Exception):
             if process.stdin is not None:
                 process.stdin.close()
+    stdout = b""
     stderr = b""
+    with contextlib.suppress(Exception):
+        stdout = process.stdout.read() or b""
     with contextlib.suppress(Exception):
         stderr = process.stderr.read() or b""
     code = process.wait()
@@ -393,6 +428,8 @@ def _append_stream(
         tail = stderr.decode("utf-8", "replace").strip().splitlines()
         message = tail[-1] if tail else f"ssh exit {code}"
         raise RemoteError(f"remote write failed: {message}")
+    parts = stdout.decode("utf-8", "replace").split()
+    return parts[0] if parts and len(parts[0]) == 64 else None
 
 
 def _delete_local(path: Path, timeline, log) -> bool:
@@ -447,6 +484,13 @@ def push_file(
         digest = sha256_file(path)
     known = entries.by_digest.get(digest)
 
+    is_convertable = path.parent.name == "convertable" and path.suffix.lower() == ".pdf"
+    parsed_row: tuple[str, str, str] | None = None
+    if is_convertable:
+        parsed_row = parse_convertable_book(path, log=log)
+        if parsed_row is None:
+            return PushOutcome(False, f"convertable parse/segment failed for {name}")
+
     resumed = False
     verified_existing = False
     last_error = "unknown"
@@ -459,6 +503,10 @@ def push_file(
                 and remote_sha256(config, known) == digest
             ):
                 log(f"[push-skip] {name} already archived and verified @ {_stamp()}")
+                if parsed_row is not None:
+                    book_name, book_text, book_segmented = parsed_row
+                    if write_parquet_row(path.parent.parent, book_name, book_text, book_segmented, log=log) is None:
+                        return PushOutcome(False, f"parquet row write failed for {name}")
                 deleted = _delete_local(path, timeline, log)
                 return PushOutcome(
                     True,
@@ -499,9 +547,10 @@ def push_file(
                     f"[push] {name} ({size / 1048576:.1f} MB) -> "
                     f"{remote_path} @ {_stamp()}"
                 )
-            _append_stream(config, remote_path, path, offset, log, name)
+            stream_digest = _append_stream(config, remote_path, path, offset, log, name)
             log(f"[push-check] {name} upload sent; verifying remote sha256 @ {_stamp()}")
-            if remote_sha256(config, remote_path) != digest:
+            verified_digest = stream_digest or remote_sha256(config, remote_path)
+            if verified_digest != digest:
                 raise RemoteError("sha256 mismatch after upload")
             last_error = ""
             break
@@ -530,6 +579,10 @@ def push_file(
     else:
         detail = "sha256 verified"
     log(f"[push-ok] {name} {detail} -> {remote_path} @ {_stamp()}")
+    if parsed_row is not None:
+        book_name, book_text, book_segmented = parsed_row
+        if write_parquet_row(path.parent.parent, book_name, book_text, book_segmented, log=log) is None:
+            return PushOutcome(False, f"parquet row write failed for {name}", remote_path=remote_path)
     deleted = _delete_local(path, timeline, log)
     return PushOutcome(
         True,
@@ -540,17 +593,43 @@ def push_file(
     )
 
 
-def pending_files(root: Path) -> list[Path]:
-    """Files waiting in root, depth included, sorted. Staged temps
-    (.download-*.tmp), dotfiles, dot-directories and __pycache__ are never
-    listed, so a half-written download is never pushed."""
+def _release_legacy_staged(root: Path) -> None:
+    """Move any legacy PDFs left in root/.convert into root/convertable."""
+    stage = root / ".convert"
+    if not stage.is_dir():
+        return
+    final_dir = root / "convertable"
     try:
+        entries = sorted(p for p in stage.iterdir() if p.is_file() and not p.name.startswith("."))
+    except OSError:
+        return
+    if not entries:
+        return
+    final_dir.mkdir(parents=True, exist_ok=True)
+    for source in entries:
+        target = final_dir / source.name
+        index = 1
+        while target.exists():
+            index += 1
+            target = final_dir / f"{source.stem} ({index}){source.suffix}"
+        with contextlib.suppress(OSError):
+            os.replace(source, target)
+
+
+def pending_files(root: Path) -> list[Path]:
+    """Book files waiting in root, depth included, sorted. Staged temps
+    (.download-*.tmp), dotfiles, dot-directories, __pycache__ and local-only
+    Parquet batches (parquet/ and *.parquet) are never listed, so Parquet
+    stays on the VPS and only books are pushed to remote storage."""
+    try:
+        _release_legacy_staged(root)
         return sorted(
             entry
             for entry in root.rglob("*")
             if entry.is_file()
+            and entry.suffix.lower() != ".parquet"
             and not any(
-                part.startswith(".") or part == "__pycache__"
+                part.startswith(".") or part in {"__pycache__", "parquet"}
                 for part in entry.relative_to(root).parts
             )
         )

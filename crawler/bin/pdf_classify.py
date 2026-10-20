@@ -41,7 +41,7 @@ import time
 from dataclasses import dataclass, field
 from pathlib import Path
 
-_PRASER = Path(__file__).resolve().parents[1] / "praser"
+_PRASER = Path(__file__).resolve().parents[2] / "praser"
 if str(_PRASER) not in sys.path:
     sys.path.insert(0, str(_PRASER))
 
@@ -491,7 +491,10 @@ def choose_decoding(objects, pages, zawgyi_one_named: bool):
 
     def decodes_myanmar(decoding) -> bool:
         for idx in range(probe_n):
-            text = _page_text(objects, pages, idx, decoding)
+            try:
+                text = _page_text(objects, pages, idx, decoding)
+            except Exception:  # noqa: BLE001 - one broken page must not stop the probe
+                continue
             if _MY_PAIR.search(text):
                 return True
         return False
