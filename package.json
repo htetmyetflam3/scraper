@@ -1,0 +1,12 @@
+{
+  "name": "linga",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Root toolchain for the scraper: Engine build (rebuild) and the wasm box (rebuild:wasm)",
+  "license": "ISC",
+  "scripts": {
+    "rebuild": "npm install --prefix Engine/MonoSyllabism/mapbuilder --no-package-lock && node Engine/Bridge/restore-master.js && node Engine/MonoSyllabism/mapbuilder/obfuscator.js",
+    "rebuild:wasm": "sh ./wasm/rebuild-box.sh"
+  }
+}
