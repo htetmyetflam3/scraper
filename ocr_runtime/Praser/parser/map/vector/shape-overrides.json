@@ -1,0 +1,114 @@
+{
+  "_": [
+    "Hand-edited input to gen-shape-thresholds.mjs: the generator reads this and never writes it.",
+    "Run: node scrmgr.js exe gen-shape-thresholds.mjs",
+    "",
+    "THREE KINDS OF DECISION, and only one of them is a real confusion.",
+    "",
+    "1. COMPOSITION -- not listed here, derived automatically.",
+    "   ည against ညှ is not ambiguity. No font draws ည to look like ည+ှ, so",
+    "   if the ink is nearer ညှ then the medial IS present. The ranking has",
+    "   already answered it and a margin test would only throw the answer",
+    "   away. The generator finds these by shape: one label is the other",
+    "   plus combining marks. Measured: ဠ/ဠှ 0.0025, ည/ညှ 0.0054,",
+    "   ရ/ရှ 0.0159, န/နု 0.0175 -- all tighter than most real confusions,",
+    "   and none of them a confusion.",
+    "",
+    "2. ATOMIC -- a single unit that cannot be a base plus a mark.",
+    "   ဈ is not စ+ျ in any dictionary (only ဈေး), ၌ has no undotted base,",
+    "   ဿ is not သ+ာ. So an exact match to the decomposed rival IS the",
+    "   decomposed form, and an exact match to the atomic one is atomic.",
+    "   The ranking decides.",
+    "",
+    "3. CONFUSION -- bare consonants that genuinely look alike. These get a",
+    "   HIGH bar, and when it is not met the matcher abstains and lets the",
+    "   registered code page decide. Abstaining is the right answer when the",
+    "   pixels cannot separate them; guessing is not."
+  ],
+  "groups": [
+    [
+      "တ",
+      "က"
+    ],
+    [
+      "ဝ",
+      "၀"
+    ],
+    [
+      "ပ",
+      "ဖ"
+    ],
+    [
+      "ယ",
+      "ဃ"
+    ],
+    [
+      "ဘ",
+      "သ"
+    ],
+    [
+      "ဗ",
+      "ပ",
+      "မ"
+    ],
+    [
+      "တ",
+      "သ",
+      "က"
+    ],
+    [
+      "ဂ",
+      "ဝ"
+    ],
+    [
+      "ဝ",
+      "ဓ"
+    ],
+    [
+      "စ",
+      "ဓ"
+    ],
+    [
+      "ဓ",
+      "မ"
+    ],
+    [
+      "က",
+      "ဏ"
+    ],
+    [
+      "င",
+      "ဝ"
+    ]
+  ],
+  "atomic": [
+    "၍",
+    "၌",
+    "၏",
+    "၎",
+    "ဪ",
+    "ဩ",
+    "ဧ",
+    "ဈ",
+    "ဿ",
+    "ဤ",
+    "ဥ",
+    "ဦ"
+  ],
+  "distinct": [
+    "ဒ",
+    "န",
+    "အ",
+    "ည",
+    "ခ",
+    "ဠ",
+    "ဌ",
+    "ဇ",
+    "ဍ",
+    "ဋ",
+    "ရ"
+  ],
+  "strictness": 0.85,
+  "leniency": 0.35,
+  "baseline": 0.55
+}

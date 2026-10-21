@@ -1,0 +1,8 @@
+{
+  "_note": "Pairs of Myanmar code points that share one glyph in legacy faces. A legacy code page must resolve the shared glyph to one side, and when it picks wrong the other side is what the text meant. Repair is dictionary-arbitrated: a swap is only applied when the token is not a word, exactly one swapped variant IS a word, and no other variant also resolves.",
+  "pairs": [
+    ["\u101D", "\u1040", "wa / digit zero"],
+    ["\u101B", "\u1047", "ra / digit seven"],
+    ["\u1009", "\u1025", "nya / u vowel"]
+  ]
+}
