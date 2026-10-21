@@ -20,4 +20,8 @@ coverage/
 Thumbs.db
 *.tmp
 *.swp
+*ssh*
+*env*
+*pycache*
+*lock*
 
