@@ -8,7 +8,7 @@
 #
 # This is the download half only - it never talks to Hugging Face. Pushing what
 # lands here to the Hub is the other script:
-#   ./hf-upload.sh parquet
+#   uv run hfinit.py parquet
 #
 # Plain ssh in BatchMode: it never prompts, so a wrong key fails fast instead of
 # hanging. Nothing extra is needed on the VPS (no rsync) - only ls, cat, tail,
@@ -151,4 +151,4 @@ if [ "$FAILED" -ne 0 ]; then
     exit 1
 fi
 echo "[OK] the VPS copy was not touched; nothing was deleted"
-echo "[INFO] next: ./hf-upload.sh $DEST"
+echo "[INFO] next: uv run hfinit.py $DEST"
