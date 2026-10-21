@@ -14,8 +14,9 @@
 # hanging. Nothing extra is needed on the VPS (no rsync) - only ls, cat, tail,
 # stat and sha256sum.
 #
-# The ssh Host alias carries HostName, Port, User and IdentityFile, so no key
-# path is hardcoded here; this box's ~/.ssh/config "hostingervps" entry decides.
+# The ssh Host alias carries HostName, Port and User; the private key is
+# hardcoded below and pinned with IdentitiesOnly, so this script only ever
+# offers the VPS key - never a general key used for other hosts.
 #
 # Verified: the local sha256 must equal the VPS sha256 before the dot-temp is
 # renamed into place. Nothing is deleted - not the VPS copy, not a local file
@@ -27,6 +28,7 @@ set -euo pipefail
 
 # ── Defaults: the VPS case. Edit these lines. ──
 DEFAULT_HOST="hostingervps"                  # ssh alias in this box's ~/.ssh/config
+DEFAULT_KEY="${HOME}/.ssh/mylinux"           # the VPS private key, hardcoded
 DEFAULT_REMOTE_DIR="scraper/pdfs/parquet"    # relative to the VPS account home
 DEFAULT_REMOTE_FILE="books.parquet"          # what text_collect.py appends rows to
 DEFAULT_DEST="parquet"                       # cwd-relative
@@ -49,19 +51,28 @@ while [ "$#" -gt 0 ]; do
     shift
 done
 
-SSH=(ssh -o BatchMode=yes -o ConnectTimeout=20 -o ServerAliveInterval=30)
-
 # ── Can we see the VPS and its Parquet dir? ──
 if ! command -v ssh >/dev/null 2>&1; then
     echo "[ERROR] no ssh client on PATH; install openssh-client"
     exit 1
 fi
 
+if [ ! -f "$DEFAULT_KEY" ]; then
+    echo "[ERROR] SSH private key not found: $DEFAULT_KEY"
+    echo "        Copy your VPS key there, or edit DEFAULT_KEY in $0."
+    exit 1
+fi
+
+# IdentitiesOnly: offer this one key and nothing else, so a general key from
+# the agent or ~/.ssh/id_* is never sent to the VPS.
+SSH=(ssh -o BatchMode=yes -o ConnectTimeout=20 -o ServerAliveInterval=30
+    -i "$DEFAULT_KEY" -o IdentitiesOnly=yes)
+
 if ! "${SSH[@]}" "$HOST" "test -d '$REMOTE_DIR'"; then
     echo "[ERROR] cannot see '$REMOTE_DIR' on '$HOST'."
-    echo "        Check the alias in ~/.ssh/config (HostName, Port, User,"
-    echo "        IdentityFile), or set VPS_SSH_HOST / --host / --dest."
-    echo "        Expected: $HOST:$REMOTE_DIR"
+    echo "        Check the alias in ~/.ssh/config (HostName, Port, User),"
+    echo "        the hardcoded key at $DEFAULT_KEY,"
+    echo "        or the dir: $HOST:$REMOTE_DIR"
     exit 1
 fi
 
