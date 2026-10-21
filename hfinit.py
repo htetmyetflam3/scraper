@@ -2,35 +2,31 @@
 """hfinit.py -- log in to Hugging Face, then push parquet files into ONE dataset repo.
 
     uv run hfinit.py                             log in only
-    uv run hfinit.py pdfs/parquet                every *.parquet in that folder
-    uv run hfinit.py pdfs/parquet/batch-20261021-120000.parquet
+    uv run hfinit.py pdfs/parquet                the collection parquet, up to HF
+    uv run hfinit.py pdfs/parquet/books.parquet  the same, named explicitly
+    uv run hfinit.py --download pulled           ...and back down again, the round trip
 
-Local paths are relative to the current directory. A folder is NOT walked recursively,
-so pdfs/parquet/ocr/ is left alone, and dot-files are skipped -- which ignores the
-".batch-<stamp>.parquet.tmp" half-written files that crawler/bin/text_collect.py leaves
-behind mid-write.
+Local paths are relative to the current directory. `pdfs/parquet` is not a guess: it is
+where crawler/bin/text_collect.py writes, now that REPO_ROOT resolves to the repository
+root in every module instead of `crawler/` in seven of them. Not recursive, and dot-files
+are skipped, so the ".books.parquet.tmp" half-write is never picked up mid-commit.
 
 How the name check works
 ------------------------
     name already in the repo -> UPDATE that same path in the repo
     name not in the repo     -> ADD the whole file as a new dataset file
 
-text_collect.py writes ONE new batch per run, named batch-<YYYYmmdd-HHMMSS>.parquet
-(batch-<stamp>-<N>.parquet if that second is already taken), into pdfs/parquet/ on the
-VPS. Those names never repeat, so in practice every push is an ADD and the repo grows as
-a pile of shards. That is the shape you want: every batch carries the same four columns
-(author | book | text | segmented), so the Hub, datasets and duckdb all read the whole
-folder as one table.
+There is ONE parquet: pdfs/parquet/books.parquet, four columns (author | book | text |
+segmented). text_collect.py appends each book into it and rewrites it atomically, so the
+local copy is always cumulative - every old row plus the new ones. The first push is an
+ADD; every push after that has the same name, so it is an UPDATE.
 
-UPDATE only fires when a name genuinely repeats -- re-pushing a batch already uploaded,
-i.e. a retry. Replacing the file is the right thing there, and it cannot duplicate rows.
+UPDATE replaces the file on HF with the local copy. It never downloads anything and never
+merges rows on this machine, and it does not have to: the local file already holds every
+row, which is exactly what makes re-uploading it the append.
 
-UPDATE always replaces the file on HF with the local copy. It never downloads anything
-and never merges rows on this machine. On the branch whose text_collect.py also appends
-into a cumulative books.parquet, re-uploading that single file IS the append, because the
-local copy already holds the old rows plus the new ones. The one thing to watch: pointing
-this at a file holding ONLY new rows, under a name that already exists, would drop
-whatever rows are on HF.
+The one thing to watch: if you ever point this at a file holding ONLY new rows, under a
+name that already exists, UPDATE would drop whatever rows are on HF.
 
 Everything in one run goes into ONE commit, because the Hub allows roughly 320 commit
 creations per hour and a single file upload is a single commit.
@@ -54,16 +50,19 @@ from __future__ import annotations
 
 import argparse
 import getpass
+import hashlib
 import os
+import shutil
 import sys
 import tempfile
 from pathlib import Path
 from typing import Sequence
 
-# ---------------------------------------------------------------- edit these two lines
+# ------------------------------------------------------------------ edit these lines
 HF_USER = "htetmyetflam3"  # your Hugging Face user name (same as your git user name)
 HF_REPO_NAME = "scraper"  # the one dataset repo this script ever touches
-# -------------------------------------------------------------------------------------
+PARQUET_PATH = "pdfs/parquet"  # where text_collect.py writes the collection, cwd-relative
+# -----------------------------------------------------------------------------------
 
 REPO_ID = f"{HF_USER}/{HF_REPO_NAME}"
 REPO_TYPE = "dataset"
@@ -76,23 +75,75 @@ class HfInitError(RuntimeError):
 
 
 def _fail(message: str) -> "NoReturn":  # noqa: F821 - NoReturn only needed for typing
-    print(f"[ERROR] {message}", file=sys.stderr)
-    raise SystemExit(1)
+    raise HfInitError(message)
 
 
 def _import_hub():
     try:
-        from huggingface_hub import CommitOperationAdd, HfApi, login, whoami
+        from huggingface_hub import (CommitOperationAdd, HfApi, hf_hub_download,
+                                     login, whoami)
     except ImportError as exc:  # pragma: no cover - environment problem
         _fail(f"huggingface_hub is not installed ({exc}). Try: uv sync")
-    return HfApi, CommitOperationAdd, login, whoami
+    return HfApi, CommitOperationAdd, hf_hub_download, login, whoami
 
 
 # --------------------------------------------------------------------------- login
 
+def _sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for block in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(block)
+    return digest.hexdigest()
+
+
+def pull(dest: str) -> None:
+    """Return leg of the round trip: pull the parquet back down out of the repo.
+
+    Writes into the folder given, keeping the name the file has on HF. A file already
+    sitting there that is byte-identical is left alone and reported as [same], so this
+    doubles as the proof that what came back is what went up.
+    """
+    HfApi, _, hf_hub_download, _, whoami = _import_hub()
+
+    api = HfApi()
+    token, hub_user = _identity_or_die(whoami)
+    print(f"[INFO] acting as {hub_user} -> {REPO_TYPE}s/{REPO_ID}")
+
+    try:
+        names = [
+            rel for rel in api.list_repo_files(REPO_ID, repo_type=REPO_TYPE, token=token)
+            if rel.lower().endswith(".parquet") and not _hidden(Path(rel))
+        ]
+    except Exception as exc:
+        _fail(f"cannot list the files in {REPO_TYPE}s/{REPO_ID}: {exc}")
+
+    if not names:
+        _fail(f"{REPO_TYPE}s/{REPO_ID} holds no parquet - push one first")
+
+    out = Path(dest)
+    out.mkdir(parents=True, exist_ok=True)
+
+    for rel in sorted(names):
+        try:
+            got = hf_hub_download(repo_id=REPO_ID, repo_type=REPO_TYPE,
+                                  filename=rel, token=token)
+        except Exception as exc:
+            _fail(f"downloading {rel}: {exc}")
+        source = Path(got)
+        target = out / Path(rel).name
+        if target.exists() and _sha256(target) == _sha256(source):
+            print(f"[same] {rel} -> {target} (already byte-identical)")
+            continue
+        shutil.copyfile(source, target)
+        print(f"[pull] {rel} -> {target} ({row_count(target)} row(s))")
+
+    print(f"[OK] {len(names)} parquet pulled into {out} - nothing on HF was changed")
+
+
 def do_login() -> None:
     """No arguments: authenticate and confirm who we are. Nothing is uploaded."""
-    _, _, login, whoami = _import_hub()
+    _, _, _, login, whoami = _import_hub()
 
     token = os.environ.get(TOKEN_ENV, "").strip()
     if not token:
@@ -136,19 +187,34 @@ def _identity_or_die(whoami) -> tuple[str | None, str]:
 
 # ------------------------------------------------------------------- local file pick
 
-def local_files(raw: str) -> list[Path]:
-    """Resolve the argument to the list of files that will be pushed."""
+def _hidden(rel: Path) -> bool:
+    """True when any path component is a dot-name.
+
+    Skips the ".batch-<stamp>.parquet.tmp" half-writes text_collect.py leaves behind,
+    and the ".cache" folder hf_hub_download creates inside a local_dir.
+    """
+    return any(part.startswith(".") for part in rel.parts)
+
+
+def local_files(raw: str) -> tuple[Path, list[Path]]:
+    """Resolve the argument to (base, files). Repo paths are relative to base.
+
+    Not recursive: the collection is ONE parquet, pdfs/parquet/books.parquet, written by
+    crawler/bin/text_collect.py. Dot-files are skipped so the ".books.parquet.tmp"
+    half-write is never picked up mid-commit.
+    """
     path = Path(raw)
     if not path.exists():
         _fail(f"no such file or folder: {raw}")
 
     if path.is_file():
-        return [path]
+        return path.parent, [path]
 
-    found = sorted(p for p in path.glob("*.parquet") if p.is_file())
+    found = sorted(p for p in path.glob("*.parquet")
+                   if p.is_file() and not _hidden(p.relative_to(path)))
     if not found:
-        _fail(f"no *.parquet files directly inside {raw} (sub-folders are not walked)")
-    return found
+        _fail(f"no *.parquet in {raw} (expected {PARQUET_PATH})")
+    return path, found
 
 
 def row_count(path: Path) -> int | None:
@@ -224,8 +290,8 @@ def rewrite_with_cdc(path: Path, workdir: Path) -> Path:
 
 # ---------------------------------------------------------------------------- push
 
-def push(files: Sequence[Path], use_cdc: bool) -> None:
-    HfApi, CommitOperationAdd, _, whoami = _import_hub()
+def push(base: Path, files: Sequence[Path], use_cdc: bool) -> None:
+    HfApi, CommitOperationAdd, _, _, whoami = _import_hub()
 
     api = HfApi()
     token, hub_user = _identity_or_die(whoami)
@@ -256,18 +322,20 @@ def push(files: Sequence[Path], use_cdc: bool) -> None:
         added: list[str] = []
 
         for path in files:
+            # Relative to the folder given, so pdfs/parquet/books.parquet -> books.parquet.
+            rel = path.relative_to(base).as_posix()
             rows = row_count(path)
             rows_txt = f"{rows} row(s)" if rows is not None else "row count unreadable"
             upload_path = rewrite_with_cdc(path, workdir) if use_cdc else path
 
-            if path.name in existing:
-                updated.append(path.name)
-                print(f"[UPDATE] {path.name} <- {path} ({rows_txt}) replaces the copy on HF")
+            if rel in existing:
+                updated.append(rel)
+                print(f"[UPDATE] {rel} <- {path} ({rows_txt}) replaces the copy on HF")
             else:
-                added.append(path.name)
-                print(f"[NEW]    {path.name} <- {path} ({rows_txt}) added as a new dataset file")
+                added.append(rel)
+                print(f"[NEW]    {rel} <- {path} ({rows_txt}) added as a new dataset file")
 
-            operations.append(CommitOperationAdd(path_in_repo=path.name, path_or_fileobj=upload_path))
+            operations.append(CommitOperationAdd(path_in_repo=rel, path_or_fileobj=upload_path))
 
         parts = []
         if added:
@@ -315,20 +383,33 @@ def main(argv: Sequence[str] | None = None) -> int:
         help="rewrite each parquet with Content-Defined Chunking first (needs pyarrow>=21) "
         "so later row updates transfer only the changed chunks",
     )
+    parser.add_argument(
+        "--download",
+        metavar="DEST",
+        help=f"return leg of the round trip: pull the parquet back down out of "
+        f"{REPO_TYPE}s/{REPO_ID} into the folder DEST",
+    )
     args = parser.parse_args(argv)
 
     try:
-        if args.path is None:
+        if args.download is not None:
+            if args.path is not None:
+                _fail("give a path to push OR --download DEST, not both")
+            if args.cdc:
+                _fail("--cdc applies to pushing, not to --download")
+            pull(args.download)
+        elif args.path is None:
             if args.cdc:
                 _fail("--cdc does nothing without a file or folder to push")
             do_login()
         else:
-            push(local_files(args.path), use_cdc=args.cdc)
+            push(*local_files(args.path), use_cdc=args.cdc)
     except KeyboardInterrupt:
         print("\n[ERROR] interrupted", file=sys.stderr)
         return 1
     except HfInitError as exc:
-        _fail(str(exc))
+        print(f"[ERROR] {exc}", file=sys.stderr)
+        return 1
     return 0
 
 

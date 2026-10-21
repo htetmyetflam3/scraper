@@ -224,8 +224,8 @@ async def api_get_json(
 # Files live on S3 and must be fetched WITHOUT auth headers (S3 rejects an
 # unknown Authorization header instead of ignoring it).
 
-REPO_ROOT = Path(__file__).resolve().parent.parent  # python/
-SCAN_DIR = REPO_ROOT.parent / "scan"
+REPO_ROOT = Path(__file__).resolve().parents[2]
+SCAN_DIR = REPO_ROOT / "scan"
 OUTPUT_DIR = REPO_ROOT / "pdfs"
 PHATMAL_FILE = SCAN_DIR / "phatmal.txt"
 PAGE_LIMIT = 100

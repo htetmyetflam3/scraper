@@ -65,7 +65,7 @@ exit codes: 0 ok (also --process stopping at its {NIGHT_HOURS:g}-hour mark), 1 f
 2 usage error, 130 paused (Ctrl+C; rerun resumes)
 
 email: every command except --findentry mails a started notice, then a
-finished (--upload: when python/pdfs is empty) or failed one naming the part: kaungmyatthu@devnovex.shop ->
+finished (--upload: when pdfs is empty) or failed one naming the part: kaungmyatthu@devnovex.shop ->
 htetmyet986@gmail.com via smtp.hostinger.com:465 (MAIL_PASSWORD in .env); a
 copy of each goes to that mailbox's Sent folder via imap.hostinger.com:993.
 --process mails started, then one report at the {NIGHT_HOURS:g}-hour mark (or when all is
@@ -75,8 +75,8 @@ right away, with the problems so far.
 
 upload (--upload, --process): a file that fails is retried after 15 s, 30 s,
 45 s, 1 min, 1 min 30 s, 2 min, 2 min 30 s and 3 min (UPLOAD_WAITS in
-python/bin/save_remote.py); then uploading stops instead of looping: with an
-error when under 5 GB is free, else the files stay in python/pdfs.
+crawler/bin/save_remote.py); then uploading stops instead of looping: with an
+error when under 5 GB is free, else the files stay in pdfs.
 
 disk: 5 GB is kept free for the system. Every download command (--main,
 --download, --process, --scribd, --phatmal) checks it before each file and
@@ -155,12 +155,12 @@ def build_parser() -> argparse.ArgumentParser:
         "--upload",
         action="store_true",
         help=(
-            "Push every file in python/pdfs to the SSH host (SSH_* in .env), "
+            "Push every file in pdfs to the SSH host (SSH_* in .env), "
             "verify its sha256, then delete the local copy; when the folder "
             "is empty it mails \"finished\" and exits. A file that fails is retried "
             "after 15 s, 30 s, 45 s, 1 min, 1 min 30 s, 2 min, 2 min 30 s "
             "and 3 min; then uploading stops: with an error when under 5 GB "
-            "is free, else normally (the files stay in python/pdfs)."
+            "is free, else normally (the files stay in pdfs)."
         ),
     )
     command.add_argument(
@@ -433,7 +433,7 @@ def main(argv: list[str] | None = None) -> int:
         elif args.process is not None:
             print(
                 "\n[paused] interrupted; downloads are journaled and unsent files "
-                f"stay in python/pdfs - rerun to resume. @ {note_pause()}"
+                f"stay in pdfs - rerun to resume. @ {note_pause()}"
             )
         else:
             print(

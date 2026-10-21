@@ -1,7 +1,7 @@
 """Remote saving over SSH: push saved files to a host instead of keeping them.
 
-Used by main.py --upload (one pass over python/pdfs, then it ends) and main.py
---process (python/bin/night.py's upload thread). A download is written
+Used by main.py --upload (one pass over pdfs, then it ends) and main.py
+--process (crawler/bin/night.py's upload thread). A download is written
 locally first; then this
 module pushes it over plain ``ssh``, verifies the remote sha256 against the
 *local* bytes, appends a line to scan/uploaded-host.txt, and only after that
@@ -755,7 +755,7 @@ def upload_all(local: Path) -> list[str]:
             )
             return [
                 f"⚠️ Uploading stopped: {gave_up}. The disk has room ({size_text(free)} free), "
-                f"so it stopped instead of retrying; {left} file(s) stay in python/pdfs.",
+                f"so it stopped instead of retrying; {left} file(s) stay in pdfs.",
                 "",
                 "▶ Send them later: uv run main.py --upload",
             ]

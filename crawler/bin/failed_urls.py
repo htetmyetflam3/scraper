@@ -15,7 +15,7 @@ Default mode - backfill failed URLs
     nothing that is already in either ledger. Use --all to count every
     unmatched crawled URL, not only download-looking ones.
 
-    python3 python/bin/failed_urls.py [--scan-dir DIR] [--dry-run] [--all]
+    python3 crawler/bin/failed_urls.py [--scan-dir DIR] [--dry-run] [--all]
 
 Zip mode - what a batch zip actually contains, plus a deletion manifest
     Prints the member count, when the zip was made, which PDFs were saved
@@ -27,7 +27,7 @@ Zip mode - what a batch zip actually contains, plus a deletion manifest
     itself never deletes anything; re-running --zip rewrites the manifest
     so it always matches the current zip.
 
-    python3 python/bin/failed_urls.py --zip batch1.zip [--pdfs-dir DIR]
+    python3 crawler/bin/failed_urls.py --zip batch1.zip [--pdfs-dir DIR]
                                        [--manifest PATH]
 
 Delete mode - separate step, run ONLY after the upload is verified
@@ -37,7 +37,7 @@ Delete mode - separate step, run ONLY after the upload is verified
     ``--yes`` performs the deletions. ``--base DIR`` when the zip was
     built somewhere other than the zip's own folder.
 
-    python3 python/bin/failed_urls.py --delete-zip batch1.zip [--base DIR] [--yes]
+    python3 crawler/bin/failed_urls.py --delete-zip batch1.zip [--base DIR] [--yes]
 
 Dcrawler itself keeps scan/failed.txt up to date automatically now; this
 helper exists for history written before that, and for zip audits.
@@ -321,7 +321,7 @@ def zip_audit(
         print(f"[zip] cannot write manifest {manifest}: {error}")
         return 1
     print(f"[zip] manifest written: {manifest} ({len(listed):,} path(s))")
-    hint = f"python/bin/failed_urls.py --delete-zip {zip_path}"
+    hint = f"crawler/bin/failed_urls.py --delete-zip {zip_path}"
     if manifest_path is not None:
         hint += f" --manifest {manifest}"
     print(
