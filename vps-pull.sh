@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Download the Parquet collection from the VPS onto this box (local container).
 #
-#   ./vps-pull.sh                        # books.parquet      -> ./parquet/
-#   ./vps-pull.sh --all                  # every remote *.parquet
+#   ./vps-pull.sh                        # every remote *.parquet -> ./parquet/
+#   ./vps-pull.sh --all                  # the same, explicitly
 #   ./vps-pull.sh --dest downloads       # somewhere else (cwd-relative)
 #   ./vps-pull.sh batch-2026-09-01.parquet
 #
@@ -30,12 +30,11 @@ set -euo pipefail
 DEFAULT_HOST="hostingervps"                  # ssh alias in this box's ~/.ssh/config
 DEFAULT_KEY="${HOME}/.ssh/mylinux"           # the VPS private key, hardcoded
 DEFAULT_REMOTE_DIR="scraper/pdfs/parquet"    # relative to the VPS account home
-DEFAULT_REMOTE_FILE="books.parquet"          # what text_collect.py appends rows to
 DEFAULT_DEST="parquet"                       # cwd-relative
 
 HOST="${VPS_SSH_HOST:-$DEFAULT_HOST}"
 REMOTE_DIR="${VPS_REMOTE_DIR:-$DEFAULT_REMOTE_DIR}"
-REMOTE_FILE="${VPS_REMOTE_FILE:-$DEFAULT_REMOTE_FILE}"
+REMOTE_FILE="${VPS_REMOTE_FILE:-}"           # optional: one file instead of every *.parquet
 DEST="${VPS_LOCAL_DIR:-$DEFAULT_DEST}"
 ALL=0
 NAMES=()
@@ -79,11 +78,20 @@ fi
 mkdir -p "$DEST"
 
 # ── What to pull ──
+# text_collect.py writes ONE batch-<stamp>.parquet per run, so there is no single
+# cumulative file to default to: with no name on the command line, pull every remote
+# *.parquet. Naming a file, or VPS_REMOTE_FILE, still narrows it to that one.
+if [ "${#NAMES[@]}" -eq 0 ]; then
+    if [ -n "$REMOTE_FILE" ]; then
+        NAMES=("$REMOTE_FILE")
+    else
+        ALL=1
+    fi
+fi
+
 if [ "$ALL" -eq 1 ]; then
     mapfile -t NAMES < <("${SSH[@]}" "$HOST" "ls -1 -- '$REMOTE_DIR'" |
         grep -E '\.parquet$' | grep -v '^\.' || true)
-elif [ "${#NAMES[@]}" -eq 0 ]; then
-    NAMES=("$REMOTE_FILE")
 fi
 
 if [ "${#NAMES[@]}" -eq 0 ]; then

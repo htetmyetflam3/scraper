@@ -1,30 +1,39 @@
 #!/usr/bin/env python3
 """hfinit.py -- log in to Hugging Face, then push parquet files into ONE dataset repo.
 
-    uv run hfinit.py                              log in only
-    uv run hfinit.py ./parquet                    every *.parquet in that folder
-    uv run hfinit.py ./parquet/books.parquet      just that file
+    uv run hfinit.py                             log in only
+    uv run hfinit.py pdfs/parquet                every *.parquet in that folder
+    uv run hfinit.py pdfs/parquet/batch-20261021-120000.parquet
 
 Local paths are relative to the current directory. A folder is NOT walked recursively,
-and dot-files are skipped -- which conveniently ignores the ".books.parquet.tmp"
-half-written files that crawler/bin/text_collect.py leaves behind mid-write.
+so pdfs/parquet/ocr/ is left alone, and dot-files are skipped -- which ignores the
+".batch-<stamp>.parquet.tmp" half-written files that crawler/bin/text_collect.py leaves
+behind mid-write.
 
 How the name check works
 ------------------------
     name already in the repo -> UPDATE that same path in the repo
     name not in the repo     -> ADD the whole file as a new dataset file
 
-UPDATE replaces the file on HF with your local copy; it does not download anything and
-does not merge rows on this machine. The dataset still "gains the new rows" because your
-local parquet is cumulative -- crawler/bin/text_collect.py appends every book into
-books.parquet and rewrites it atomically, so the local copy already holds old rows + new
-rows. Re-uploading it is the append.
+text_collect.py writes ONE new batch per run, named batch-<YYYYmmdd-HHMMSS>.parquet
+(batch-<stamp>-<N>.parquet if that second is already taken), into pdfs/parquet/ on the
+VPS. Those names never repeat, so in practice every push is an ADD and the repo grows as
+a pile of shards. That is the shape you want: every batch carries the same four columns
+(author | book | text | segmented), so the Hub, datasets and duckdb all read the whole
+folder as one table.
 
-That assumption is the one thing to watch: if you ever point this at a file holding ONLY
-new rows, UPDATE would drop the rows already on HF.
+UPDATE only fires when a name genuinely repeats -- re-pushing a batch already uploaded,
+i.e. a retry. Replacing the file is the right thing there, and it cannot duplicate rows.
+
+UPDATE always replaces the file on HF with the local copy. It never downloads anything
+and never merges rows on this machine. On the branch whose text_collect.py also appends
+into a cumulative books.parquet, re-uploading that single file IS the append, because the
+local copy already holds the old rows plus the new ones. The one thing to watch: pointing
+this at a file holding ONLY new rows, under a name that already exists, would drop
+whatever rows are on HF.
 
 Everything in one run goes into ONE commit, because the Hub allows roughly 320 commit
-creations per hour and one upload_file call is one commit.
+creations per hour and a single file upload is a single commit.
 
 --cdc
 ---
@@ -32,6 +41,8 @@ Rewrites each parquet with Parquet Content-Defined Chunking before uploading (ne
 pyarrow>=21). Without it, appended rows shift every page boundary and column header, so
 Xet re-transfers most of the file. With it, only the changed ~64 kB chunks travel. The
 first --cdc run pays one full re-upload, because every chunk boundary moves at once.
+The rewrite keeps the file's existing codec -- zstd level 19, what text_collect.py
+chose -- rather than falling back to pyarrow's default.
 
 Environment
 -----------
@@ -152,6 +163,29 @@ def row_count(path: Path) -> int | None:
 
 # ----------------------------------------------------------------------------- cdc
 
+def source_compression(path: Path) -> dict:
+    """The codec this parquet was written with, so a CDC rewrite does not change it.
+
+    crawler/bin/text_collect.py writes compression="zstd", compression_level=19 on
+    purpose - measured ~40% smaller than pyarrow's default on segmented Burmese text.
+    The level is not recorded inside the file, so the pipeline's own value is reused.
+    Without this, rewriting for CDC silently fell back to snappy: a 10,487-byte batch
+    came back as 28,599 bytes, 2.7x larger, with the data unchanged.
+    """
+    try:
+        import pyarrow.parquet as pq
+
+        codec = pq.ParquetFile(path).metadata.row_group(0).column(0).compression
+    except Exception:
+        return {}
+    codec = (codec or "").upper()
+    if codec == "ZSTD":
+        return {"compression": "zstd", "compression_level": 19}
+    if codec in ("", "UNCOMPRESSED"):
+        return {}
+    return {"compression": codec.lower()}
+
+
 def rewrite_with_cdc(path: Path, workdir: Path) -> Path:
     """Re-write one parquet with Content-Defined Chunking + page index.
 
@@ -162,6 +196,8 @@ def rewrite_with_cdc(path: Path, workdir: Path) -> Path:
     import pyarrow.parquet as pq
 
     target = workdir / path.name
+    if target.resolve() == path.resolve():
+        _fail(f"refusing to rewrite {path.name} over itself - the CDC work dir is the source dir")
     before = row_count(path)
     try:
         table = pq.read_table(path)
@@ -170,6 +206,7 @@ def rewrite_with_cdc(path: Path, workdir: Path) -> Path:
             target,
             use_content_defined_chunking=True,
             write_page_index=True,
+            **source_compression(path),
         )
     except TypeError as exc:
         _fail(
