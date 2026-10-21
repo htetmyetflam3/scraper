@@ -6,6 +6,8 @@ dependencies = [
     "beautifulsoup4>=4.12.0",
     "cryptography>=42.0",
     "httpx>=0.27",
+    # hf-upload.sh: the `hf` CLI that pushes the Parquet to Hugging Face
+    "huggingface_hub>=1.0",
     "pikepdf>=8",
     "pyarrow>=17",
     "pypdf>=6.0",
