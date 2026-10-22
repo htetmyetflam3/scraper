@@ -69,9 +69,13 @@ TimeoutStartSec=infinity
         'scraper-ocr-reminder.timer': '''[Unit]
 Description=Check retained OCR failures independently of OCR queue
 [Timer]
+# One check an hour, matching the one-mail-an-hour gate in reminders(). The boot
+# check fires once per boot so a restart does not wait an hour to be noticed.
+# AccuracySec is relaxed because 10s precision on an hourly timer buys nothing and
+# stops systemd coalescing the wakeup with other timers.
 OnBootSec=2min
-OnUnitInactiveSec=1min
-AccuracySec=10s
+OnUnitInactiveSec=1h
+AccuracySec=1min
 Unit=scraper-ocr-reminder.service
 [Install]
 WantedBy=timers.target
