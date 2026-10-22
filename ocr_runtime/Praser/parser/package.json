@@ -1,0 +1,19 @@
+{
+  "name": "linga-praser-js",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Node port of the Burmese PDF/DOCX praser core (extraction + encoding normalisation + DOCX/PDF writers)",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "optionalDependencies": {
+    "tesseract.js": "7.0.0"
+  },
+  "devDependencies": {
+    "@napi-rs/canvas": "1.0.10",
+    "harfbuzzjs": "1.6.3",
+    "mammoth": "1.13.0",
+    "pdfjs-dist": "6.4.299"
+  }
+}

@@ -20,6 +20,7 @@ in ``pdfs/parquet/`` (kept on the VPS; never uploaded to shared host storage).
 
 from __future__ import annotations
 
+import fcntl
 import json
 import os
 import shutil
@@ -28,6 +29,7 @@ import sys
 import tempfile
 import threading
 import time
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -44,6 +46,25 @@ PARQUET_FILE_NAME = "books.parquet"
 
 DOC_SEPARATOR = "\u001d"  # GROUP SEPARATOR between documents, both directions
 _PARQUET_LOCK = threading.Lock()
+
+
+@contextmanager
+def _parquet_file_lock(parquet_dir: Path):
+    """Serialise appends across PROCESSES, not just threads.
+
+    The collection is one cumulative books.parquet and two independent processes
+    append to it: the scraper (save_remote.push_file) and the continuous-OCR
+    service. A threading lock cannot see the other process, so two concurrent
+    read-modify-write cycles would each start from the same table and the slower
+    one would silently drop the other's row.
+    """
+    lock_path = parquet_dir / ("." + PARQUET_FILE_NAME + ".lock")
+    with lock_path.open("a") as handle:
+        fcntl.flock(handle, fcntl.LOCK_EX)
+        try:
+            yield
+        finally:
+            fcntl.flock(handle, fcntl.LOCK_UN)
 
 # One Parquet file per flushed run keeps batches small and committed: the
 # file only appears (rename) after every row in it is complete.
@@ -223,7 +244,8 @@ def write_parquet_row(
 
     parquet_dir = Path(output_dir) / PARQUET_DIR_NAME
     final = parquet_dir / PARQUET_FILE_NAME
-    with _PARQUET_LOCK:
+    parquet_dir.mkdir(parents=True, exist_ok=True)
+    with _PARQUET_LOCK, _parquet_file_lock(parquet_dir):
         authors: list[str] = []
         books: list[str] = []
         texts: list[str] = []
