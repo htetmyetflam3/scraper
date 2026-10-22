@@ -16,6 +16,7 @@ back checked, converted text.
 | `README.md` (this file) | what the repo is, which branch has the code |
 | `AGENTS.md` | the rules that bite — read before editing anything |
 | `PROJECTSTRUCTURE.md` | the detailed map: per-branch contents, the command that actually runs there, what is broken |
+| `USAGE.md` | every command's flags and usage, in one document |
 | `./.bin/branch.sh map` | the same map, printed live from the remote |
 
 ## The branch table
