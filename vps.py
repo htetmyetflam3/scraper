@@ -26,7 +26,7 @@ Rules:
 - A path that ends in ``/`` - or an existing directory - transfers every file
   inside it automatically. Sub-directories are skipped, not followed.
 - One-shot on purpose: no resume, no retry waits, no sha256 pass. For the big
-  Parquet collection use ./vps-pull.sh, which resumes and verifies.
+  Parquet collection use ./hfinit.py, which pushes it straight to the Hub.
 - Nothing is deleted on either box. A destination file of the same name is
   overwritten.
 

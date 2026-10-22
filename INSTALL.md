@@ -11,7 +11,7 @@ download  ->  validate / unlock / repair / linearize   (python, pikepdf)
           ->  convertable text journaled to scan/collected.jsonl during the run
 run end   ->  ONE node subprocess: Engine MonoSyllabism segmentor + formatter
           ->  ONE cumulative Parquet, pdfs/parquet/books.parquet (zstd level 19;
-              book-collection schema: author | book | text | segmented)
+              book-collection schema: author | book | text | segmented | sha256)
           ->  staged PDFs released .convert/ -> convertable/
 upload    ->  category folders + parquet, verify sha256, then delete local
 ```
@@ -111,7 +111,7 @@ every one lands in its defined directory:
 | `bg-mlc-1-1.pdf` | Win Innwa old-font book | `old/` |
 
 then runs the real run-end flush (node segmentor → Parquet) and checks the
-batch — the book-collection schema `author | book | text | segmented`
+batch — the book-collection schema `author | book | text | segmented | sha256`
 (author left empty on purpose: PDF metadata authorship is untrusted, the
 owner extracts authors from book content later; book = filename without
 .pdf; segmented = formatter output, no √ marks) — and that staged PDFs are

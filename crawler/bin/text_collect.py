@@ -43,6 +43,7 @@ CONVERT_STAGE_NAME = ".convert"      # legacy staging dir
 CONVERT_FINAL_NAME = "convertable"   # convertable PDFs folder
 PARQUET_DIR_NAME = "parquet"
 PARQUET_FILE_NAME = "books.parquet"
+PARQUET_SHA_COLUMN = "sha256"   # which PDF a row came from; the duplicate guard
 
 DOC_SEPARATOR = "\u001d"  # GROUP SEPARATOR between documents, both directions
 _PARQUET_LOCK = threading.Lock()
@@ -225,16 +226,48 @@ def parse_convertable_book(path: Path, log=print) -> tuple[str, str, str] | None
     return book, text, segmented[0]
 
 
-def write_parquet_row(
-    output_dir: Path,
-    book: str,
-    text: str,
-    segmented: str,
-    *,
-    author: str = "",
-    log=print,
-) -> Path | None:
-    """Append one book row to parquet/books.parquet on the VPS atomically."""
+def _parquet_columns(pq, sources: list[Path], log):
+    """The collection's columns out of `sources`, tolerating older files.
+
+    Files written before the sha256 column existed simply have no value for it, so a
+    legacy books.parquet or an old batch-*.parquet still reads; those rows come back
+    with an empty sha and stay deniable only once shafill.py has filled them in.
+    """
+    cols: dict[str, list] = {
+        "author": [], "book": [], "text": [], "segmented": [], PARQUET_SHA_COLUMN: [],
+    }
+    for src in sources:
+        try:
+            existing = pq.read_table(src)
+        except Exception as error:  # noqa: BLE001
+            log(f"[convert-warn] could not read {src.name}: {error}")
+            return None
+        names = set(existing.column_names)
+        for key in cols:
+            cols[key].extend(
+                existing[key].to_pylist() if key in names else [""] * existing.num_rows
+            )
+    return cols
+
+
+def write_parquet_rows(output_dir: Path, rows: list[dict], log=print):
+    """Append or replace many rows in ONE read-modify-write of books.parquet.
+
+    `rows` are dicts with book, text, segmented, author and sha256. Returns
+    (path, added, replaced, denied), or None if the write could not happen.
+
+    Bulk because a run-end flush can carry hundreds of journaled books, and one
+    append per book would rewrite the whole growing file each time.
+
+    THE GUARD: a row whose sha256 is already in the table carrying the same text is
+    DENIED - not appended, not replaced, nothing rewritten. That is what stops one
+    PDF being recorded twice, which two independent writers would otherwise do: the
+    run-end flush of scan/collected.jsonl and the per-book append during upload both
+    see the same convertable book. It also stops the same file landing twice under two
+    book keys, which is possible because the OCR disambiguates equal basenames.
+    A matching sha with DIFFERENT text is not denied: the same PDF parsed or OCR'd
+    better is an improvement, and it replaces the row under its own book key.
+    """
     try:
         import pyarrow as pa
         import pyarrow.parquet as pq
@@ -246,40 +279,56 @@ def write_parquet_row(
     final = parquet_dir / PARQUET_FILE_NAME
     parquet_dir.mkdir(parents=True, exist_ok=True)
     with _PARQUET_LOCK, _parquet_file_lock(parquet_dir):
-        authors: list[str] = []
-        books: list[str] = []
-        texts: list[str] = []
-        segmenteds: list[str] = []
         sources = [final] if final.exists() else sorted(parquet_dir.glob("batch-*.parquet"))
-        for src in sources:
-            try:
-                existing = pq.read_table(src)
-                authors.extend(existing["author"].to_pylist())
-                books.extend(existing["book"].to_pylist())
-                texts.extend(existing["text"].to_pylist())
-                segmenteds.extend(existing["segmented"].to_pylist())
-            except Exception as error:  # noqa: BLE001
-                log(f"[convert-warn] could not read {src.name}: {error}")
-                return None
+        cols = _parquet_columns(pq, sources, log)
+        if cols is None:
+            return None
+        books, texts = cols["book"], cols["text"]
+        by_sha = {
+            sha: i for i, sha in enumerate(cols[PARQUET_SHA_COLUMN]) if sha
+        }
 
-        if book in books:
-            idx = books.index(book)
-            authors[idx] = author
-            texts[idx] = text
-            segmenteds[idx] = segmented
-        else:
-            authors.append(author)
-            books.append(book)
-            texts.append(text)
-            segmenteds.append(segmented)
+        added = replaced = denied = 0
+        for row in rows:
+            book = row.get("book", "")
+            text = row.get("text", "")
+            sha = row.get("sha256", "") or ""
+            hit = by_sha.get(sha) if sha else None
+            if hit is not None and texts[hit] == text:
+                denied += 1
+                if books[hit] == book:
+                    log(f"[parquet-skip] {book}: sha256 {sha[:12]} already recorded with "
+                        "this exact text, not written again")
+                else:
+                    log(f"[parquet-skip] {book}: same PDF and text as the existing row "
+                        f"{books[hit]!r} (sha256 {sha[:12]}), not recorded twice")
+                continue
 
-        table = pa.table({
-            "author": authors,
-            "book": books,
-            "text": texts,
-            "segmented": segmenteds,
-        })
-        parquet_dir.mkdir(parents=True, exist_ok=True)
+            values = (
+                row.get("author", ""), book, text,
+                row.get("segmented", ""), sha,
+            )
+            if book in books:
+                idx = books.index(book)
+                for key, value in zip(cols, values):
+                    cols[key][idx] = value
+                replaced += 1
+            else:
+                # `books` and `texts` ARE cols["book"] and cols["text"] - the same
+                # list objects - so appending through cols already extends them.
+                for key, value in zip(cols, values):
+                    cols[key].append(value)
+                added += 1
+            if sha:
+                by_sha[sha] = books.index(book)
+
+        if not added and not replaced:
+            log(f"[parquet] nothing to write: {denied} row(s) already recorded -> "
+                f"{PARQUET_DIR_NAME}/{final.name} ({len(books)} row(s) on VPS)")
+            return final, added, replaced, denied
+
+        table = pa.table({key: cols[key] for key in
+                          ("author", "book", "text", "segmented", PARQUET_SHA_COLUMN)})
         temp = final.with_name("." + final.name + ".tmp")
         try:
             pq.write_table(table, temp, compression="zstd", compression_level=19)
@@ -291,62 +340,129 @@ def write_parquet_row(
         finally:
             if temp.exists():
                 temp.unlink(missing_ok=True)
-        log(f"[parquet] +1 row ({book}) -> {PARQUET_DIR_NAME}/{final.name} ({len(books)} row(s) on VPS)")
-        return final
+        log(f"[parquet] +{added} new, {replaced} updated, {denied} denied -> "
+            f"{PARQUET_DIR_NAME}/{final.name} ({len(books)} row(s) on VPS)")
+        return final, added, replaced, denied
 
 
-def _write_parquet(records: list[dict], segmented: list[str],
-                   parquet_dir: Path, log) -> Path | None:
-    """Write one committed Parquet file; dot-temp then atomic rename."""
+def write_parquet_row(
+    output_dir: Path,
+    book: str,
+    text: str,
+    segmented: str,
+    *,
+    author: str = "",
+    sha256: str = "",
+    log=print,
+) -> Path | None:
+    """Append one book row to parquet/books.parquet atomically.
+
+    Pass sha256 - the hash of the PDF the text came from - so the duplicate guard in
+    write_parquet_rows can see it. Both callers already have it: save_remote computes
+    the digest before uploading, and the OCR service stores it in state.sqlite3.
+    """
+    result = write_parquet_rows(
+        output_dir,
+        [{"book": book, "text": text, "segmented": segmented,
+          "author": author, "sha256": sha256}],
+        log,
+    )
+    return None if result is None else result[0]
+
+
+def set_parquet_sha(output_dir: Path, hashes: dict[str, str], *, force: bool = False,
+                    log=print) -> dict | None:
+    """Fill the sha256 column of existing rows from {book: sha256}. One locked pass.
+
+    This is the write half of shafill.py, kept here so the collection has ONE place
+    that knows its lock, its dot-temp name and its compression. It touches the
+    sha256 column and nothing else - author, book, text and segmented come back as
+    they were - and it deliberately does NOT run the duplicate guard: round one has
+    to be able to describe the duplicates that are already in the file, not refuse
+    to look at them.
+
+    An existing hash that disagrees with `hashes` is kept unless force=True, because
+    a disagreement means either the file on the host changed or two different books
+    were matched to one file, and silently rewriting that would hide the problem.
+    Returns a stats dict, or None if the file could not be read or written.
+    """
     try:
         import pyarrow as pa
         import pyarrow.parquet as pq
     except ImportError as error:
         log(f"[convert-warn] pyarrow unavailable: {error}")
         return None
-    # The parquet is the owner's BOOK COLLECTION, not a pipeline database
-    # (owner: "don't look from development perspective"): four columns —
-    # author | book | text | segmented. book = the filename without .pdf.
-    # author stays EMPTY on purpose (owner: PDF metadata authorship is
-    # untrustworthy — most Burmese authors never embed their name, and
-    # online tools overwrite the field and steal credit; the owner will
-    # later extract the author from the book CONTENT programmatically).
-    # Everything else (sha256, encoding, pages, scan counts, source URL,
-    # timestamps) stays in the journal rows for crash-safety and debugging
-    # but is not carried into the collection file.
-    def book_name(r: dict) -> str:
-        name = r.get("filename", "")
-        return name[:-4] if name.lower().endswith(".pdf") else name
-    columns = {
-        "author": [r.get("author", "") for r in records],
-        "book": [book_name(r) for r in records],
-        "text": [r.get("text", "") for r in records],
-        "segmented": segmented,
-    }
-    table = pa.table(columns)
-    parquet_dir.mkdir(parents=True, exist_ok=True)
-    stamp = time.strftime("%Y%m%d-%H%M%S")
-    final = parquet_dir / f"batch-{stamp}.parquet"
-    index = 1
-    while final.exists():
-        index += 1
-        final = parquet_dir / f"batch-{stamp}-{index}.parquet"
-    temp = final.with_name("." + final.name + ".tmp")
-    try:
-        # zstd level 19: measured 40% smaller than pyarrow's default level on
-        # segmented Burmese text (59.6KB vs 99.5KB per ~480KB column) and ~19%
-        # smaller than gzip-9 JSONL of the same rows. Batches are written once
-        # per run, so the extra CPU (~seconds) is irrelevant.
-        pq.write_table(table, temp, compression="zstd", compression_level=19)
-        os.replace(temp, final)  # commit: the uploader may see it only now
-    except OSError as error:
-        log(f"[convert-warn] parquet write failed: {error}")
-        temp.unlink(missing_ok=True)
-        return None
-    finally:
-        if temp.exists():
+
+    parquet_dir = Path(output_dir) / PARQUET_DIR_NAME
+    final = parquet_dir / PARQUET_FILE_NAME
+    stats = {"filled": 0, "forced": 0, "same": 0, "conflict": 0, "absent": 0,
+             "rows": 0, "wrote": False, "path": final}
+    if not final.exists():
+        log(f"[sha] no {PARQUET_DIR_NAME}/{PARQUET_FILE_NAME} to fill")
+        stats["absent"] = len(hashes)
+        return stats
+
+    with _PARQUET_LOCK, _parquet_file_lock(parquet_dir):
+        cols = _parquet_columns(pq, [final], log)
+        if cols is None:
+            return None
+        books = cols["book"]
+        current = cols[PARQUET_SHA_COLUMN]
+        stats["rows"] = len(books)
+        index = {book: i for i, book in enumerate(books)}
+        changed = False
+        for book, sha in hashes.items():
+            if book not in index:
+                stats["absent"] += 1
+                continue
+            i = index[book]
+            if not current[i]:
+                current[i] = sha
+                stats["filled"] += 1
+                changed = True
+            elif current[i] == sha:
+                stats["same"] += 1
+            elif force:
+                log(f"[sha-force] {book}: {current[i][:12]} -> {sha[:12]}")
+                current[i] = sha
+                stats["forced"] += 1
+                changed = True
+            else:
+                log(f"[sha-conflict] {book}: parquet says {current[i][:12]}, host says "
+                    f"{sha[:12]} - kept the parquet value (use --force to overwrite)")
+                stats["conflict"] += 1
+
+        if not changed:
+            log(f"[sha] nothing to write ({stats['same']} already correct, "
+                f"{stats['conflict']} conflicting, {stats['absent']} not in the parquet)")
+            return stats
+
+        table = pa.table({key: cols[key] for key in
+                          ("author", "book", "text", "segmented", PARQUET_SHA_COLUMN)})
+        temp = final.with_name("." + final.name + ".tmp")
+        try:
+            pq.write_table(table, temp, compression="zstd", compression_level=19)
+            os.replace(temp, final)
+        except OSError as error:
+            log(f"[convert-warn] parquet write failed: {error}")
             temp.unlink(missing_ok=True)
-    return final
+            return None
+        finally:
+            if temp.exists():
+                temp.unlink(missing_ok=True)
+        stats["wrote"] = True
+        log(f"[sha] wrote {stats['filled']} new hash(es)"
+            + (f", forced {stats['forced']}" if stats["forced"] else "")
+            + f" into {PARQUET_DIR_NAME}/{final.name} ({stats['rows']} row(s))")
+        return stats
+
+
+def book_name(record: dict) -> str:
+    """The collection's `book` value: the PDF's filename without its extension."""
+    name = record.get("filename", "")
+    return name[:-4] if name.lower().endswith(".pdf") else name
+
+
 
 
 def _release_staged(records: list[dict], output_dir: Path, log) -> int:
@@ -378,6 +494,7 @@ class FlushStats:
     documents: int = 0
     moved: int = 0
     parquet: Path | None = None
+    denied: int = 0  # rows the duplicate guard refused (already recorded)
     error: str = ""
     skipped: bool = False  # nothing collected this run
 
@@ -394,9 +511,10 @@ class FlushStats:
                 f"🧾 Convert: {self.documents} doc(s) still journaled — "
                 f"{self.error} (kept in scan/collected.jsonl for the next run)."
             )
+        extra = f", {self.denied} already recorded" if self.denied else ""
         return (
             f"🧾 Convert: {self.documents} doc(s) segmented -> "
-            f"{self.parquet.name if self.parquet else '?'} (kept on VPS)."
+            f"{self.parquet.name if self.parquet else '?'}{extra} (kept on VPS)."
         )
 
 
@@ -423,13 +541,34 @@ def flush(output_dir: str | Path, log=print) -> FlushStats:
         stats.error = "segmentation failed"
         return stats
 
-    parquet = _write_parquet(
-        records, segmented, output_dir / PARQUET_DIR_NAME, log
-    )
-    if parquet is None:
+    # The parquet is the owner's BOOK COLLECTION, not a pipeline database (owner:
+    # "don't look from development perspective"): five columns - author | book |
+    # text | segmented | sha256. author stays EMPTY on purpose (owner: PDF metadata
+    # authorship is untrustworthy - most Burmese authors never embed their name, and
+    # online tools overwrite the field and steal credit; the owner will later extract
+    # the author from the book CONTENT programmatically). sha256 is the hash of the
+    # PDF the text came from, and it is what the duplicate guard keys on: this flush
+    # and the per-book append during upload both see the same convertable book, so
+    # without it one PDF would be recorded twice. Everything else (encoding, pages,
+    # scan counts, source URL, timestamps) stays in the journal rows for crash-safety
+    # and debugging but is not carried into the collection file.
+    rows = [
+        {
+            "book": book_name(record),
+            "text": record.get("text", ""),
+            "segmented": seg,
+            "author": record.get("author", ""),
+            "sha256": record.get("sha256", "") or "",
+        }
+        for record, seg in zip(records, segmented)
+    ]
+    written = write_parquet_rows(output_dir, rows, log)
+    if written is None:
         stats.error = "parquet write failed"
         return stats
+    parquet, added, replaced, denied = written
     stats.parquet = parquet
+    stats.denied = denied
 
     stats.moved = _release_staged(records, output_dir, log)
 

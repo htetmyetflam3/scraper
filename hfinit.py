@@ -16,8 +16,8 @@ How the name check works
     name already in the repo -> UPDATE that same path in the repo
     name not in the repo     -> ADD the whole file as a new dataset file
 
-There is ONE parquet: pdfs/parquet/books.parquet, four columns (author | book | text |
-segmented). text_collect.py appends each book into it and rewrites it atomically, so the
+There is ONE parquet: pdfs/parquet/books.parquet, five columns (author | book | text |
+segmented | sha256). text_collect.py appends each book into it and rewrites it atomically, so the
 local copy is always cumulative - every old row plus the new ones. The first push is an
 ADD; every push after that has the same name, so it is an UPDATE.
 
@@ -190,7 +190,7 @@ def _identity_or_die(whoami) -> tuple[str | None, str]:
 def _hidden(rel: Path) -> bool:
     """True when any path component is a dot-name.
 
-    Skips the ".batch-<stamp>.parquet.tmp" half-writes text_collect.py leaves behind,
+    Skips the ".books.parquet.tmp" half-write text_collect.py leaves behind mid-commit,
     and the ".cache" folder hf_hub_download creates inside a local_dir.
     """
     return any(part.startswith(".") for part in rel.parts)

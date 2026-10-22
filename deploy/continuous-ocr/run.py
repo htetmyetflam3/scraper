@@ -250,7 +250,7 @@ def commit_dataset(db, row, pages_file, result):
     # and it holds a cross-process lock against save_remote appending at the same time.
     final = text_collect.write_parquet_row(
         ROOT / 'pdfs', book_key(db, source), record['text'], segmented,
-        author=record['author'], log=print)
+        author=record['author'], sha256=record['sha256'], log=print)
     if final is None:
         raise RuntimeError('Existing scraper Parquet writer failed')
     syncfile(final)

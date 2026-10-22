@@ -505,7 +505,8 @@ def push_file(
                 log(f"[push-skip] {name} already archived and verified @ {_stamp()}")
                 if parsed_row is not None:
                     book_name, book_text, book_segmented = parsed_row
-                    if write_parquet_row(path.parent.parent, book_name, book_text, book_segmented, log=log) is None:
+                    if write_parquet_row(path.parent.parent, book_name, book_text, book_segmented,
+                                   sha256=digest, log=log) is None:
                         return PushOutcome(False, f"parquet row write failed for {name}")
                 deleted = _delete_local(path, timeline, log)
                 return PushOutcome(
@@ -581,7 +582,8 @@ def push_file(
     log(f"[push-ok] {name} {detail} -> {remote_path} @ {_stamp()}")
     if parsed_row is not None:
         book_name, book_text, book_segmented = parsed_row
-        if write_parquet_row(path.parent.parent, book_name, book_text, book_segmented, log=log) is None:
+        if write_parquet_row(path.parent.parent, book_name, book_text, book_segmented,
+                                   sha256=digest, log=log) is None:
             return PushOutcome(False, f"parquet row write failed for {name}", remote_path=remote_path)
     deleted = _delete_local(path, timeline, log)
     return PushOutcome(
