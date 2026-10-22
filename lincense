@@ -1,0 +1,118 @@
+PROPRIETARY SOFTWARE LICENSE AGREEMENT
+pdf-text-extractor
+
+Copyright (c) 2025 Kaung Myat Thu
+All Rights Reserved.
+
+NOTICE: This software and its source code are proprietary and confidential.
+This is NOT open source software. No license, right, or interest of any kind
+is granted to you except as expressly stated in a separate written agreement
+signed by the copyright holder.
+
+--------------------------------------------------------------------------
+1. DEFINITIONS
+--------------------------------------------------------------------------
+"Software" means the pdf-text-extractor program, including all source code,
+object code, scripts, models, data files, configuration, documentation, and
+any updates, modifications, or derivative works thereof contained in this
+repository.
+
+"Licensor" means Kaung Myat Thu, the sole owner of the Software.
+
+"You" means any individual or legal entity that accesses, receives, or
+possesses a copy of the Software.
+
+--------------------------------------------------------------------------
+2. OWNERSHIP
+--------------------------------------------------------------------------
+The Software is licensed, not sold. The Licensor retains all right, title,
+and interest in and to the Software, including all copyrights, trade secrets,
+and other intellectual property rights therein. Any rights not expressly
+granted in writing are reserved by the Licensor.
+
+--------------------------------------------------------------------------
+3. RESTRICTIONS
+--------------------------------------------------------------------------
+Without the prior express written permission of the Licensor, You may NOT:
+
+  (a) copy, reproduce, publish, or archive the Software, in whole or in part;
+  (b) distribute, sublicense, sell, rent, lease, lend, host, or otherwise
+      make the Software available to any third party, including as a
+      service (SaaS), API, or hosted application;
+  (c) modify, adapt, translate, or create derivative works of the Software;
+  (d) reverse engineer, decompile, disassemble, or otherwise attempt to
+      derive the source code or underlying algorithms of the Software,
+      except to the limited extent such restriction is prohibited by
+      applicable law;
+  (e) remove, alter, or obscure any copyright, trademark, or other
+      proprietary notice contained in the Software;
+  (f) use the Software, or any part of it, to train, fine-tune, evaluate,
+      or otherwise develop any machine learning or artificial intelligence
+      model or dataset;
+  (g) use the Software for any commercial purpose or in any production
+      environment.
+
+Unauthorized copying, distribution, or modification of this Software, via
+any medium, is strictly prohibited and constitutes a violation of applicable
+copyright and trade secret law.
+
+--------------------------------------------------------------------------
+4. CONFIDENTIALITY
+--------------------------------------------------------------------------
+The Software constitutes confidential information and trade secrets of the
+Licensor. You shall use at least a reasonable degree of care to protect the
+Software from unauthorized disclosure and shall not disclose it to any third
+party without the Licensor's prior written consent.
+
+--------------------------------------------------------------------------
+5. TERMINATION
+--------------------------------------------------------------------------
+Any use of the Software in breach of this Agreement automatically terminates
+any permission You may have had, immediately and without notice. Upon
+termination, You must cease all use of the Software and permanently destroy
+all copies in Your possession or control. Sections 2, 4, 6, 7, and 8 survive
+termination.
+
+--------------------------------------------------------------------------
+6. NO WARRANTY
+--------------------------------------------------------------------------
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE, TITLE, AND NONINFRINGEMENT.
+
+--------------------------------------------------------------------------
+7. LIMITATION OF LIABILITY
+--------------------------------------------------------------------------
+IN NO EVENT SHALL THE LICENSOR BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT, OR OTHERWISE, ARISING
+FROM, OUT OF, OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+DEALINGS IN THE SOFTWARE.
+
+--------------------------------------------------------------------------
+8. THIRD-PARTY COMPONENTS
+--------------------------------------------------------------------------
+The Software depends on, and may bundle, third-party components (including
+but not limited to Python packages such as fpdf2, fonttools, pdfminer.six,
+Pillow, and pyarrow, and font files under the fonts/ directory such as
+Anonymous Pro, Noto Sans Myanmar, Padauk, and Pyidaungsu). Those components
+remain the property of their respective owners and are governed by their own
+licenses (e.g. the SIL Open Font License for certain fonts). Nothing in this
+Agreement modifies or restricts your rights in those third-party components,
+and this proprietary license applies only to the Licensor's own code and
+materials.
+
+--------------------------------------------------------------------------
+9. GENERAL
+--------------------------------------------------------------------------
+This Agreement is the entire agreement between the parties regarding the
+Software and supersedes all prior discussions. If any provision is held
+unenforceable, the remaining provisions remain in full force. Failure to
+enforce any provision is not a waiver of it.
+
+--------------------------------------------------------------------------
+CONTACT
+--------------------------------------------------------------------------
+For licensing inquiries, commercial use, or written permission, contact:
+
+  Kaung Myat Thu
+  https://github.com/htetmyetflam3/pdf

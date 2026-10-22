@@ -1,0 +1,237 @@
+{
+  "format": "scraper-additions-only-overlay-v1",
+  "scraper_reference": "26779d831937736bf3b88bc8aad0dbd060b9b111",
+  "linga_base": "e666961af69a2dab50e78b57fd5f617869c022c9",
+  "reused_not_included": {
+    "crawler/bin/save_remote.py": "2c0f75bd601ae19f907df0a1436e73ac42e55129886724650f4074810c17749b",
+    "crawler/bin/mailer.py": "83c9299009247ccfedb9cc713b1b718efad9f13ec3b1e86157ae49f87d3a5e6a",
+    "crawler/bin/text_collect.py": "82645ee161c41ce2a764c0c02eec6011875d3cae98a5ebdb02d1728dba266823",
+    "crawler/bin/segment_bridge.mjs": "52651ec927dc0e34064ac6ae39d7bbc4c3e1e132da7fc98a340b1065d44726c7",
+    "crawler/bin/disk_floor.py": "696a982976502c74121529b7cc6d75cc443ff8acc375a316380c367c0f21f410",
+    "deploy/engine_ready.py": "44576dda86bcee8b07b56e7b37fc8be70789e15bbaffdf17de0dfa6f731f9052"
+  },
+  "files": {
+    "ocr.py": "88a3fb4beda3086111071247890089e7252e0256608f84386bbcad7a5f54e679",
+    "deploy/continuous-ocr/OCR-VERIFICATION.md": "85269c4834a0266e7df7816e46818661e11f89d03da86e7018145189a5ab6a34",
+    "deploy/continuous-ocr/README.md": "6e5f342d35fe958306fe95ef4e42dbf7d2458dfea9111be38db4c9059b8da12e",
+    "deploy/continuous-ocr/install.py": "99157c2d7c6b8261b36b2adb6cca9588127fb317130c3dc476907bbb9707dcd6",
+    "deploy/continuous-ocr/run.py": "e43d264cd724e146c2628343ec6b0b51bb0ca0cb9ef80b24892d12561433a1d0",
+    "deploy/continuous-ocr/worker.mjs": "4593924fba3b41b0ec9cbeb3aee34ef827b9e0cc415d1559b44ed3409ab977c9",
+    "ocr_runtime/Praser/parser/package.json": "2c0f4337c7ddbdc277b2891def4e323aa6689fa840b6bb924723eb5fea5c026a",
+    "ocr_runtime/Praser/parser/package-lock.json": "96384029a0b2d3c2742078f680d97692b9ad6af553dd0ea33cd9afeeee1ca6a8",
+    "ocr_runtime/Praser/parser/.npmrc": "8a74b1091affea3c71c2cf04acbaa38c4a51a261a9a98dcc9e96473d07a85a27",
+    "ocr_runtime/Praser/parser/core/paths.mjs": "3947ba702c85866072eb38dcf951ba9ef73f0c7950df545a5bec05d1ca0be2e8",
+    "ocr_runtime/Praser/parser/core/limits.mjs": "79b03a22e8ff2c15cba66c2c3829994fe25371a8f836aa1f146ea9dd6fc58243",
+    "ocr_runtime/Praser/parser/core/pylib.mjs": "1a9417efa2c2258ba11af9948a08425f6c26acece2ce015d254e7d1157bfe1a1",
+    "ocr_runtime/Praser/parser/read/pdf-render.mjs": "29b7b8728ab180b67ddf0ad5c6905f93750aee502574cc680a3addf5a2dad72a",
+    "ocr_runtime/Praser/parser/read/ocr.mjs": "c8620c157d96a9286e27ee4ac1512fb8cd44ce3f6cfd67e44a038a6fd6e82eba",
+    "ocr_runtime/Praser/parser/read/ocr-no-relaxedsimd.cjs": "1f602d41f9b506605a7f20ccb114690313f1aa1c1cf82460c2e2167d3b8f5e37",
+    "ocr_runtime/Praser/parser/shape/svg.mjs": "2d4fb285dc992d14405d72ae5eb83219097c60f6d39b2b1bb5771fb950d36d4a",
+    "ocr_runtime/Praser/parser/shape/raster.mjs": "5593539ade4932f97aa40f278a7d929b1c7b8b6100d4ad1481be81ee904688a2",
+    "ocr_runtime/Praser/parser/shape/match.mjs": "a1d8a5dc5476860d6acd3cd167d374d1652c58ccd2182fe7e569a5b019d88f76",
+    "ocr_runtime/Praser/parser/shape/contour.mjs": "c393a92b55d9156a05bbda1fac0bb5a502f9f4b36631a662b3ad97ee552ef76e",
+    "ocr_runtime/Praser/parser/codepage/vote.mjs": "aaa576ea5a44dff335932483cd9c91c603a2f68897e45f60304705005612f5fe",
+    "ocr_runtime/Praser/parser/text/scan.mjs": "38f01687e81b682b934467da8d3eab75696b79ed777d5ed17a672c11a12eb5da",
+    "ocr_runtime/Praser/parser/text/repair.mjs": "a27831fece5d183904b318bb4d169003f2b575bc10219d2c685073646133e154",
+    "ocr_runtime/Praser/parser/text/normalize.mjs": "00fa389acd90ebab774e3bb623edf3885933575af7673e0a1f471d3c0bb6dad8",
+    "ocr_runtime/Praser/parser/text/cleanup.mjs": "b340e7045870d10b7f2cf1bbe3dba637aa58cb703621c8920ccd40b54b9e21ee",
+    "ocr_runtime/Praser/parser/text/mm-score.mjs": "bbd98a6fca29b414720d14b2809aee9ff6f940494d02ae4476a0b9ec853544e3",
+    "ocr_runtime/Praser/parser/model/secure.js": "02c13e380a0733b386040513e2b7884e17c52f65ed3181190d6c1c04ee821d7d",
+    "ocr_runtime/Praser/parser/model/master.json.enc": "54fb2fcc19ade5f2182bcc59b6b886776c5d49c11737d2ab93925753bd9bc529",
+    "ocr_runtime/Praser/parser/model/mya.traineddata": "cf749828f7db42e0fbeb3b5e9077363c3b92c58e5e0058d70c446e2d12c19dd8",
+    "ocr_runtime/Praser/parser/map/burmese-inventory.json": "ed55ae6f069553f2e4993e0f336e94ea946f84b4443f43cb8b240ee936ca95e6",
+    "ocr_runtime/Praser/parser/map/cipher-map.json": "bac90193071c69d1361ebe90a98cacd112100436969d37f0aaaee7b2dd4088c9",
+    "ocr_runtime/Praser/parser/map/cleanup.json": "f9de331e3b5021ea8c18fd02c8b0472dd9ee362ae67909bd4d041616bf0fa66d",
+    "ocr_runtime/Praser/parser/map/homoglyphs.json": "70099a5ce6622b5217f01a91f1cf3679416d202e9a42859df18e052975491da1",
+    "ocr_runtime/Praser/parser/map/mm-score.json": "8cb3b7ec3c92f56546dbaa886be564a62610fe2891ab84d0d9a4b93ac79afd05",
+    "ocr_runtime/Praser/parser/map/normalize-map.json": "c5e00fbbc108f089761fb28a364e6174d8224352c99d670fbc7b818786d15a90",
+    "ocr_runtime/Praser/parser/map/scan.json": "6da751a4b79b79c367b9fdaeb2845c7066721176c6fd16b515cc77e8e1b354e4",
+    "ocr_runtime/Praser/parser/map/zg2uni-rules.json": "aedcadfd7bef5cfdaa7ecd9d0bb1b3ba6d25065f1c416ef77c4638c67543b802",
+    "ocr_runtime/Praser/parser/map/vector/PYIDAUNGSU-2.5.2_REGULAR-sheet-1.svg": "46123115e55796f8182983cb9914bf3b5ad5602cd731cc79f47f78012405fe6b",
+    "ocr_runtime/Praser/parser/map/vector/PYIDAUNGSU-2.5.2_REGULAR-sheet-2.svg": "bbe1523a442e4f8e15354711a9fb73a058fdb46679626d1b37607172e996b136",
+    "ocr_runtime/Praser/parser/map/vector/shape-alias.json": "78827f69da2844efd233519cb801ebdeb3ee2b8ffcb7d77b33bd36e05365c4de",
+    "ocr_runtime/Praser/parser/map/vector/shape-overrides.json": "8333e6e881236d07bc25bf9fce818aaf87713098aa8e31026533036935e02e8b",
+    "ocr_runtime/Praser/parser/map/vector/shape-thresholds.json": "8a160405676321a87299719975e38e188d752167f6242b5e217996dbb390df91",
+    "OCR-INSTALL.md": "3dc694727e2c146f048755679239cd840b4544c79f6c935e90746518d1902a33",
+    "OCR-VERIFICATION.md": "85269c4834a0266e7df7816e46818661e11f89d03da86e7018145189a5ab6a34"
+  },
+  "copied_runtime": {
+    "ocr_runtime/Praser/parser/package.json": {
+      "source": "Praser/parser/package.json",
+      "source_sha256": "2c0f4337c7ddbdc277b2891def4e323aa6689fa840b6bb924723eb5fea5c026a",
+      "modified_for_whole_index_cache": false
+    },
+    "ocr_runtime/Praser/parser/package-lock.json": {
+      "source": "Praser/parser/package-lock.json",
+      "source_sha256": "96384029a0b2d3c2742078f680d97692b9ad6af553dd0ea33cd9afeeee1ca6a8",
+      "modified_for_whole_index_cache": false
+    },
+    "ocr_runtime/Praser/parser/.npmrc": {
+      "source": "Praser/parser/.npmrc",
+      "source_sha256": "8a74b1091affea3c71c2cf04acbaa38c4a51a261a9a98dcc9e96473d07a85a27",
+      "modified_for_whole_index_cache": false
+    },
+    "ocr_runtime/Praser/parser/core/paths.mjs": {
+      "source": "Praser/parser/core/paths.mjs",
+      "source_sha256": "3947ba702c85866072eb38dcf951ba9ef73f0c7950df545a5bec05d1ca0be2e8",
+      "modified_for_whole_index_cache": false
+    },
+    "ocr_runtime/Praser/parser/core/limits.mjs": {
+      "source": "Praser/parser/core/limits.mjs",
+      "source_sha256": "79b03a22e8ff2c15cba66c2c3829994fe25371a8f836aa1f146ea9dd6fc58243",
+      "modified_for_whole_index_cache": false
+    },
+    "ocr_runtime/Praser/parser/core/pylib.mjs": {
+      "source": "Praser/parser/core/pylib.mjs",
+      "source_sha256": "1a9417efa2c2258ba11af9948a08425f6c26acece2ce015d254e7d1157bfe1a1",
+      "modified_for_whole_index_cache": false
+    },
+    "ocr_runtime/Praser/parser/read/pdf-render.mjs": {
+      "source": "Praser/parser/read/pdf-render.mjs",
+      "source_sha256": "29b7b8728ab180b67ddf0ad5c6905f93750aee502574cc680a3addf5a2dad72a",
+      "modified_for_whole_index_cache": false
+    },
+    "ocr_runtime/Praser/parser/read/ocr.mjs": {
+      "source": "Praser/parser/read/ocr.mjs",
+      "source_sha256": "c8620c157d96a9286e27ee4ac1512fb8cd44ce3f6cfd67e44a038a6fd6e82eba",
+      "modified_for_whole_index_cache": false
+    },
+    "ocr_runtime/Praser/parser/read/ocr-no-relaxedsimd.cjs": {
+      "source": "Praser/parser/read/ocr-no-relaxedsimd.cjs",
+      "source_sha256": "1f602d41f9b506605a7f20ccb114690313f1aa1c1cf82460c2e2167d3b8f5e37",
+      "modified_for_whole_index_cache": false
+    },
+    "ocr_runtime/Praser/parser/shape/svg.mjs": {
+      "source": "Praser/parser/shape/svg.mjs",
+      "source_sha256": "2d4fb285dc992d14405d72ae5eb83219097c60f6d39b2b1bb5771fb950d36d4a",
+      "modified_for_whole_index_cache": false
+    },
+    "ocr_runtime/Praser/parser/shape/raster.mjs": {
+      "source": "Praser/parser/shape/raster.mjs",
+      "source_sha256": "5593539ade4932f97aa40f278a7d929b1c7b8b6100d4ad1481be81ee904688a2",
+      "modified_for_whole_index_cache": false
+    },
+    "ocr_runtime/Praser/parser/shape/match.mjs": {
+      "source": "Praser/parser/shape/match.mjs",
+      "source_sha256": "2d2f88d666ca9ea292b2dc784baa17394d2322e097d0e52235cbbd6a4c673e7d",
+      "modified_for_whole_index_cache": true
+    },
+    "ocr_runtime/Praser/parser/shape/contour.mjs": {
+      "source": "Praser/parser/shape/contour.mjs",
+      "source_sha256": "c393a92b55d9156a05bbda1fac0bb5a502f9f4b36631a662b3ad97ee552ef76e",
+      "modified_for_whole_index_cache": false
+    },
+    "ocr_runtime/Praser/parser/codepage/vote.mjs": {
+      "source": "Praser/parser/codepage/vote.mjs",
+      "source_sha256": "aaa576ea5a44dff335932483cd9c91c603a2f68897e45f60304705005612f5fe",
+      "modified_for_whole_index_cache": false
+    },
+    "ocr_runtime/Praser/parser/text/scan.mjs": {
+      "source": "Praser/parser/text/scan.mjs",
+      "source_sha256": "38f01687e81b682b934467da8d3eab75696b79ed777d5ed17a672c11a12eb5da",
+      "modified_for_whole_index_cache": false
+    },
+    "ocr_runtime/Praser/parser/text/repair.mjs": {
+      "source": "Praser/parser/text/repair.mjs",
+      "source_sha256": "a27831fece5d183904b318bb4d169003f2b575bc10219d2c685073646133e154",
+      "modified_for_whole_index_cache": false
+    },
+    "ocr_runtime/Praser/parser/text/normalize.mjs": {
+      "source": "Praser/parser/text/normalize.mjs",
+      "source_sha256": "00fa389acd90ebab774e3bb623edf3885933575af7673e0a1f471d3c0bb6dad8",
+      "modified_for_whole_index_cache": false
+    },
+    "ocr_runtime/Praser/parser/text/cleanup.mjs": {
+      "source": "Praser/parser/text/cleanup.mjs",
+      "source_sha256": "b340e7045870d10b7f2cf1bbe3dba637aa58cb703621c8920ccd40b54b9e21ee",
+      "modified_for_whole_index_cache": false
+    },
+    "ocr_runtime/Praser/parser/text/mm-score.mjs": {
+      "source": "Praser/parser/text/mm-score.mjs",
+      "source_sha256": "bbd98a6fca29b414720d14b2809aee9ff6f940494d02ae4476a0b9ec853544e3",
+      "modified_for_whole_index_cache": false
+    },
+    "ocr_runtime/Praser/parser/model/secure.js": {
+      "source": "Praser/parser/model/secure.js",
+      "source_sha256": "02c13e380a0733b386040513e2b7884e17c52f65ed3181190d6c1c04ee821d7d",
+      "modified_for_whole_index_cache": false
+    },
+    "ocr_runtime/Praser/parser/model/master.json.enc": {
+      "source": "Praser/parser/model/master.json.enc",
+      "source_sha256": "54fb2fcc19ade5f2182bcc59b6b886776c5d49c11737d2ab93925753bd9bc529",
+      "modified_for_whole_index_cache": false
+    },
+    "ocr_runtime/Praser/parser/model/mya.traineddata": {
+      "source": "Praser/parser/model/mya.traineddata",
+      "source_sha256": "cf749828f7db42e0fbeb3b5e9077363c3b92c58e5e0058d70c446e2d12c19dd8",
+      "modified_for_whole_index_cache": false
+    },
+    "ocr_runtime/Praser/parser/map/burmese-inventory.json": {
+      "source": "Praser/parser/map/burmese-inventory.json",
+      "source_sha256": "ed55ae6f069553f2e4993e0f336e94ea946f84b4443f43cb8b240ee936ca95e6",
+      "modified_for_whole_index_cache": false
+    },
+    "ocr_runtime/Praser/parser/map/cipher-map.json": {
+      "source": "Praser/parser/map/cipher-map.json",
+      "source_sha256": "bac90193071c69d1361ebe90a98cacd112100436969d37f0aaaee7b2dd4088c9",
+      "modified_for_whole_index_cache": false
+    },
+    "ocr_runtime/Praser/parser/map/cleanup.json": {
+      "source": "Praser/parser/map/cleanup.json",
+      "source_sha256": "f9de331e3b5021ea8c18fd02c8b0472dd9ee362ae67909bd4d041616bf0fa66d",
+      "modified_for_whole_index_cache": false
+    },
+    "ocr_runtime/Praser/parser/map/homoglyphs.json": {
+      "source": "Praser/parser/map/homoglyphs.json",
+      "source_sha256": "70099a5ce6622b5217f01a91f1cf3679416d202e9a42859df18e052975491da1",
+      "modified_for_whole_index_cache": false
+    },
+    "ocr_runtime/Praser/parser/map/mm-score.json": {
+      "source": "Praser/parser/map/mm-score.json",
+      "source_sha256": "8cb3b7ec3c92f56546dbaa886be564a62610fe2891ab84d0d9a4b93ac79afd05",
+      "modified_for_whole_index_cache": false
+    },
+    "ocr_runtime/Praser/parser/map/normalize-map.json": {
+      "source": "Praser/parser/map/normalize-map.json",
+      "source_sha256": "c5e00fbbc108f089761fb28a364e6174d8224352c99d670fbc7b818786d15a90",
+      "modified_for_whole_index_cache": false
+    },
+    "ocr_runtime/Praser/parser/map/scan.json": {
+      "source": "Praser/parser/map/scan.json",
+      "source_sha256": "6da751a4b79b79c367b9fdaeb2845c7066721176c6fd16b515cc77e8e1b354e4",
+      "modified_for_whole_index_cache": false
+    },
+    "ocr_runtime/Praser/parser/map/zg2uni-rules.json": {
+      "source": "Praser/parser/map/zg2uni-rules.json",
+      "source_sha256": "aedcadfd7bef5cfdaa7ecd9d0bb1b3ba6d25065f1c416ef77c4638c67543b802",
+      "modified_for_whole_index_cache": false
+    },
+    "ocr_runtime/Praser/parser/map/vector/PYIDAUNGSU-2.5.2_REGULAR-sheet-1.svg": {
+      "source": "Praser/parser/map/vector/PYIDAUNGSU-2.5.2_REGULAR-sheet-1.svg",
+      "source_sha256": "46123115e55796f8182983cb9914bf3b5ad5602cd731cc79f47f78012405fe6b",
+      "modified_for_whole_index_cache": false
+    },
+    "ocr_runtime/Praser/parser/map/vector/PYIDAUNGSU-2.5.2_REGULAR-sheet-2.svg": {
+      "source": "Praser/parser/map/vector/PYIDAUNGSU-2.5.2_REGULAR-sheet-2.svg",
+      "source_sha256": "bbe1523a442e4f8e15354711a9fb73a058fdb46679626d1b37607172e996b136",
+      "modified_for_whole_index_cache": false
+    },
+    "ocr_runtime/Praser/parser/map/vector/shape-alias.json": {
+      "source": "Praser/parser/map/vector/shape-alias.json",
+      "source_sha256": "78827f69da2844efd233519cb801ebdeb3ee2b8ffcb7d77b33bd36e05365c4de",
+      "modified_for_whole_index_cache": false
+    },
+    "ocr_runtime/Praser/parser/map/vector/shape-overrides.json": {
+      "source": "Praser/parser/map/vector/shape-overrides.json",
+      "source_sha256": "8333e6e881236d07bc25bf9fce818aaf87713098aa8e31026533036935e02e8b",
+      "modified_for_whole_index_cache": false
+    },
+    "ocr_runtime/Praser/parser/map/vector/shape-thresholds.json": {
+      "source": "Praser/parser/map/vector/shape-thresholds.json",
+      "source_sha256": "8a160405676321a87299719975e38e188d752167f6242b5e217996dbb390df91",
+      "modified_for_whole_index_cache": false
+    }
+  },
+  "hashes_recomputed_at": "ddf9a4195932a92d759d2b3dbca422f02b575b74",
+  "hashes_recomputed_note": "Content hashes recomputed after the overlay was merged into this branch and the path-drift, single-cumulative-Parquet and .env-wiring fixes were applied. copied_runtime[*].source_sha256 still refers to the upstream Linga source and is unchanged; the OCR runtime files themselves were not edited."
+}
