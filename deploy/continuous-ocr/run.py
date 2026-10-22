@@ -349,13 +349,17 @@ def main():
     parser.add_argument('--remind', action='store_true')
     parser.add_argument('--failure-hook', action='store_true')
     args = parser.parse_args()
-    db = database()
     if args.failure_hook:
+        # ExecStopPost: the last chance to tell the owner the service is down, so it must
+        # not depend on anything the failure may have broken. Opening state.sqlite3 first
+        # meant a full disk or a corrupt database took the notifier down with the service
+        # and the owner heard nothing at all - exactly the case that most needs the email.
         result = os.environ.get('SERVICE_RESULT', '')
         if result and result != 'success':
             mail_notice('failed', ['systemd OCR service ended: ' + result,
                                    'Exit status: ' + os.environ.get('EXIT_STATUS', 'unknown')])
         return 0
+    db = database()
     if args.remind:
         reminders(db)
         return 0
