@@ -44,6 +44,12 @@ CONVERT_FINAL_NAME = "convertable"   # convertable PDFs folder
 PARQUET_DIR_NAME = "parquet"
 PARQUET_FILE_NAME = "books.parquet"
 PARQUET_SHA_COLUMN = "sha256"   # which PDF a row came from; the duplicate guard
+# The duplicate guard matches a book on its exact text as well as on its file hash, so
+# it needs a floor: below this many characters the "text" is far more likely a failed
+# extraction than a book, and two unrelated books whose parses both collapsed into the
+# same stub of a few words are not duplicates of each other. Denying the second one
+# would lose a real book over a bad parse, so short text is matched on the hash only.
+TEXT_DEDUPE_MIN_CHARS = 200
 
 DOC_SEPARATOR = "\u001d"  # GROUP SEPARATOR between documents, both directions
 _PARQUET_LOCK = threading.Lock()
@@ -259,14 +265,26 @@ def write_parquet_rows(output_dir: Path, rows: list[dict], log=print):
     Bulk because a run-end flush can carry hundreds of journaled books, and one
     append per book would rewrite the whole growing file each time.
 
-    THE GUARD: a row whose sha256 is already in the table carrying the same text is
-    DENIED - not appended, not replaced, nothing rewritten. That is what stops one
-    PDF being recorded twice, which two independent writers would otherwise do: the
-    run-end flush of scan/collected.jsonl and the per-book append during upload both
-    see the same convertable book. It also stops the same file landing twice under two
-    book keys, which is possible because the OCR disambiguates equal basenames.
-    A matching sha with DIFFERENT text is not denied: the same PDF parsed or OCR'd
-    better is an improvement, and it replaces the row under its own book key.
+    THE GUARD - one book, one row, matched on either of the two identities a book has:
+
+      same file (sha256) AND same text   -> DENIED. A plain re-add. Three writers reach
+          this one file - save_remote during upload, the continuous-OCR service, and the
+          run-end flush - and the first two both work from the same PDFs on the shared
+          host, so without this one book is recorded twice.
+      same text under a DIFFERENT name   -> DENIED. The same book fetched from another
+          source: a different file with a different hash, which is why the text is
+          matched too and not only the hash. It also catches the same PDF sitting in
+          convertable/ twice under two filenames, and two book keys for one basename,
+          which the OCR creates when it disambiguates equal names. This arm works on
+          rows that have no hash yet, so it holds before shafill.py has been run.
+      same name AND same text, new file  -> the row is kept and its hash corrected.
+      same file, DIFFERENT text          -> not denied: the same PDF parsed or OCR'd
+          better is an improvement, so the row that already holds that file is updated
+          in place instead of a second book being opened for it.
+
+    Text shorter than TEXT_DEDUPE_MIN_CHARS is matched on the hash only, so a shared
+    failed-parse stub cannot deny an unrelated book. A denied row changes nothing: not
+    appended, not replaced, and if the whole batch is denied the file is not rewritten.
     """
     try:
         import pyarrow as pa
@@ -283,44 +301,81 @@ def write_parquet_rows(output_dir: Path, rows: list[dict], log=print):
         cols = _parquet_columns(pq, sources, log)
         if cols is None:
             return None
-        books, texts = cols["book"], cols["text"]
-        by_sha = {
-            sha: i for i, sha in enumerate(cols[PARQUET_SHA_COLUMN]) if sha
-        }
+        books, texts, shas = cols["book"], cols["text"], cols[PARQUET_SHA_COLUMN]
+        # A book has TWO identities and the guard needs both to stop it being added
+        # twice:
+        #   the FILE  - its sha256. Catches the same PDF re-added, and the same PDF
+        #               sitting in convertable/ under a second filename.
+        #   the WORDS - its exact text. Catches the same book fetched from a different
+        #               source, which is a different file with a different hash, so the
+        #               hash on its own cannot see it. This is the "same book under a
+        #               different name" case, and it also works on rows that have no
+        #               hash yet, i.e. before shafill.py has been run.
+        by_sha = {sha: i for i, sha in enumerate(shas) if sha}
+        by_text = {text.strip(): i for i, text in enumerate(texts)
+                   if len(text.strip()) >= TEXT_DEDUPE_MIN_CHARS}
 
         added = replaced = denied = 0
         for row in rows:
             book = row.get("book", "")
             text = row.get("text", "")
             sha = row.get("sha256", "") or ""
-            hit = by_sha.get(sha) if sha else None
-            if hit is not None and texts[hit] == text:
-                denied += 1
-                if books[hit] == book:
-                    log(f"[parquet-skip] {book}: sha256 {sha[:12]} already recorded with "
-                        "this exact text, not written again")
-                else:
-                    log(f"[parquet-skip] {book}: same PDF and text as the existing row "
-                        f"{books[hit]!r} (sha256 {sha[:12]}), not recorded twice")
-                continue
+            target = by_sha.get(sha) if sha else None
+            if target is None:
+                target = by_text.get(text.strip())
 
-            values = (
-                row.get("author", ""), book, text,
-                row.get("segmented", ""), sha,
-            )
-            if book in books:
+            if target is not None:
+                same_words = texts[target].strip() == text.strip()
+                same_name = books[target] == book
+                if same_words and not same_name:
+                    denied += 1
+                    log(f"[parquet-skip] {book}: already in the collection as "
+                        f"{books[target]!r} - the same book under a different name, "
+                        "not added again")
+                    continue
+                if same_words and shas[target] == sha:
+                    denied += 1
+                    log(f"[parquet-skip] {book}: already recorded with this exact text"
+                        + (f" and file (sha256 {sha[:12]})" if sha else "")
+                        + ", not written again")
+                    continue
+                if same_words and sha:
+                    # Same book, same words, a different copy of the file: keep the row,
+                    # correct the hash it points at.
+                    log(f"[parquet-fix] {book}: same text from a different file - sha256 "
+                        f"{(shas[target] or '(none)')[:12]} -> {sha[:12]}")
+                elif not same_words and not same_name:
+                    # The very same PDF, extracted better. Update the row that already
+                    # holds it rather than opening a second book entry for one file.
+                    log(f"[parquet-update] {book}: the same PDF as the existing row "
+                        f"{books[target]!r}, so its text is updated there instead of "
+                        "being added as a second book")
+
+            # `books`, `texts` and `shas` ARE cols[...] - the same list objects - so
+            # appending through cols already extends them.
+            name = books[target] if target is not None else book
+            values = (row.get("author", ""), name, text, row.get("segmented", ""), sha)
+            if target is not None:
+                idx = target
+            elif book in books:
                 idx = books.index(book)
+            else:
+                idx = None
+
+            if idx is None:
+                for key, value in zip(cols, values):
+                    cols[key].append(value)
+                idx = len(books) - 1
+                added += 1
+            else:
                 for key, value in zip(cols, values):
                     cols[key][idx] = value
                 replaced += 1
-            else:
-                # `books` and `texts` ARE cols["book"] and cols["text"] - the same
-                # list objects - so appending through cols already extends them.
-                for key, value in zip(cols, values):
-                    cols[key].append(value)
-                added += 1
+
             if sha:
-                by_sha[sha] = books.index(book)
+                by_sha[sha] = idx
+            if len(text.strip()) >= TEXT_DEDUPE_MIN_CHARS:
+                by_text[text.strip()] = idx
 
         if not added and not replaced:
             log(f"[parquet] nothing to write: {denied} row(s) already recorded -> "
@@ -547,9 +602,12 @@ def flush(output_dir: str | Path, log=print) -> FlushStats:
     # authorship is untrustworthy - most Burmese authors never embed their name, and
     # online tools overwrite the field and steal credit; the owner will later extract
     # the author from the book CONTENT programmatically). sha256 is the hash of the
-    # PDF the text came from, and it is what the duplicate guard keys on: this flush
-    # and the per-book append during upload both see the same convertable book, so
-    # without it one PDF would be recorded twice. Everything else (encoding, pages,
+    # PDF the text came from, and it is what the duplicate guard keys on. NOTE this
+    # flush is currently dormant: append_document() above is the only writer of
+    # scan/collected.jsonl and nothing calls it, so _read_journal() returns [] and
+    # flush() reports skipped. It is still routed through the single guarded writer so
+    # that wiring the journal up later cannot start emitting a second schema into this
+    # folder. Everything else (encoding, pages,
     # scan counts, source URL, timestamps) stays in the journal rows for crash-safety
     # and debugging but is not carried into the collection file.
     rows = [
