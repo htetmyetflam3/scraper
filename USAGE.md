@@ -349,7 +349,7 @@ process and nobody has to run `npm run rebuild` by hand on the VPS.
 
 ## Environment
 
-All of it lives in the repo-root `.env`; `.env.example` documents every key. The environment
+All of it lives in the repo-root `.env`, and this section is the full key list. The environment
 wins over the file.
 
 **Required for uploading** — `SSH_HOST`, `SSH_USER`. Optional: `SSH_PORT` (default 22),
@@ -365,7 +365,7 @@ prompts for it.
 `PHATMAL_API_KEY` (`--phatmal`), `LOGIN_EMAIL`, `LOGIN_PASSWORD`, `LOGIN_URL`,
 `LOGIN_USER_FIELD`, `LOGIN_PASS_FIELD`.
 
-**Commented out in `.env.example`, off by default** — `PRASER_MAX_STREAM_MB` (256), the eight
+**Off by default, every one has a working default in the code** — `PRASER_MAX_STREAM_MB` (256), the eight
 `SCRIBD_*` tuning keys, and `LOGIN_SCRIBD_COM_EMAIL`/`LOGIN_SCRIBD_COM_PASSWORD`.
 
 **Set by the launcher, not by hand** — `SCRAPER_SYSTEMD_CHILD`, `SCRAPER_SYSTEMD_DIRECT`.
