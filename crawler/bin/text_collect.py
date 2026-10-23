@@ -232,6 +232,41 @@ def parse_convertable_book(path: Path, log=print) -> tuple[str, str, str] | None
     return book, text, segmented[0]
 
 
+def parse_convertable_book_direct(path: Path, log=print) -> tuple[str, str, str] | None:
+    """Parse a PDF that is ALREADY in convertable/ - no inspection, no old-font gates.
+
+    Same return shape as parse_convertable_book - (book, text, segmented) or None - so
+    a caller can use either, but the text comes from
+    pdf_classify.extract_convertable_text, which skips the classification verdict.
+    The books in convertable/ were put there by hand or by the classifier and their
+    text is known to survive intact; re-judging them with the legacy-font gates can
+    only throw a verified book away. Zawgyi-One and Unicode are still detected and
+    converted, because that is extraction, not judgement.
+
+    Unlike parse_convertable_book this does not fall back to scan/collected.jsonl:
+    append_document(), the only writer of that journal, has no callers, so the journal
+    is always empty and the fallback could never fire.
+    """
+    from pdf_classify import extract_convertable_text
+
+    name = path.name
+    book = name[:-4] if name.lower().endswith(".pdf") else name
+    try:
+        text, kind, pages = extract_convertable_text(path.read_bytes())
+    except Exception as error:  # noqa: BLE001 - the reason belongs in the ledger
+        log(f"[parse-warn] extraction failed on {name}: {error}")
+        return None
+    if not text:
+        log(f"[parse-warn] no text layer in {name}")
+        return None
+    log(f"[parse] {name}: {pages} page(s) via {kind} decode, {len(text)} char(s), no gates")
+    segmented = _segment_documents([text], log)
+    if segmented is None or not segmented:
+        log(f"[parse-warn] segmentation failed for {name}")
+        return None
+    return book, text, segmented[0]
+
+
 def _parquet_columns(pq, sources: list[Path], log):
     """The collection's columns out of `sources`, tolerating older files.
 
