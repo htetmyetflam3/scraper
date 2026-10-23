@@ -139,7 +139,24 @@ def reminders(db):
 
 
 def ssh(config, command):
-    return subprocess.run(_ssh_argv(config, command), capture_output=True, check=True).stdout
+    """Run one command on the host and return its stdout bytes.
+
+    A failure has to carry ssh's own stderr. CalledProcessError's str() holds only the
+    argv and the numeric code, so a bare "returned non-zero exit status 255" reached
+    the owner as an email with the reason captured and then thrown away - and 255 is
+    ssh's OWN failure code, not the remote command's, so it names a whole family of
+    causes (refused, auth, host key, a broken control socket) without picking one.
+    Every diagnosis then became a guess. save_remote.py already does this correctly in
+    ensure_dir() and probe(); this mirrors it.
+    """
+    result = subprocess.run(_ssh_argv(config, command), capture_output=True)
+    if result.returncode != 0:
+        detail = (result.stderr or b'').decode('utf-8', 'replace').strip()
+        detail = detail or f'exit {result.returncode} with nothing on stderr'
+        raise RuntimeError(
+            f'ssh to {config.target} failed: {detail}\n'
+            f'        command: {command}')
+    return result.stdout
 
 
 def discover(config):
