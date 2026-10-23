@@ -8,9 +8,50 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[2]
 HERE = Path(__file__).resolve().parent
+STATE = ROOT / 'scan' / 'ocr'
+LAUNCH_ENV = STATE / 'launch.env'
+
+sys.path.insert(0, str(ROOT / 'crawler' / 'bin'))
+from site_login import load_dotenv_values  # noqa: E402
+
+ENV_KEYS = (
+    'SSH_HOST', 'SSH_USER', 'SSH_PORT', 'SSH_KEY', 'SSH_DIR',
+    'MAIL_PASSWORD', 'PRASER_MAX_STREAM_MB',
+)
+
 
 def q(value):
     return '"' + str(value).replace('\\', '\\\\').replace('"', '\\"').replace('%', '%%').replace('$', '$$') + '"'
+
+
+def stage_launch_env(target: Path, keys: tuple[str, ...]) -> None:
+    """Persist shell settings absent from .env in a 0600 file read BEFORE .env."""
+    dotenv = load_dotenv_values(ROOT / '.env')
+    captured = {
+        name: os.environ[name]
+        for name in keys
+        if os.environ.get(name, '').strip() and not dotenv.get(name, '').strip()
+    }
+    if not captured:
+        target.unlink(missing_ok=True)
+        return
+    target.parent.mkdir(parents=True, exist_ok=True)
+    tmp = target.with_name(f'.{target.name}.{os.getpid()}.tmp')
+    lines = []
+    for name, value in sorted(captured.items()):
+        escaped = (
+            value.replace('\\', '\\\\')
+            .replace('"', '\\"')
+            .replace('\n', '\\n')
+            .replace('\r', '\\r')
+            .replace('\t', '\\t')
+        )
+        lines.append(f'{name}="{escaped}"\n')
+    fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, 'w', encoding='utf-8') as handle:
+        handle.writelines(lines)
+    os.replace(tmp, target)
+
 
 def main():
     if os.geteuid() != 0 or not Path('/run/systemd/system').is_dir():
@@ -28,15 +69,20 @@ def main():
                                capture_output=True, text=True).stdout.strip()
         if state in {'active', 'activating', 'deactivating'}:
             sys.exit(f'Stop {name} before installing.')
+    stage_launch_env(LAUNCH_ENV, ENV_KEYS)
     path = ':'.join(dict.fromkeys([str(Path(node).parent), str(Path(uv).parent),
-                                  '/usr/local/sbin','/usr/local/bin','/usr/sbin','/usr/bin','/sbin','/bin']))
+                                  '/usr/local/sbin', '/usr/local/bin', '/usr/sbin',
+                                  '/usr/bin', '/sbin', '/bin']))
     command = ' '.join(map(q, [uv, 'run', '--project', ROOT, '--', 'python', '-u', HERE / 'run.py']))
     preflight = ' '.join(map(q, [uv, 'run', '--project', ROOT, '--', 'python', ROOT / 'deploy' / 'engine_ready.py', '--fix']))
+    root_esc = str(ROOT).replace('%', '%%')
+    launch_esc = str(LAUNCH_ENV).replace('%', '%%')
     common = f'''User=root
-WorkingDirectory={str(ROOT).replace('%','%%')}
+WorkingDirectory={root_esc}
 Environment=PATH={path}
 Environment=PYTHONUNBUFFERED=1
-EnvironmentFile=-{str(ROOT).replace('%','%%')}/.env
+EnvironmentFile=-{launch_esc}
+EnvironmentFile=-{root_esc}/.env
 StandardOutput=journal
 StandardError=journal
 '''
@@ -92,6 +138,7 @@ WantedBy=timers.target
           'Logs: journalctl -u scraper-ocr.service -f\n'
           'Stop OCR: systemctl stop scraper-ocr.service\n'
           'Stop reminders too: systemctl disable --now scraper-ocr-reminder.timer')
+
 
 if __name__ == '__main__':
     main()
