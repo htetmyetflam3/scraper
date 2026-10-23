@@ -6,7 +6,10 @@ dependencies = [
     "beautifulsoup4>=4.12.0",
     "cryptography>=42.0",
     "httpx>=0.27",
+    # hfinit.py: the Hub API client it uses to create the repo and commit Parquet
+    "huggingface_hub>=1.0",
     "pikepdf>=8",
+    # hfinit.py --cdc needs pyarrow>=21 for use_content_defined_chunking
     "pyarrow>=17",
     "pypdf>=6.0",
     "requests>=2.32.0",

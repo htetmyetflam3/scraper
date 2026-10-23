@@ -9,10 +9,10 @@ from pathlib import Path
 import httpx
 from serpapi import SerpApiError, serpapi_search
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
-SCAN_DIR = REPO_ROOT.parent / "scan"
+REPO_ROOT = Path(__file__).resolve().parents[2]
+SCAN_DIR = REPO_ROOT / "scan"
 OUTPUT_FILE = SCAN_DIR / "search_results.json"
-LEGACY_OUTPUT_FILE = REPO_ROOT / "search_results.json"
+LEGACY_OUTPUT_FILE = REPO_ROOT / "crawler" / "search_results.json"
 DEFAULT_KEYWORDS = (
     "myanmar books download",
     "myanmar ebooks download",
@@ -32,7 +32,7 @@ def _read_api_key(explicit_key: str | None) -> str:
     if environment_key:
         return environment_key
 
-    env_file = REPO_ROOT.parent / ".env"  # repo root, next to main.py
+    env_file = REPO_ROOT / ".env"  # repo root, next to main.py
     try:
         lines = env_file.read_text(encoding="utf-8").splitlines()
     except FileNotFoundError:

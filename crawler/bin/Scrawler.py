@@ -14,8 +14,8 @@ from download_links import FILE_EXTENSION, extract_file_links, guard_download_ur
 from scribd import SCRIBD_LINKS_FILE
 from site_login import ensure_logged_in_sync
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
-SCAN_DIR = REPO_ROOT.parent / "scan"
+REPO_ROOT = Path(__file__).resolve().parents[2]
+SCAN_DIR = REPO_ROOT / "scan"
 OUTPUT_FILE = SCAN_DIR / "entry.txt"
 SEARCH_RESULTS_FILE = SCAN_DIR / "search_results.json"
 REQUEST_TIMEOUT = 15.0

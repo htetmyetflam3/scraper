@@ -7,7 +7,7 @@ PROJECT_DIR="$(pwd)"
 DEFAULT_REMOTE="git@github.com:htetmyetflam3/scraper.git"
 DEFAULT_USER="htetmyetflam3"
 DEFAULT_EMAIL="149076482+htetmyetflam3@users.noreply.github.com"
-DEFAULT_BRANCH="main"
+DEFAULT_BRANCH="release"
 
 DEFAULT_SSH_KEY="${HOME}/.ssh/default"
 
@@ -218,18 +218,15 @@ if git ls-files | grep -qE '^logs/|\.log(\.txt)?$|log\.txt$'; then
 fi
 
 TARGET_PATHS=(
-   "model/"
+   "crawler/bin/"
    "scan/"
-   "map/"
    "crawler/scribdl/"
    ".gitignore"
    "gitinit.sh"
   "changeslog.md"
    "agents.md"
    "main.py"
-   "install.sh"
    "pyproject.toml"
-   "deploy/"
 )
 
 

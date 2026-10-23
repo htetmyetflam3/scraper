@@ -10,7 +10,15 @@ import time
 import urllib.parse
 from pathlib import Path
 
-BIN_DIR = Path(__file__).resolve().parent / "crawler" / "bin"
+ROOT = Path(__file__).resolve().parent
+sys.path.insert(0, str(ROOT / "scripts"))
+from systemd_launcher import launch_under_systemd  # noqa: E402
+
+_systemd_status = launch_under_systemd(sys.argv[1:])
+if _systemd_status is not None:
+    raise SystemExit(_systemd_status)
+
+BIN_DIR = ROOT / "crawler" / "bin"
 sys.path.insert(0, str(BIN_DIR))
 
 from Dcrawler import ENTRY_FILE, OUTPUT_DIR, download_entries, note_pause, retry_line  # noqa: E402
@@ -24,7 +32,6 @@ from save_remote import start_remote, upload_all  # noqa: E402
 from Scrawler import find_entry  # noqa: E402
 from scribd import download_scribd, read_links_file  # noqa: E402
 from serpapi import SerpApiError  # noqa: E402
-from text_collect import flush as text_flush  # noqa: E402
 
 # --process (night run): hours until it stops at a safe point and mails the
 # report - your wake-up time. No flag on purpose: edit this number.
@@ -58,7 +65,7 @@ exit codes: 0 ok (also --process stopping at its {NIGHT_HOURS:g}-hour mark), 1 f
 2 usage error, 130 paused (Ctrl+C; rerun resumes)
 
 email: every command except --findentry mails a started notice, then a
-finished (--upload: when python/pdfs is empty) or failed one naming the part: kaungmyatthu@devnovex.shop ->
+finished (--upload: when pdfs is empty) or failed one naming the part: kaungmyatthu@devnovex.shop ->
 htetmyet986@gmail.com via smtp.hostinger.com:465 (MAIL_PASSWORD in .env); a
 copy of each goes to that mailbox's Sent folder via imap.hostinger.com:993.
 --process mails started, then one report at the {NIGHT_HOURS:g}-hour mark (or when all is
@@ -68,8 +75,8 @@ right away, with the problems so far.
 
 upload (--upload, --process): a file that fails is retried after 15 s, 30 s,
 45 s, 1 min, 1 min 30 s, 2 min, 2 min 30 s and 3 min (UPLOAD_WAITS in
-python/bin/save_remote.py); then uploading stops instead of looping: with an
-error when under 5 GB is free, else the files stay in python/pdfs.
+crawler/bin/save_remote.py); then uploading stops instead of looping: with an
+error when under 5 GB is free, else the files stay in pdfs.
 
 disk: 5 GB is kept free for the system. Every download command (--main,
 --download, --process, --scribd, --phatmal) checks it before each file and
@@ -148,12 +155,12 @@ def build_parser() -> argparse.ArgumentParser:
         "--upload",
         action="store_true",
         help=(
-            "Push every file in python/pdfs to the SSH host (SSH_* in .env), "
+            "Push every file in pdfs to the SSH host (SSH_* in .env), "
             "verify its sha256, then delete the local copy; when the folder "
             "is empty it mails \"finished\" and exits. A file that fails is retried "
             "after 15 s, 30 s, 45 s, 1 min, 1 min 30 s, 2 min, 2 min 30 s "
             "and 3 min; then uploading stops: with an error when under 5 GB "
-            "is free, else normally (the files stay in python/pdfs)."
+            "is free, else normally (the files stay in pdfs)."
         ),
     )
     command.add_argument(
@@ -364,17 +371,6 @@ def main(argv: list[str] | None = None) -> int:
             details = _download_details(download_entries(source, download_limit=limit))
         elif args.upload:
             part = "upload"
-            # A crashed or stopped run can leave collected text journaled
-            # and its PDFs staged in pdfs/.convert. Committing them first
-            # means --upload really does send everything that CAN go; a
-            # failed flush simply leaves those PDFs staged (not uploaded).
-            try:
-                stats = text_flush(OUTPUT_DIR)
-            except Exception as error:  # noqa: BLE001 - upload must still run
-                print(f"[convert-warn] pre-upload flush crashed: {error}", flush=True)
-            else:
-                if not stats.skipped:
-                    print(f"[convert] {stats.line()}", flush=True)
             details = upload_all(OUTPUT_DIR)
         elif args.process is not None:
             source = ENTRY_FILE if args.process is USE_ENTRY_FILE else args.process
@@ -437,7 +433,7 @@ def main(argv: list[str] | None = None) -> int:
         elif args.process is not None:
             print(
                 "\n[paused] interrupted; downloads are journaled and unsent files "
-                f"stay in python/pdfs - rerun to resume. @ {note_pause()}"
+                f"stay in pdfs - rerun to resume. @ {note_pause()}"
             )
         else:
             print(

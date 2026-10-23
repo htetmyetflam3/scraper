@@ -4,14 +4,14 @@ What this system does, in one line per stage:
 
 ```
 download  ->  validate / unlock / repair / linearize   (python, pikepdf)
-          ->  classify the final readable bytes        (python/bin/pdf_classify.py)
+          ->  classify the final readable bytes        (crawler/bin/pdf_classify.py)
                 convertable/  Unicode or Zawgyi-One text books
                 scanned/      image-only books (NO OCR)
                 old/          pre-standard fonts / undecodable text (NO recovery)
           ->  convertable text journaled to scan/collected.jsonl during the run
 run end   ->  ONE node subprocess: Engine MonoSyllabism segmentor + formatter
-          ->  ONE Parquet batch per run in pdfs/parquet/ (zstd level 19;
-              book-collection schema: author | book | text | segmented)
+          ->  ONE cumulative Parquet, pdfs/parquet/books.parquet (zstd level 19;
+              book-collection schema: author | book | text | segmented | sha256)
           ->  staged PDFs released .convert/ -> convertable/
 upload    ->  category folders + parquet, verify sha256, then delete local
 ```
@@ -22,7 +22,7 @@ upload    ->  category folders + parquet, verify sha256, then delete local
 | --- | --- |
 | Python 3.11+ | the whole pipeline |
 | [uv](https://docs.astral.sh/uv/) (or plain `pip`) | dependency install, `uv run main.py …` |
-| Node.js 18+ | the run-end segmentor bridge (`python/bin/segment_bridge.mjs`); one subprocess per run, nothing else uses Node |
+| Node.js 22+ | the run-end segmentor bridge (`crawler/bin/segment_bridge.mjs`) and the continuous-OCR worker; `scripts/check-node.mjs` enforces 22 and will not install or switch Node |
 | npm | one-time `npm install` in `Engine/MonoSyllabism/mapbuilder` (bytenode, for the Engine's encrypted syllable-map loader) |
 
 Python packages (installed by the commands below, from `pyproject.toml`):
@@ -111,7 +111,7 @@ every one lands in its defined directory:
 | `bg-mlc-1-1.pdf` | Win Innwa old-font book | `old/` |
 
 then runs the real run-end flush (node segmentor → Parquet) and checks the
-batch — the book-collection schema `author | book | text | segmented`
+batch — the book-collection schema `author | book | text | segmented | sha256`
 (author left empty on purpose: PDF metadata authorship is untrusted, the
 owner extracts authors from book content later; book = filename without
 .pdf; segmented = formatter output, no √ marks) — and that staged PDFs are

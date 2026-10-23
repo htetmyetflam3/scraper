@@ -8,10 +8,11 @@
  *
  * Contract: the loader is obfuscated but NOT encrypted (bootstrap runs raw);
  * the payload is decrypt-TO-LOAD — boot runs the loader's bootModules against
- * the payload in-engine and keeps the three normalize functions. UTF-8 in/out;
- * hosts pre-apply NFC. Modules are served from the decrypted pack by basename
- * (the same shape the Node spike used: './normalize.js', './sourceMap.js',
- * '_function.js', './sourceMapper.js'; './logen.js' is a stub).
+ * the payload in-engine and keeps the three normalize functions. Payload
+ * modules are obfuscated JavaScript source, not bytecode. UTF-8 in/out; hosts
+ * pre-apply NFC. Modules are served from the decrypted pack by basename
+ * ('./normalize.js', './sourceMap.js', './function.js', './sourceMapper.js';
+ * './logen.js' is a stub).
  */
 #include "quickjs.h"
 #include <stdlib.h>

@@ -41,8 +41,8 @@ from save_local import (
 from site_login import ensure_logged_in_async
 from site_size_guard import FALLBACK_SITEMAP_PATHS, large_site_reason
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
-SCAN_DIR = REPO_ROOT.parent / "scan"
+REPO_ROOT = Path(__file__).resolve().parents[2]
+SCAN_DIR = REPO_ROOT / "scan"
 ENTRY_FILE = SCAN_DIR / "entry.txt"
 BLOCKED_FILE = SCAN_DIR / "blocked.txt"
 DOWNLOADED_FILE = SCAN_DIR / "downloaded.txt"
@@ -1849,9 +1849,10 @@ def _scan_output_hashes(output_dir: Path) -> tuple[set[str], int, int]:
     hashes: set[str] = set()
     file_count = 0
     byte_count = 0
-    for dirpath, _dirnames, filenames in os.walk(output_dir):
+    for dirpath, dirnames, filenames in os.walk(output_dir):
+        dirnames[:] = [d for d in dirnames if d != "parquet"]
         for name in filenames:
-            if name.startswith("."):
+            if name.startswith(".") or name.lower().endswith(".parquet"):
                 continue
             entry = Path(dirpath) / name
             try:
@@ -2004,7 +2005,7 @@ async def _run_download_entries_async(
             """One try at candidate -> (outcome, text, path, digest); outcome is
             saved | downloaded | duplicate | no-download | unresolved | rejected.
             What worked is recorded here, the same for the crawl and the retry
-            turns (python/pdfs, downloaded.txt, timeline.log)."""
+            turns (pdfs, downloaded.txt, timeline.log)."""
             check_disk(output_dir)  # under the 5 GB kept for the system every command quits
             try:
                 payload = await _resolve_candidate(client, candidate)

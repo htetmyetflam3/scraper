@@ -3,7 +3,7 @@
 The crawler (Dcrawler) downloads the sites in scan/entry.txt, or the one site
 URL main.py was given, while a
 background thread uploads every saved file to the SSH host (save_remote:
-push, verify sha256, then free the local copy), checking python/pdfs every
+push, verify sha256, then free the local copy), checking pdfs every
 -i seconds.
 
 Night rules (the owner is asleep, nobody can press a key):
@@ -21,7 +21,7 @@ Night rules (the owner is asleep, nobody can press a key):
   UPLOAD_WAITS: 15 s, 30 s, 45 s, 1 min, 1 min 30 s, 2 min, 2 min 30 s, 3 min;
   9 tries) ->
   - downloading goes on and the disk has room: quit uploading (no retrying
-    all night); the files stay in python/pdfs for `main.py --upload`.
+    all night); the files stay in pdfs for `main.py --upload`.
   - downloading goes on and the disk is tight: quit entirely - stop
     downloading and uploading and exit with an error (NightFailed, part
     upload), mailed right away like above.
@@ -47,7 +47,6 @@ from pathlib import Path
 from disk_floor import DISK_FLOOR, DiskTight, disk_tight, size_text
 from Dcrawler import ENTRY_FILE, OUTPUT_DIR, DownloadSummary, StopRun, download_entries, retry_line
 from mailer import clock, now
-from text_collect import flush as text_flush
 from save_remote import (
     UPLOAD_TRIES,
     RemoteConfig,
@@ -133,7 +132,7 @@ class NightReport:
         lines += [
             f"☁️ Upload: {self.uploaded} file(s) ({size_text(self.uploaded_bytes)}) "
             f"sent and verified · {self.left_files} file(s) "
-            f"({size_text(self.left_bytes)}) still in python/pdfs.",
+            f"({size_text(self.left_bytes)}) still in pdfs.",
         ]
         stopped_early = self.reached_mark or bool(self.failure)
         if stopped_early and self.current_site:
@@ -268,7 +267,7 @@ class NightGuard:
         try:
             self._upload_loop(interval)
         except Exception as error:  # noqa: BLE001 - a crash is a failure, mailed right away
-            self.fail(f"the uploader crashed ({type(error).__name__}: {error}); downloading and uploading stopped, files stay in python/pdfs.")
+            self.fail(f"the uploader crashed ({type(error).__name__}: {error}); downloading and uploading stopped, files stay in pdfs.")
 
     def _upload_loop(self, interval: float) -> None:
         while not self.upload_stop.is_set():
@@ -321,7 +320,7 @@ class NightGuard:
             self.fail(
                 f"Uploads failed {UPLOAD_TRIES} tries ({detail}) while the disk was tight ({size_text(free)} free, "
                 f"under the {size_text(DISK_FLOOR)} kept for the system): downloading and uploading stopped, "
-                f"{len(waiting)} file(s) stay in python/pdfs."
+                f"{len(waiting)} file(s) stay in pdfs."
             )
             return False
         if downloading:
@@ -332,7 +331,7 @@ class NightGuard:
             why = "downloading was stopping"
         print(
             f"[upload-stop] {file.name}: {UPLOAD_TRIES} tries failed ({detail}); {why} - uploading "
-            f"stops, {len(waiting)} file(s) stay in python/pdfs for `uv run main.py --upload` @ {_stamp()}",
+            f"stops, {len(waiting)} file(s) stay in pdfs for `uv run main.py --upload` @ {_stamp()}",
             flush=True,
         )
         self.problem("upload", f"{UPLOAD_TRIES} tries failed ({detail}). {why[0].upper()}{why[1:]}, so uploading stopped.")
@@ -374,30 +373,13 @@ def run_process(
             guard.fail(
                 f"The disk went under the {size_text(DISK_FLOOR)} kept for the system "
                 f"({size_text(tight.free)} free): downloading and uploading stopped, "
-                f"{len(pending_files(output_dir))} file(s) stay in python/pdfs.",
+                f"{len(pending_files(output_dir))} file(s) stay in pdfs.",
                 part="download",
             )
         finally:
             guard.download_running = False
             if guard.hard_timer is not None:
                 guard.hard_timer.cancel()
-        # Run-end text flush: the whole run's collected text goes through
-        # one segmentor pass into a committed Parquet file, and only then
-        # are the staged convertable PDFs released for upload. This happens
-        # BEFORE download_done so the uploader's final sweep includes them.
-        # Skipped when the disk floor was hit: nothing more gets written.
-        if not guard.failure:
-            try:
-                convert_stats = text_flush(output_dir)
-            except Exception as error:  # noqa: BLE001 - never kill the night run
-                convert_stats = None
-                print(f"[convert-warn] run-end flush crashed: {error}", flush=True)
-                guard.problem("download", f"text flush crashed: {error}")
-            if convert_stats is not None:
-                print(f"[convert] {convert_stats.line()}", flush=True)
-                guard.convert_line = convert_stats.line()
-                if not convert_stats.ok:
-                    guard.problem("download", convert_stats.line())
         guard.download_done.set()
         if not guard.stop_event.is_set():
             print(f"[night] downloading finished; the uploader sends what is left @ {_stamp()}", flush=True)

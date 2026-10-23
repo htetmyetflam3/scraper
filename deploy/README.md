@@ -27,7 +27,7 @@ which:
 1. finds `node` and requires version 18 or newer;
 2. checks `Engine/MonoSyllabism/map/{payload.jsc,loader.js}` and the
    precomputed `Engine/.cache-tree/`;
-3. boots the real bridge (`python/bin/segment_bridge.mjs`) with empty input,
+3. boots the real bridge (`crawler/bin/segment_bridge.mjs`) with empty input,
    which loads the encrypted payload through the loader, the syllable tree and
    the formatter;
 4. if that boot fails because the V8 bytecode was compiled by a different

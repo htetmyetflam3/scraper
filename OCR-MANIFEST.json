@@ -3,19 +3,19 @@
   "scraper_reference": "26779d831937736bf3b88bc8aad0dbd060b9b111",
   "linga_base": "e666961af69a2dab50e78b57fd5f617869c022c9",
   "reused_not_included": {
-    "crawler/bin/save_remote.py": "7c1ba62eb9a63d6382f0c46e9b33aa452d6e99695aa1d6d457e67611bd04f5e4",
+    "crawler/bin/save_remote.py": "2c0f75bd601ae19f907df0a1436e73ac42e55129886724650f4074810c17749b",
     "crawler/bin/mailer.py": "83c9299009247ccfedb9cc713b1b718efad9f13ec3b1e86157ae49f87d3a5e6a",
-    "crawler/bin/text_collect.py": "a0c945b6a66ac240defc9aedcdcf8e333fc2c806fc3a30a1c86674e97960a5f3",
-    "crawler/bin/segment_bridge.mjs": "6c7ca94b3ec03c5342bc62f538b3a9aea736e9f6f5d4202e0aeb17dea20650d7",
+    "crawler/bin/text_collect.py": "82645ee161c41ce2a764c0c02eec6011875d3cae98a5ebdb02d1728dba266823",
+    "crawler/bin/segment_bridge.mjs": "52651ec927dc0e34064ac6ae39d7bbc4c3e1e132da7fc98a340b1065d44726c7",
     "crawler/bin/disk_floor.py": "696a982976502c74121529b7cc6d75cc443ff8acc375a316380c367c0f21f410",
-    "deploy/engine_ready.py": "f8139dbe4bb9f709a8b55158e8876f1049fbd465e8bf06ef7d7d0b4b253e5e74"
+    "deploy/engine_ready.py": "44576dda86bcee8b07b56e7b37fc8be70789e15bbaffdf17de0dfa6f731f9052"
   },
   "files": {
     "ocr.py": "88a3fb4beda3086111071247890089e7252e0256608f84386bbcad7a5f54e679",
-    "deploy/continuous-ocr/OCR-VERIFICATION.md": "6dbf24b319559061f7759183929fb04415c4c0c417da2ba115854cf17302e74d",
-    "deploy/continuous-ocr/README.md": "642ab70000182c315d5603f0e573e0764bb984471a3aefd9c81a838245dc8cdc",
-    "deploy/continuous-ocr/install.py": "40c40d0d5705530792b1d5218d6b7a8725cb0fb02e23762e93bd9360c19806d8",
-    "deploy/continuous-ocr/run.py": "5cad9f0487a6133d6cf15bad84ed0c14a6791b37a8cddb0a651dd0d080b83660",
+    "deploy/continuous-ocr/OCR-VERIFICATION.md": "85269c4834a0266e7df7816e46818661e11f89d03da86e7018145189a5ab6a34",
+    "deploy/continuous-ocr/README.md": "6e5f342d35fe958306fe95ef4e42dbf7d2458dfea9111be38db4c9059b8da12e",
+    "deploy/continuous-ocr/install.py": "99157c2d7c6b8261b36b2adb6cca9588127fb317130c3dc476907bbb9707dcd6",
+    "deploy/continuous-ocr/run.py": "e43d264cd724e146c2628343ec6b0b51bb0ca0cb9ef80b24892d12561433a1d0",
     "deploy/continuous-ocr/worker.mjs": "4593924fba3b41b0ec9cbeb3aee34ef827b9e0cc415d1559b44ed3409ab977c9",
     "ocr_runtime/Praser/parser/package.json": "2c0f4337c7ddbdc277b2891def4e323aa6689fa840b6bb924723eb5fea5c026a",
     "ocr_runtime/Praser/parser/package-lock.json": "96384029a0b2d3c2742078f680d97692b9ad6af553dd0ea33cd9afeeee1ca6a8",
@@ -52,8 +52,8 @@
     "ocr_runtime/Praser/parser/map/vector/shape-alias.json": "78827f69da2844efd233519cb801ebdeb3ee2b8ffcb7d77b33bd36e05365c4de",
     "ocr_runtime/Praser/parser/map/vector/shape-overrides.json": "8333e6e881236d07bc25bf9fce818aaf87713098aa8e31026533036935e02e8b",
     "ocr_runtime/Praser/parser/map/vector/shape-thresholds.json": "8a160405676321a87299719975e38e188d752167f6242b5e217996dbb390df91",
-    "OCR-INSTALL.md": "642ab70000182c315d5603f0e573e0764bb984471a3aefd9c81a838245dc8cdc",
-    "OCR-VERIFICATION.md": "6dbf24b319559061f7759183929fb04415c4c0c417da2ba115854cf17302e74d"
+    "OCR-INSTALL.md": "3dc694727e2c146f048755679239cd840b4544c79f6c935e90746518d1902a33",
+    "OCR-VERIFICATION.md": "85269c4834a0266e7df7816e46818661e11f89d03da86e7018145189a5ab6a34"
   },
   "copied_runtime": {
     "ocr_runtime/Praser/parser/package.json": {
@@ -231,5 +231,7 @@
       "source_sha256": "8a160405676321a87299719975e38e188d752167f6242b5e217996dbb390df91",
       "modified_for_whole_index_cache": false
     }
-  }
+  },
+  "hashes_recomputed_at": "ddf9a4195932a92d759d2b3dbca422f02b575b74",
+  "hashes_recomputed_note": "Content hashes recomputed after the overlay was merged into this branch and the path-drift, single-cumulative-Parquet and .env-wiring fixes were applied. copied_runtime[*].source_sha256 still refers to the upstream Linga source and is unchanged; the OCR runtime files themselves were not edited."
 }

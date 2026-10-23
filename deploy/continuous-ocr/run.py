@@ -49,8 +49,34 @@ def database():
       digest text, error text, parquet text, updated real not null);
     create table if not exists meta (key text primary key, value text not null);
     ''')
+    # The collection is ONE cumulative Parquet, so each source needs a stable, unique
+    # row identity. Added as a migration so an existing state.sqlite3 keeps working.
+    if not any(c[1] == 'book_key' for c in db.execute('pragma table_info(books)')):
+        db.execute('alter table books add column book_key text')
     db.commit()
     return db
+
+
+def book_key(db, source):
+    """This book's row identity in the ONE cumulative Parquet.
+
+    The rest of the pipeline keys rows by filename minus .pdf, so keep that shape -
+    but the OCR walks the hosting directories recursively, where two different
+    sources can share a basename and would otherwise overwrite each other's row.
+    The key is persisted, so a retry reuses its own key and replaces its own row
+    instead of appending a duplicate.
+    """
+    row = db.execute('select book_key from books where source=?', (source,)).fetchone()
+    if row and row['book_key']:
+        return row['book_key']
+    name = PurePosixPath(source).name
+    base = name[:-4] if name.lower().endswith('.pdf') else name
+    clash = db.execute('select 1 from books where book_key=? and source!=?',
+                       (base, source)).fetchone()
+    key = base if not clash else base + '-' + hashlib.sha256(source.encode()).hexdigest()[:8]
+    db.execute('update books set book_key=? where source=?', (key, source))
+    db.commit()
+    return key
 
 
 def update(db, source, status, **values):
@@ -197,9 +223,6 @@ class Ocr:
 def commit_dataset(db, row, pages_file, result):
     source = row['source']
     key = hashlib.sha256(source.encode()).hexdigest()
-    parquet_dir = ROOT / 'pdfs' / 'parquet' / 'ocr'
-    parquet_dir.mkdir(parents=True, exist_ok=True)
-    final = parquet_dir / (key + '.parquet')
     journal = STATE / (key + '.json')
     pages = [json.loads(line)['text'] for line in pages_file.read_text().splitlines()]
     record = {'filename': PurePosixPath(source).name, 'author': '', 'sha256': row['digest'],
@@ -221,19 +244,17 @@ def commit_dataset(db, row, pages_file, result):
     segmented = seg.read_text()
     if record['text'].strip() and not segmented.strip():
         raise RuntimeError('Scraper Engine returned empty segmentation')
-    # Reuse the actual scraper four-column Parquet writer, not a new schema/Engine.
-    batch_dir = STATE / ('batch-' + key)
-    written = text_collect._write_parquet([record], [segmented], batch_dir, print)
-    if written is None:
+    # Reuse the scraper's own single-Parquet appender, not a per-book file and not a
+    # new schema. It writes its dot-temp inside pdfs/parquet/ and renames within that
+    # same directory, so there is no cross-device move and no staging dir to clean up,
+    # and it holds a cross-process lock against save_remote appending at the same time.
+    final = text_collect.write_parquet_row(
+        ROOT / 'pdfs', book_key(db, source), record['text'], segmented,
+        author=record['author'], sha256=record['sha256'], log=print)
+    if final is None:
         raise RuntimeError('Existing scraper Parquet writer failed')
-    syncfile(written)
-    import pyarrow.parquet as pq
-    table = pq.read_table(written)
-    if table.column_names != ['author', 'book', 'text', 'segmented'] or table.num_rows != 1:
-        raise RuntimeError('Invalid committed Parquet schema/row count')
-    os.replace(written, final)
     syncfile(final)
-    # Deterministic filename + durable ledger make restart reconcile crash windows.
+    # Deterministic row key + durable ledger make restart reconcile crash windows.
     update(db, source, 'success', parquet=str(final), error='')
     Path(row['local']).unlink(missing_ok=True)
     pages_file.unlink(missing_ok=True)
@@ -251,11 +272,26 @@ def run(db):
         worker = None
         try:
             # Interrupted segmentation resumes by re-OCR of its retained verified PDF;
-            # deterministic final filename prevents a second dataset row/file.
-            for row in db.execute("select * from books where status='success'").fetchall():
-                if not row['parquet'] or not Path(row['parquet']).is_file():
-                    raise RuntimeError('Committed Parquet missing: ' + row['source'])
-                Path(row['local']).unlink(missing_ok=True)
+            # the deterministic row key prevents a second dataset row. Reconcile by ROW
+            # now, because every book shares one cumulative Parquet.
+            done = db.execute("select * from books where status='success'").fetchall()
+            if done:
+                target = ROOT / 'pdfs' / 'parquet' / text_collect.PARQUET_FILE_NAME
+                committed = set()
+                if target.is_file():
+                    import pyarrow.parquet as pq
+                    committed = set(pq.read_table(target, columns=['book'])['book'].to_pylist())
+                for row in done:
+                    if (row['book_key'] or book_key(db, row['source'])) in committed:
+                        Path(row['local']).unlink(missing_ok=True)
+                        continue
+                    # No row in the single Parquet - a state.sqlite3 left over from
+                    # per-book ocr/<hash>.parquet output. Re-queue rather than brick the
+                    # service: discover() re-downloads and the row is appended once.
+                    update(db, row['source'], 'pending', parquet='',
+                           error='re-queued: row absent from ' + target.name)
+                    print(f'[migrate] {row["source"]}: no row in {target.name}, re-queued',
+                          flush=True)
             while True:
                 sources = discover(config)
                 for source in sources:
@@ -287,7 +323,19 @@ def run(db):
                         print(f'[ocr-failed] {source}: {error}', flush=True)
                         reminders(db)
                         continue
-                    commit_dataset(db, row, pages_file, result)
+                    try:
+                        commit_dataset(db, row, pages_file, result)
+                    except Exception as error:
+                        # Anything past BookError - segmentation exit, empty segmentation,
+                        # writer failure, a disk-full append. Mark the book and carry on:
+                        # otherwise the service dies, Restart=no keeps it down, and the row
+                        # stays in a status this query re-selects forever, so every book
+                        # sorted after it is never reached. Stopped is a BaseException, so
+                        # SIGTERM still propagates.
+                        update(db, source, 'failed', error=f'commit: {error}')
+                        print(f'[commit-failed] {source}: {error}', flush=True)
+                        reminders(db)
+                        continue
                     reminders(db)
             mail_notice('finished', ['OCR stopped: no eligible PDFs remain. Failed PDFs are not retried.',
                                      'The reminder timer continues checking retained failures.'])
@@ -301,13 +349,17 @@ def main():
     parser.add_argument('--remind', action='store_true')
     parser.add_argument('--failure-hook', action='store_true')
     args = parser.parse_args()
-    db = database()
     if args.failure_hook:
+        # ExecStopPost: the last chance to tell the owner the service is down, so it must
+        # not depend on anything the failure may have broken. Opening state.sqlite3 first
+        # meant a full disk or a corrupt database took the notifier down with the service
+        # and the owner heard nothing at all - exactly the case that most needs the email.
         result = os.environ.get('SERVICE_RESULT', '')
         if result and result != 'success':
             mail_notice('failed', ['systemd OCR service ended: ' + result,
                                    'Exit status: ' + os.environ.get('EXIT_STATUS', 'unknown')])
         return 0
+    db = database()
     if args.remind:
         reminders(db)
         return 0

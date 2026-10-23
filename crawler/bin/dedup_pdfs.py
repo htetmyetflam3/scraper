@@ -21,7 +21,7 @@ import re
 import sys
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
+REPO_ROOT = Path(__file__).resolve().parents[2]
 PDFS_DIR = REPO_ROOT / "pdfs"
 
 DUP_PATTERN = re.compile(r"^(?P<stem>.*) \((?P<num>\d+)\)(?P<ext>\.[^.]+)$")

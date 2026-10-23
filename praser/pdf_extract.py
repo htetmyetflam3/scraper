@@ -178,7 +178,11 @@ find_font_files2 = find_font_streams
 
 def _utf16be_to_str(hexstr):
     """Decode a UTF-16BE hex string (e.g. from a ToUnicode CMap) to text."""
+    if len(hexstr) % 2:
+        hexstr = '0' + hexstr
     raw = bytes.fromhex(hexstr)
+    if len(raw) % 2:
+        raw = b'\x00' + raw
     return raw.decode('utf-16-be', errors='replace')
 
 
@@ -206,15 +210,32 @@ def parse_tounicode_stream(data):
     for m in re.finditer(r'beginbfrange(.*?)endbfrange', text, re.DOTALL):
         body = m.group(1)
         for p in re.finditer(r'<([0-9A-Fa-f]+)>\s*<([0-9A-Fa-f]+)>\s*<([0-9A-Fa-f]+)>', body):
-            lo, hi, start = int(p.group(1), 16), int(p.group(2), 16), int(p.group(3), 16)
-            for code in range(lo, hi + 1):
-                mapping[code] = chr(start + (code - lo))
+            lo, hi = int(p.group(1), 16), int(p.group(2), 16)
+            if hi < lo or hi - lo > 0xFFFF:
+                continue
+            dst_hex = p.group(3)
+            if len(dst_hex) <= 4:
+                start = int(dst_hex, 16)
+                for code in range(lo, hi + 1):
+                    cp = start + (code - lo)
+                    if 0 <= cp <= 0x10FFFF and not (0xD800 <= cp <= 0xDFFF):
+                        mapping[code] = chr(cp)
+            else:
+                if len(dst_hex) % 4:
+                    dst_hex = dst_hex.zfill((len(dst_hex) + 3) // 4 * 4)
+                prefix_hex = dst_hex[:-4]
+                last_unit = int(dst_hex[-4:], 16)
+                for code in range(lo, hi + 1):
+                    unit = (last_unit + (code - lo)) & 0xFFFF
+                    mapping[code] = _utf16be_to_str(f"{prefix_hex}{unit:04X}")
 
     # bfrange, array form: <lo> <hi> [<d1> <d2> ...]
     for m in re.finditer(r'beginbfrange(.*?)endbfrange', text, re.DOTALL):
         body = m.group(1)
         for p in re.finditer(r'<([0-9A-Fa-f]+)>\s*<([0-9A-Fa-f]+)>\s*\[(.*?)\]', body, re.DOTALL):
             lo, hi = int(p.group(1), 16), int(p.group(2), 16)
+            if hi < lo or hi - lo > 0xFFFF:
+                continue
             items = re.findall(r'<([0-9A-Fa-f]+)>', p.group(3))
             for i, code in enumerate(range(lo, hi + 1)):
                 if i < len(items):
@@ -459,6 +480,9 @@ def parse_ttf_cmap(data):
                     break
                 sc, ec, sg = struct.unpack('>III', sub[go:go+12])
                 go += 12
+                if sc > 0x10FFFF or ec < sc:
+                    continue
+                ec = min(ec, 0x10FFFF)
                 for c in range(sc, ec + 1):
                     mappings[c] = sg + (c - sc)
     return mappings

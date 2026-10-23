@@ -1,27 +1,62 @@
 # Untracked directories
 
 *.venv*
-*venv*
 *output*
 *.output/
 *.log*
 *frontend/
 *__pycache__*
 /__pycache__/
-*pycache*
 *package.lock.json*
 # Runtime build artifacts
 /node_modules/
 *node_modules*
+/output/
 dist
-*env*
 coverage/
 .DS_Store
 Thumbs.db
 *.tmp
 *.swp
-*ssh*
-*env*
-*pycache*
-*lock*
+/.map*
+*bundle*
+*.map*
+# R_Site/Build/mapbuilder/.map/bundle.js
+# R_Site/Build/mapbuilder/map.build.js
 
+
+# --- scraper (mirrored from scraper@main) ---
+*venv*
+.venv/
+*__pycache__*
+*/__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+*.linearizing
+/pdfs/
+/python/pdfs/
+/ssh/
+/scan/*
+!/scan/search_results.json
+# precomputed syllable tree = committed build output (the builder is not shipped);
+# only the runtime scratch dirs under it stay local
+/Engine/.cache-tree/log/
+/Engine/.cache-tree/out/
+/Engine/.cache-tree/in/
+# *.map* above would swallow the tree's mapped file — it is build output too
+!/Engine/.cache-tree/syllable.mapped.txt
+
+# test artifacts (fake-download test provisions these itself)
+/python/tests/fixtures/
+/python/tests/.out/
+
+# readable knowledge JSON restored locally by npm run rebuild (never shipped)
+# — including its mapData-only form; the sealed master.json.enc is the source
+/Engine/knowledge/
+
+# wasm/box build artifacts (rebuild: build-payload.mjs + tools/pack-box.mjs)
+# box.wasm is TRACKED: it is the distributable artifact (rebuild with
+# `npm run rebuild:wasm`); payload.bin stays a local intermediate
+wasm/box/payload.bin
+!/wasm/box/box.wasm
