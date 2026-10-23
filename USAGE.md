@@ -29,6 +29,7 @@ Shell scripts run directly: `./install.sh`, `./git.sh "message"`.
 | Pull it back to prove the round trip | `uv run hfinit.py --download ./verify` |
 | Move one file to or from the VPS | `uv run vps.py --upload SRC DEST` |
 | Start the continuous OCR service | `uv run ocr.py` |
+| Rebuild the collection from the host's `convertable/` PDFs (parser, no OCR) | `uv run parse.py` |
 | Install `scraper.service` (the download pipeline) | `sudo python3 deploy/install_service.py -- --process -l 2` |
 | Find duplicate PDFs on disk | `uv run crawler/bin/dedup_pdfs.py` |
 | Backfill URLs that failed | `uv run crawler/bin/failed_urls.py --dry-run` |
@@ -226,6 +227,64 @@ Stopping it yourself (`systemctl stop`) sends `SIGINT`, which mails one *finishe
 "OCR stopped by owner/system … Unfinished inputs retained." — and exits 0, so the failure
 hook correctly stays silent instead of doubling it. A hard failure (OOM, `SIGKILL`, segfault,
 timeout, non-zero exit, start-limit) mails from the hook.
+
+---
+
+## `parse.py` — the continuous convertable parse
+
+```
+uv run parse.py          # no flags
+```
+
+`ocr.py`'s twin for the parser-only service. It installs that service's own three
+systemd units and starts it detached from your SSH session, so you can close the
+terminal. There is no OCR runtime to prepare — no tesseract, no `worker.mjs`, no
+`npm ci` — because the only native step left is the scraper's own Engine segmentor.
+It runs as root on the systemd VPS, in the same account as `scraper.service`, and
+never stops `scraper.service` or the OCR service.
+
+What it does: every PDF in `<SSH_DIR>/convertable/` on the shared host, downloaded
+read-only, its text extracted and converted (Zawgyi-One or Unicode) with **no
+classification verdict**, segmented, and appended as one row to
+`pdfs/parquet/books.parquet`. Success deletes the local download; failure keeps it,
+records the reason, and mails at 20 retained failures, at most once an hour. Nothing
+on the host is ever written to or deleted.
+
+This is the command that **rebuilds a lost collection**: if `books.parquet` is wiped,
+its ledger rows no longer match anything in the file, so the service re-queues every
+one of them and re-parses the host's `convertable/` directory back into a fresh
+parquet. The writer's duplicate guard is what makes that safe to run twice.
+
+Why no verdict: the books in `convertable/` are already the Zawgyi-One and Unicode
+ones whose text survives intact, and the old-font gates — image dominance, Myanmar
+characters per page, the structural scan rate that judges WinNwa / Ayar / legacy
+layout decodes — can only throw a verified book away. `classify_pdf` still uses them
+for PDFs nobody has looked at; this path deliberately does not. On a real fixture the
+gates reject a 41-page book as `old` with zero characters, and this path reads all
+52,209 of them. A PDF with no text layer at all still fails and is kept, so an empty
+row is never written.
+
+It installs three units, mirroring the OCR's:
+
+| Unit | What it is |
+| --- | --- |
+| `scraper-parse.service` | The parse loop. `systemctl start`/`stop`; logs with `journalctl -u scraper-parse.service -f`. |
+| `scraper-parse-reminder.service` | One reminder check, invoked by the timer. |
+| `scraper-parse-reminder.timer` | Hourly (`OnBootSec=2min`, `OnUnitInactiveSec=1h`), enabled and started by the installer. |
+
+`deploy/continuous-parse/run.py` is what those units execute. Its two flags are for
+systemd, not for you, and behave exactly like the OCR's:
+
+| Flag | What it does |
+| --- | --- |
+| `--remind` | Run one reminder check and exit: mark failures whose PDF is gone as `removed`, and mail if 20 or more remain and an hour has passed since the last mail. |
+| `--failure-hook` | The service's `ExecStopPost`. Reads `SERVICE_RESULT`/`EXIT_STATUS` and mails unless the result is `success` or unset. Runs **before** anything opens `state.sqlite3`, so a full disk or a corrupt database cannot silence it. |
+
+Its ledger is `scan/parse/state.sqlite3`, separate from the OCR's `scan/ocr/`, and
+each service counts its own retained failures. Both resolve the same PDF to the same
+`book_key`, so a book the OCR already recorded is denied by the guard rather than
+written twice — and if this parser reads the same file better, the row that already
+holds that PDF is updated in place instead of a second book being opened for it.
 
 ---
 

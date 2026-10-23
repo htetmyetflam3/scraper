@@ -760,6 +760,66 @@ def classify_pdf(data: bytes, detector: ZawgyiDetector | None = None) -> Classif
     return result
 
 
+def extract_convertable_text(
+    data: bytes, detector: ZawgyiDetector | None = None
+) -> tuple[str, str, int]:
+    """Extract and convert a PDF's whole text layer with NO classification gates.
+
+    Returns ``(text, decode_kind, pages)``; ``text`` is empty when the file has no
+    readable text layer at all. A PDF that cannot be parsed raises, so the caller
+    records a real reason instead of silently storing nothing.
+
+    Why this exists next to ``classify_pdf``: that function's job is to DECIDE what
+    an unknown PDF is, and it refuses the text of anything it judges ``scanned`` or
+    ``old`` - image dominance, too few Myanmar characters per page, or a structural
+    scan rate above ``OLD_FONT_SCAN_RATE``. Those gates are the old-font verdict
+    (WinNwa, Ayar, the legacy layout methods), and they are the right call for a PDF
+    nobody has looked at. They are the wrong call for a PDF already sitting in
+    ``convertable/``: the owner put it there precisely because its text survives
+    intact, and re-judging it with the parser he does not trust can only lose a book
+    he has already verified. So this keeps the stable half of the pipeline - parse
+    the objects, pick a decode from the cmap / identity / ToUnicode ladder, extract
+    every page, convert Zawgyi to Unicode - and drops every gate and every verdict.
+    No category is returned because none is decided.
+    """
+    detector = detector or get_detector()
+    objects = parse_pdf_objects(data)
+    root = find_root_pages(objects)
+    if isinstance(root, tuple):
+        pages = collect_pages(objects, *root)
+    elif root is not None:
+        pages = collect_pages(objects, root)
+    else:
+        pages = []
+    if not pages:
+        return "", "none", 0
+
+    # The ladder's Zawgyi-One shortcut needs the font NAMES, so read them - but only
+    # to pick a decode. Nothing here turns a name into a verdict.
+    raw_names = document_font_names(objects)
+    zawgyi_one_named = any(is_zawgyi_one_font_name(n) for n in raw_names)
+    decoding, kind = choose_decoding(objects, pages, zawgyi_one_named)
+
+    converted: list[str] = []
+    total_chars = 0
+    truncated = False
+    for idx in range(len(pages)):
+        try:
+            raw = _page_text(objects, pages, idx, decoding)
+        except Exception:  # noqa: BLE001 - one broken page must not stop the book
+            raw = ""
+        page_out, _page_cat = _convert_page(raw, detector) if raw else ("", "")
+        converted.append(page_out)
+        total_chars += len(page_out)
+        if total_chars > MAX_TEXT_CHARS:
+            truncated = True
+            break
+    text = re.sub(r"\n{3,}", "\n\n", "\n\n".join(converted)).strip()
+    if truncated:
+        print(f"[parse-warn] text truncated at {MAX_TEXT_CHARS} chars", file=sys.stderr)
+    return text, kind, len(pages)
+
+
 def main(argv: list[str]) -> int:
     if not argv:
         print("usage: pdf_classify.py FILE.pdf [FILE.pdf ...]")
