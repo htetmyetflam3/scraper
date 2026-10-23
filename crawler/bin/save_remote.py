@@ -24,9 +24,15 @@ Configuration (environment wins over the repo-root .env):
     SSH_USER   ssh account                     (required)
     SSH_PORT   ssh port                        (default 22)
     SSH_KEY    private key file on this box    (default: ssh's own lookup)
-    SSH_DIR    remote directory relative to
-               the account's home; keep it out
-               of public_html                  (default books)
+    SSH_DIR    the remote directory that CONTAINS
+               convertable/ (and scan/ or scanned/
+               for the OCR service). Mirrors the
+               local pdfs/. Relative to the account
+               home, or absolute - shared hosting
+               usually needs the absolute form, e.g.
+               /domains/<site>/public_html/pdfs.
+               Anything under public_html is also
+               reachable over the web.             (default pdfs)
 """
 
 from __future__ import annotations
@@ -92,7 +98,7 @@ class RemoteConfig:
     user: str
     port: int = 22
     key: str = ""
-    directory: str = "books"
+    directory: str = "pdfs"
 
     @property
     def target(self) -> str:
@@ -170,7 +176,7 @@ def load_config() -> RemoteConfig:
         port = int(port_text)
     except ValueError as error:
         raise RemoteError(f"SSH_PORT must be a number, got {port_text!r}") from error
-    directory = setting("SSH_DIR", "books").strip().rstrip("/") or "books"
+    directory = setting("SSH_DIR", "pdfs").strip().rstrip("/") or "pdfs"
     return RemoteConfig(
         host=host,
         user=user,

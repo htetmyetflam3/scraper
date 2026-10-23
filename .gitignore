@@ -1,3 +1,8 @@
+# Secrets. The real .env holds MAIL_PASSWORD / HG_TOKEN / SSH_* and must never be
+# committed. Anchored and exact on purpose: .env.example IS tracked and this must
+# not match it.
+/.env
+
 # Untracked directories
 
 *.venv*
