@@ -20,7 +20,7 @@ The runtime contains only the Linga modules/assets needed for raster OCR, scanne
 
 ## Existing SSH/settings
 
-Use your existing root-level `.env` or environment: `SSH_HOST`, `SSH_USER`, `SSH_PORT`, `SSH_KEY`, `SSH_DIR`, `MAIL_PASSWORD`. They are read by **your existing scraper loaders**, not a second parser — and the systemd units get them through `EnvironmentFile=-<repo root>/.env`, so the service sees the same values an interactive run does (the leading `-` means a missing `.env` is not fatal, since the environment may supply them instead). Copy `.env.example` to `.env` for the full key list. Keep the existing VPS key file and known_hosts; nothing here ships an SSH key or disables host-key checking.
+Use your existing root-level `.env` or environment: `SSH_HOST`, `SSH_USER`, `SSH_PORT`, `SSH_KEY`, `SSH_DIR`, `MAIL_PASSWORD`. They are read by **your existing scraper loaders**, not a second parser — and the systemd units get them through `EnvironmentFile=-<repo root>/.env`, so the service sees the same values an interactive run does (the leading `-` means a missing `.env` is not fatal, since the environment may supply them instead). The Environment section of `USAGE.md` is the full key list. Keep the existing VPS key file and known_hosts; nothing here ships an SSH key or disables host-key checking.
 
 `SSH_DIR` should be the hosting archive root containing `scan/` or `scanned/`. PDFs under either spelling are discovered recursively; `old/` and `convertable/` are excluded. Hosting originals are read-only. The VPS downloads mirror hosting-relative directories under `pdfs/.ocr/`.
 

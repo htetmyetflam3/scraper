@@ -170,7 +170,7 @@ def load_config() -> RemoteConfig:
     if not host or not user:
         raise RemoteError(
             "Remote upload needs SSH_HOST and SSH_USER (environment or the "
-            "repo-root .env); see the SSH_* block in .env.example."
+            "repo-root .env); see the Environment section of USAGE.md."
         )
     port_text = setting("SSH_PORT", "22")
     try:

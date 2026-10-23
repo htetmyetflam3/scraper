@@ -18,15 +18,19 @@ is always a directory to save into.
 
 Rules:
 - The LOCAL side is relative to where you run the script (your cwd), like any
-  other shell command.
-- The REMOTE side is relative to the VPS account home, so ``scraper/.env`` and
-  ``~/scraper/.env`` both mean ``/root/scraper/.env``; an absolute path is used
+  other shell command. Errors quote the path as the script resolved it, which is
+  the PHYSICAL path with symlinks followed - so in a symlinked checkout it will
+  not match what your prompt shows. ``pwd -P`` prints the same thing.
+- The REMOTE side is relative to the VPS account home - whatever ``echo $HOME``
+  returns there, read at run time, not assumed to be ``/root``. So ``scraper/.env``
+  and ``~/scraper/.env`` both mean ``$HOME/scraper/.env``; an absolute path is used
   as given. Quote a leading ``~`` - unquoted, your own shell rewrites it to
   your LOCAL home before this script ever sees it.
 - A path that ends in ``/`` - or an existing directory - transfers every file
   inside it automatically. Sub-directories are skipped, not followed.
 - One-shot on purpose: no resume, no retry waits, no sha256 pass. For the big
-  Parquet collection use ./vps-pull.sh, which resumes and verifies.
+  Parquet collection, transfer pdfs/parquet/ and verify with hfinit.py --download,
+  which compares what came back against what is on the Hub.
 - Nothing is deleted on either box. A destination file of the same name is
   overwritten.
 
@@ -142,10 +146,27 @@ def expand_local(raw: str) -> list[Path]:
         path = Path.cwd() / path  # relative to where you ran the script
     if not wants_directory(raw, path.is_dir()):
         if not path.is_file():
-            raise VpsError(f"no such local file: {path}")
+            # Name the argument as typed AND the directory it was resolved against.
+            # A bare resolved path reads like the script invented it, which is exactly
+            # what happened when a symlinked checkout made cwd() disagree with the
+            # shell prompt: `--upload .env` reported /public/scraper/.env while the
+            # prompt said ~/scraper, and looked like path drift rather than a missing
+            # file. cwd() is the PHYSICAL path, so a symlinked repo never matches what
+            # the prompt shows.
+            raise VpsError(
+                f"no such local file: {raw!r}\n"
+                f"        looked for {path}\n"
+                f"        the local side is relative to your current directory, "
+                f"which is really {Path.cwd()}\n"
+                f"        (that is the physical path - symlinks resolved, so it can "
+                f"differ from your shell prompt)"
+            )
         return [path]
     if not path.is_dir():
-        raise VpsError(f"no such local directory: {path}")
+        raise VpsError(
+            f"no such local directory: {raw!r}\n"
+            f"        looked for {path}, under your current directory {Path.cwd()}"
+        )
     files = sorted(entry for entry in path.iterdir() if entry.is_file())
     if not files:
         raise VpsError(f"no files inside {path}")

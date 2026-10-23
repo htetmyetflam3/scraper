@@ -173,15 +173,18 @@ never on the VPS. The flag order is the only difference: `--upload` is local-the
 
 ```
 uv run vps.py --upload   ./.env                scraper/
-uv run vps.py --upload   ./pdfs/parquet/       /root/scraper/parquet/
+uv run vps.py --upload   ./pdfs/parquet/       scraper/parquet/
 uv run vps.py --download '~/scraper/.env'      ./
 uv run vps.py --download scraper/pdfs/parquet/ ./parquet/
 ```
 
-The local side is relative to your cwd, like any shell command. The remote side is relative
-to the VPS account home, so `scraper/.env` and `~/scraper/.env` both mean
-`/root/scraper/.env`; an absolute path is used as given. **Quote a leading `~`** — unquoted,
-your own shell rewrites it to your local home before this script sees it. A path that ends
+The local side is relative to your cwd, like any shell command. Errors quote the path as
+resolved, which is the **physical** path with symlinks followed — so in a symlinked checkout
+it will not match your prompt, and `pwd -P` prints the same thing. The remote side is
+relative to the VPS account home, read at run time with `echo $HOME` and **not** assumed to
+be `/root`; so `scraper/.env` and `~/scraper/.env` both mean `$HOME/scraper/.env`, and an
+absolute path is used as given. **Quote a leading `~`** — unquoted, your own shell rewrites
+it to your local home before this script sees it. A path that ends
 in `/`, or an existing directory, transfers every file inside it; sub-directories are
 skipped, not followed. Nothing is deleted on either box. One-shot on purpose: no resume, no
 retry waits, no sha256 pass — for the big Parquet collection use `hfinit.py`.
@@ -346,7 +349,7 @@ process and nobody has to run `npm run rebuild` by hand on the VPS.
 
 ## Environment
 
-All of it lives in the repo-root `.env`; `.env.example` documents every key. The environment
+All of it lives in the repo-root `.env`, and this section is the full key list. The environment
 wins over the file.
 
 **Required for uploading** — `SSH_HOST`, `SSH_USER`. Optional: `SSH_PORT` (default 22),
@@ -362,7 +365,7 @@ prompts for it.
 `PHATMAL_API_KEY` (`--phatmal`), `LOGIN_EMAIL`, `LOGIN_PASSWORD`, `LOGIN_URL`,
 `LOGIN_USER_FIELD`, `LOGIN_PASS_FIELD`.
 
-**Commented out in `.env.example`, off by default** — `PRASER_MAX_STREAM_MB` (256), the eight
+**Off by default, every one has a working default in the code** — `PRASER_MAX_STREAM_MB` (256), the eight
 `SCRIBD_*` tuning keys, and `LOGIN_SCRIBD_COM_EMAIL`/`LOGIN_SCRIBD_COM_PASSWORD`.
 
 **Set by the launcher, not by hand** — `SCRAPER_SYSTEMD_CHILD`, `SCRAPER_SYSTEMD_DIRECT`.
