@@ -350,7 +350,7 @@ All of it lives in the repo-root `.env`; `.env.example` documents every key. The
 wins over the file.
 
 **Required for uploading** — `SSH_HOST`, `SSH_USER`. Optional: `SSH_PORT` (default 22),
-`SSH_DIR` (default `pdfs`) — the remote directory that *contains* `convertable/`, and `scan/` or `scanned/` for the OCR service; it mirrors this checkout's own `pdfs/`. Relative paths resolve against the ssh account's home, but shared hosting usually needs the absolute `/domains/<site>/public_html/pdfs` form. `SSH_KEY`.
+`SSH_DIR` (default `pdfs`) — the remote directory that *contains* `convertable/`, and `scan/` or `scanned/` for the OCR service; it mirrors this checkout's own `pdfs/`. A relative value is resolved by ssh against the account's home, so the default means `<home>/pdfs/convertable/`; write an absolute path only if the files really live outside it. The value is used verbatim — no `~` expansion, no spaces. `SSH_KEY`.
 
 **Email** — `MAIL_PASSWORD`. Without it the mailer logs `off` and every notice is silently
 skipped, including the OCR failure mail and the 20-failure reminder.
