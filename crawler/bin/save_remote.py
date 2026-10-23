@@ -27,10 +27,11 @@ Configuration (environment wins over the repo-root .env):
     SSH_DIR    the remote directory that CONTAINS
                convertable/ (and scan/ or scanned/
                for the OCR service). Mirrors the
-               local pdfs/. Relative to the account
-               home, or absolute - shared hosting
-               usually needs the absolute form, e.g.
-               /domains/<site>/public_html/pdfs.
+               local pdfs/. A relative value is
+               resolved by ssh against the account
+               home, so the default means
+               <home>/pdfs/convertable/. Used
+               verbatim: no ~ expansion, no spaces.
                Anything under public_html is also
                reachable over the web.             (default pdfs)
 """
