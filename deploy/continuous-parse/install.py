@@ -144,6 +144,11 @@ WantedBy=timers.target
         target.chmod(0o644)
     subprocess.run(['systemctl', 'daemon-reload'], check=True)
     subprocess.run(['systemctl', 'enable', '--now', REMINDER_TIMER], check=True)
+    if '--from-launcher' in sys.argv[1:]:
+        # parse.py starts and verifies the unit itself right after this returns.
+        # Printing "has NOT started" here would contradict its next line.
+        print(f'Installed {SERVICE} unit files; starting it now...', flush=True)
+        return
     print(f'Installed. The parse service has NOT started.\n'
           f'Start: systemctl start {SERVICE}\n'
           f'Logs: journalctl -u {SERVICE} -f\n'

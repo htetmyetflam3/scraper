@@ -215,7 +215,8 @@ def main():
         # An absent unit on first run is normal. Never stop scraper.service, and
         # never stop the OCR service - the two are independent.
         subprocess.run(['systemctl', 'stop', *REMINDER_UNITS], check=False)
-        call(sys.executable, ROOT / 'deploy' / 'continuous-parse' / 'install.py', cwd=ROOT)
+        call(sys.executable, ROOT / 'deploy' / 'continuous-parse' / 'install.py',
+             '--from-launcher', cwd=ROOT)
         start_and_verify(SERVICE, 'Parse service')
 
 

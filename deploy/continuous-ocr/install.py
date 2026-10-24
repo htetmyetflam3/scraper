@@ -133,6 +133,11 @@ WantedBy=timers.target
         target.chmod(0o644)
     subprocess.run(['systemctl', 'daemon-reload'], check=True)
     subprocess.run(['systemctl', 'enable', '--now', 'scraper-ocr-reminder.timer'], check=True)
+    if '--from-launcher' in sys.argv[1:]:
+        # ocr.py starts and verifies the unit itself right after this returns.
+        # Printing "has NOT started" here would contradict its next line.
+        print('Installed scraper-ocr.service unit files; starting it now...', flush=True)
+        return
     print('Installed. OCR has NOT started.\n'
           'Start: systemctl start scraper-ocr.service\n'
           'Logs: journalctl -u scraper-ocr.service -f\n'

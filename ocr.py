@@ -212,7 +212,8 @@ def main():
         # Stop only our reminder units before refreshing our unit definitions.
         # An absent unit on first run is normal. Never stop scraper.service.
         subprocess.run(['systemctl', 'stop', *REMINDER_UNITS], check=False)
-        call(sys.executable, ROOT / 'deploy' / 'continuous-ocr' / 'install.py', cwd=ROOT)
+        call(sys.executable, ROOT / 'deploy' / 'continuous-ocr' / 'install.py',
+             '--from-launcher', cwd=ROOT)
         start_and_verify(SERVICE, 'OCR service')
 
 
