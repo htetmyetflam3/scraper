@@ -24,6 +24,10 @@ Configuration (environment wins over the repo-root .env):
     SSH_USER   ssh account                     (required)
     SSH_PORT   ssh port                        (default 22)
     SSH_KEY    private key file on this box    (default: ssh's own lookup)
+               Pinned with IdentitiesOnly=yes, so it is the only credential
+               offered. load_config() tightens it to 0600 when this process
+               owns it, because ssh silently ignores a group/other-readable
+               key and the host then answers "Permission denied (publickey)".
     SSH_DIR    the remote directory that CONTAINS
                convertable/ (and scan/ or scanned/
                for the OCR service). Mirrors the
@@ -155,6 +159,58 @@ def _env_values() -> dict[str, str]:
     return values
 
 
+def secure_key(key: str) -> str:
+    """Return SSH_KEY as ssh will see it, after proving ssh can actually use it.
+
+    OpenSSH ignores a private key that is readable by group or other ("WARNING:
+    UNPROTECTED PRIVATE KEY FILE!", "bad permissions"). Because _ssh_argv pins
+    the key with IdentitiesOnly=yes, a discarded key leaves ssh with no
+    credential at all, and the host answers "Permission denied (publickey)" -
+    naming the key, never the permission bit that caused it. A 0644 key copied
+    onto the VPS therefore looks exactly like a rejected key.
+
+    A key this process owns is tightened to 0600 in place, which is what
+    gitinit.sh already does for the git identity key. A key owned by someone
+    else cannot be chmod'ed here, so the exact command to run is raised instead.
+    """
+    if not key.strip():
+        return ""
+    path = Path(os.path.expanduser(key.strip()))
+    shown = path if path.is_absolute() else Path(os.path.abspath(path))
+    if path.is_dir():
+        raise RemoteError(
+            f"SSH_KEY points at {shown}, which is a directory, not a private key file."
+        )
+    if not path.exists():
+        raise RemoteError(
+            f"SSH_KEY points at {shown}, which does not exist. Put the private "
+            f"key there (mode 600) or correct SSH_KEY in {ENV_FILE}."
+        )
+    try:
+        info = path.stat()
+    except OSError as error:
+        raise RemoteError(f"SSH_KEY {shown} cannot be read: {error}") from error
+    if info.st_mode & 0o077:
+        current = oct(info.st_mode & 0o777)[2:].rjust(3, "0")
+        try:
+            os.chmod(path, 0o600)
+        except OSError as error:
+            raise RemoteError(
+                f"SSH_KEY {shown} is mode {current}; ssh ignores private keys "
+                f"readable by group or other, and IdentitiesOnly=yes leaves no "
+                f"other credential, so the host replies 'Permission denied "
+                f"(publickey)'. Tightening it here failed ({error}); run: "
+                f"chmod 600 {shown}"
+            ) from error
+        _console_log(
+            f"[{_stamp()}] ssh key {shown} was mode {current} (ssh would ignore "
+            f"it); tightened to 600"
+        )
+    if not os.access(path, os.R_OK):
+        raise RemoteError(f"SSH_KEY {shown} is not readable by this user; run: chmod 600 {shown}")
+    return str(path)
+
+
 def load_config() -> RemoteConfig:
     """SSH_* settings from the environment, then the repo-root .env."""
     if ENV_FILE.is_dir():
@@ -189,7 +245,7 @@ def load_config() -> RemoteConfig:
         host=host,
         user=user,
         port=port,
-        key=setting("SSH_KEY"),
+        key=secure_key(setting("SSH_KEY")),
         directory=directory,
     )
 

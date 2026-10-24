@@ -356,7 +356,15 @@ that are absent from `.env` are staged into a `0600` `launch.env` loaded **befor
 `EnvironmentFile=-<repo root>/.env` so systemd receives them while `.env` still overrides them.
 
 **Required for uploading** — `SSH_HOST`, `SSH_USER`. Optional: `SSH_PORT` (default 22),
-`SSH_DIR` (default `pdfs`) — the remote directory that *contains* `convertable/`, and `scan/` or `scanned/` for the OCR service; it mirrors this checkout's own `pdfs/`. A relative value is resolved by ssh against the account's home, so the default means `<home>/pdfs/convertable/`; write an absolute path only if the files really live outside it. The value is used verbatim — no `~` expansion, no spaces. `SSH_KEY`.
+`SSH_DIR` (default `pdfs`) — the remote directory that *contains* `convertable/`, and `scan/` or `scanned/` for the OCR service; it mirrors this checkout's own `pdfs/`. A relative value is resolved by ssh against the account's home, so the default means `<home>/pdfs/convertable/`; write an absolute path only if the files really live outside it. The value is used verbatim — no `~` expansion, no spaces.
+
+`SSH_KEY` — the private key file on this box, expanded for `~` and pinned with
+`IdentitiesOnly=yes`, which makes it the **only** credential offered. It must be mode `600`:
+OpenSSH ignores a key readable by group or other, and with nothing left to offer the host
+replies `Permission denied (publickey)` — naming the key, never the permission bit.
+`load_config()` therefore tightens the file to `600` itself when this process owns it (and
+prints the old mode when it does); a key it cannot chmod, cannot find, or finds to be a
+directory stops the run with the exact command to fix it, before any ssh connection is made.
 
 **Email** — `MAIL_PASSWORD`. Without it the mailer logs `off` and every notice is silently
 skipped, including the OCR failure mail and the 20-failure reminder.
