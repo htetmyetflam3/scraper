@@ -41,6 +41,7 @@ from __future__ import annotations
 import contextlib
 import hashlib
 import os
+import re
 import shlex
 import subprocess
 import time
@@ -133,7 +134,7 @@ def _env_values() -> dict[str, str]:
     """KEY=VALUE pairs from the repo-root .env; blanks and comments skipped."""
     values: dict[str, str] = {}
     try:
-        lines = ENV_FILE.read_text(encoding="utf-8").splitlines()
+        lines = ENV_FILE.read_text(encoding="utf-8-sig").splitlines()
     except OSError:
         return values
     for line in lines:
@@ -149,13 +150,19 @@ def _env_values() -> dict[str, str]:
             if closing_quote > 0:
                 value = value[1:closing_quote]
         else:
-            value = value.split("#", 1)[0].strip()
+            value = "" if value.startswith("#") else re.split(r"\s+#", value, maxsplit=1)[0].strip()
         values[name.strip()] = value
     return values
 
 
 def load_config() -> RemoteConfig:
     """SSH_* settings from the environment, then the repo-root .env."""
+    if ENV_FILE.is_dir():
+        raise RemoteError(
+            f"{ENV_FILE} is a directory instead of a file (likely created by "
+            f"uploading to 'scraper/.env' instead of 'scraper/'); move "
+            f"{ENV_FILE / '.env'} to {ENV_FILE} or remove the directory."
+        )
     file_values = _env_values()
 
     def setting(name: str, default: str = "") -> str:

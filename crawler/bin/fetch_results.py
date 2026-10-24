@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 from pathlib import Path
 
 import httpx
@@ -34,8 +35,8 @@ def _read_api_key(explicit_key: str | None) -> str:
 
     env_file = REPO_ROOT / ".env"  # repo root, next to main.py
     try:
-        lines = env_file.read_text(encoding="utf-8").splitlines()
-    except FileNotFoundError:
+        lines = env_file.read_text(encoding="utf-8-sig").splitlines()
+    except OSError:
         lines = []
     for line in lines:
         entry = line.strip()
@@ -52,7 +53,7 @@ def _read_api_key(explicit_key: str | None) -> str:
             if closing_quote > 0:
                 value = value[1:closing_quote]
         else:
-            value = value.split("#", 1)[0].strip()
+            value = "" if value.startswith("#") else re.split(r"\s+#", value, maxsplit=1)[0].strip()
         if value:
             return value
     raise SerpApiError(

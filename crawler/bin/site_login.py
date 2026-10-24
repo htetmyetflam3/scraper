@@ -66,7 +66,7 @@ _NON_SUBMIT_TYPES = frozenset({"submit", "button", "image", "reset", "file"})
 def load_dotenv_values(path: Path | None = None) -> dict[str, str]:
     """Parse a .env file the same way fetch_results does (quotes, export)."""
     try:
-        lines = (path or DOTENV_PATH).read_text(encoding="utf-8").splitlines()
+        lines = (path or DOTENV_PATH).read_text(encoding="utf-8-sig").splitlines()
     except OSError:
         return {}
     values: dict[str, str] = {}
@@ -86,7 +86,7 @@ def load_dotenv_values(path: Path | None = None) -> dict[str, str]:
             if closing_quote > 0:
                 value = value[1:closing_quote]
         else:
-            value = value.split("#", 1)[0].strip()
+            value = "" if value.startswith("#") else re.split(r"\s+#", value, maxsplit=1)[0].strip()
         values[name] = value
     return values
 
@@ -110,11 +110,9 @@ def load_credentials(host: str) -> LoginCredentials | None:
 
     def pick(*names: str) -> str:
         for name in names:
-            value = os.environ.get(name)
-            if value is None:
-                value = dotenv.get(name, "")
-            if value.strip():
-                return value.strip()
+            for value in (os.environ.get(name, ""), dotenv.get(name, "")):
+                if value.strip():
+                    return value.strip()
         return ""
 
     token = _host_token(host)

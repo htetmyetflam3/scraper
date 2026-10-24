@@ -82,8 +82,8 @@ class MailConfig:
 
 def load_mail_config() -> tuple[MailConfig | None, str]:
     """(config, "") when MAIL_PASSWORD is set, else (None, reason)."""
-    password = os.environ.get(PASSWORD_SETTING)
-    if password is None:
+    password = os.environ.get(PASSWORD_SETTING, "")
+    if not password.strip():
         password = load_dotenv_values().get(PASSWORD_SETTING, "")
     if not password.strip():
         return None, f"missing {PASSWORD_SETTING}"

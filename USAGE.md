@@ -350,7 +350,10 @@ process and nobody has to run `npm run rebuild` by hand on the VPS.
 ## Environment
 
 All of it lives in the repo-root `.env`, and this section is the full key list. The environment
-wins over the file.
+wins over the file during direct CLI runs; when installing any of the three systemd services
+(`parse.py`, `ocr.py`, `deploy/install_service.py`), settings exported in the launching shell
+that are absent from `.env` are staged into a `0600` `launch.env` loaded **before**
+`EnvironmentFile=-<repo root>/.env` so systemd receives them while `.env` still overrides them.
 
 **Required for uploading** — `SSH_HOST`, `SSH_USER`. Optional: `SSH_PORT` (default 22),
 `SSH_DIR` (default `pdfs`) — the remote directory that *contains* `convertable/`, and `scan/` or `scanned/` for the OCR service; it mirrors this checkout's own `pdfs/`. A relative value is resolved by ssh against the account's home, so the default means `<home>/pdfs/convertable/`; write an absolute path only if the files really live outside it. The value is used verbatim — no `~` expansion, no spaces. `SSH_KEY`.

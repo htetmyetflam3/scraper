@@ -52,10 +52,7 @@ def load_api_config() -> tuple[str, str, str] | None:
     dotenv = load_dotenv_values()
 
     def pick(name: str) -> str:
-        value = os.environ.get(name)
-        if value is None:
-            value = dotenv.get(name, "")
-        return value.strip()
+        return os.environ.get(name, "").strip() or dotenv.get(name, "").strip()
 
     email = pick("PHATMAL_EMAIL")
     password = pick("PHATMAL_PASSWORD")
