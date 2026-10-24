@@ -44,6 +44,19 @@ CONVERT_FINAL_NAME = "convertable"   # convertable PDFs folder
 PARQUET_DIR_NAME = "parquet"
 PARQUET_FILE_NAME = "books.parquet"
 PARQUET_SHA_COLUMN = "sha256"   # which PDF a row came from; the duplicate guard
+# Every single-book append rewrites the WHOLE cumulative file, so the compression
+# level is paid once per book, not once per collection. Measured on a 266-row,
+# 120 MB (in memory) collection of segmented Burmese text:
+#     snappy (pyarrow default)   0.5 s   73.4 MB
+#     zstd-1                     0.7 s   50.0 MB
+#     zstd-3                     1.0 s   46.1 MB
+#     zstd-19                   93.6 s   38.6 MB
+# Level 19 cost 94x the time for 16% off the file, which on the VPS was the entire
+# gap between a book every few seconds and a book every ~6 minutes - the parser and
+# the segmentor were never the bottleneck. Level 3 keeps the reason zstd was chosen
+# in the first place (37% smaller than pyarrow's snappy default, the ~40% recorded
+# in hfinit.source_compression) and gives the time back.
+PARQUET_ZSTD_LEVEL = 3
 # The duplicate guard matches a book on its exact text as well as on its file hash, so
 # it needs a floor: below this many characters the "text" is far more likely a failed
 # extraction than a book, and two unrelated books whose parses both collapsed into the
@@ -421,7 +434,8 @@ def write_parquet_rows(output_dir: Path, rows: list[dict], log=print):
                           ("author", "book", "text", "segmented", PARQUET_SHA_COLUMN)})
         temp = final.with_name("." + final.name + ".tmp")
         try:
-            pq.write_table(table, temp, compression="zstd", compression_level=19)
+            pq.write_table(table, temp, compression="zstd",
+                           compression_level=PARQUET_ZSTD_LEVEL)
             os.replace(temp, final)
         except OSError as error:
             log(f"[convert-warn] parquet write failed: {error}")
@@ -531,7 +545,8 @@ def set_parquet_sha(output_dir: Path, hashes: dict[str, str], *, force: bool = F
                           ("author", "book", "text", "segmented", PARQUET_SHA_COLUMN)})
         temp = final.with_name("." + final.name + ".tmp")
         try:
-            pq.write_table(table, temp, compression="zstd", compression_level=19)
+            pq.write_table(table, temp, compression="zstd",
+                           compression_level=PARQUET_ZSTD_LEVEL)
             os.replace(temp, final)
         except OSError as error:
             log(f"[convert-warn] parquet write failed: {error}")

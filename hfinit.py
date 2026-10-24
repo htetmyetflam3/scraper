@@ -229,12 +229,25 @@ def row_count(path: Path) -> int | None:
 
 # ----------------------------------------------------------------------------- cdc
 
+def parquet_zstd_level() -> int:
+    """The level the pipeline writes with, read from the module that owns it."""
+    sys.path.insert(0, str(Path(__file__).resolve().parent / "crawler" / "bin"))
+    try:
+        from text_collect import PARQUET_ZSTD_LEVEL
+
+        return PARQUET_ZSTD_LEVEL
+    except Exception:  # noqa: BLE001 - a standalone copy of hfinit.py still works
+        return 3
+
+
 def source_compression(path: Path) -> dict:
     """The codec this parquet was written with, so a CDC rewrite does not change it.
 
-    crawler/bin/text_collect.py writes compression="zstd", compression_level=19 on
-    purpose - measured ~40% smaller than pyarrow's default on segmented Burmese text.
-    The level is not recorded inside the file, so the pipeline's own value is reused.
+    crawler/bin/text_collect.py writes compression="zstd" on purpose - measured ~40%
+    smaller than pyarrow's default on segmented Burmese text. The level is not
+    recorded inside the file, so the pipeline's own value is imported rather than
+    repeated here: a second copy of the number is a second thing to forget, and the
+    level moved once already (19 -> 3, for a 94x faster per-book append).
     Without this, rewriting for CDC silently fell back to snappy: a 10,487-byte batch
     came back as 28,599 bytes, 2.7x larger, with the data unchanged.
     """
@@ -246,7 +259,7 @@ def source_compression(path: Path) -> dict:
         return {}
     codec = (codec or "").upper()
     if codec == "ZSTD":
-        return {"compression": "zstd", "compression_level": 19}
+        return {"compression": "zstd", "compression_level": parquet_zstd_level()}
     if codec in ("", "UNCOMPRESSED"):
         return {}
     return {"compression": codec.lower()}
